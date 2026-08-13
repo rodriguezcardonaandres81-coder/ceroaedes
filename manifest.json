@@ -1,7 +1,7 @@
 {
-  "name": "MEISTER Dengue — Clasificación y manejo",
-  "short_name": "MEISTER Dengue",
-  "description": "Clasificación clínica y cálculo de reposición hídrica por peso según el algoritmo de dengue OPS/OMS — Ministerio de Salud y Protección Social de Colombia.",
+  "name": "CeroAedes by AR — Clasificación y manejo de dengue",
+  "short_name": "CeroAedes",
+  "description": "Clasificación de dengue según la ficha SIVIGILA 210/220/580 y cálculo de reposición hídrica por peso según el algoritmo OPS/OMS — MinSalud Colombia. Exporta la conducta a Word.",
   "lang": "es-CO",
   "start_url": "./index.html",
   "scope": "./",

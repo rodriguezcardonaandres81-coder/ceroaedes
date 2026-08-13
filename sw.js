@@ -1,8 +1,8 @@
-/* MEISTER Dengue — service worker
+/* CeroAedes by AR — service worker
    Cachea la aplicación completa para uso sin conexión.
    Sube el número de versión para forzar la actualización en los dispositivos. */
 
-const VERSION = 'meister-dengue-v1.0.0';
+const VERSION = 'ceroaedes-v2.0.0';
 const ASSETS = [
   './',
   './index.html',
