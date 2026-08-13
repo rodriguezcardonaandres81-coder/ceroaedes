@@ -184,13 +184,28 @@ t('23:30 + 60 min = 00:30 (cruza medianoche)', ctx.addMin('23:30', 60), '00:30')
 
 console.log('\n── Laboratorio y monitoreo ────────────────────────');
 
-t('Día 2 → NS1 por ELISA o RT-PCR',
-  /NS1 por ELISA o RT-PCR/.test(ctx.pruebaConfirmatoria('2')), 'true');
-t('Día 5 → ventana de traslape NS1 + IgM',
-  /traslape/.test(ctx.pruebaConfirmatoria('5')), 'true');
-t('Día 6 → IgM', /IgM dengue/.test(ctx.pruebaConfirmatoria('6')), 'true');
-t('Sin día registrado → enuncia ambos cortes',
-  /≤ 5 días/.test(ctx.pruebaConfirmatoria('')), 'true');
+t('Día 2 → NS1 o prueba rápida y RT-PCR',
+  /NS1 por ELISA o prueba rápida, y RT-PCR/.test(ctx.pruebaConfirmatoria('2')), 'true');
+t('Día 5 sigue dentro de la ventana molecular',
+  /≤ 5 días/.test(ctx.pruebaConfirmatoria('5')), 'true');
+t('Día 6 → IgM por ELISA', /IgM dengue por ELISA/.test(ctx.pruebaConfirmatoria('6')), 'true');
+t('Sin día registrado → enuncia los dos cortes',
+  /hasta el día 5.*desde el día 6/.test(ctx.pruebaConfirmatoria('')), 'true');
+
+t('El NS1 negativo NO descarta el evento',
+  /NEGATIVA no descarta el dengue/.test(ctx.NS1_NEGATIVO), 'true');
+t('El NS1 positivo sí confirma el caso',
+  /positiva, el caso queda confirmado/.test(ctx.NS1_NEGATIVO), 'true');
+t('Ante NS1 negativo indica RT-PCR como técnica distinta',
+  /RT-PCR — es una técnica distinta, molecular/.test(ctx.NS1_NEGATIVO), 'true');
+t('Menciona el diagnóstico diferencial con chikungunya y Zika',
+  /chikungunya y Zika/.test(ctx.NS1_NEGATIVO), 'true');
+t('Dentro de los 5 días, el siguiente paso tras un negativo es RT-PCR',
+  /solicitar RT-PCR/.test(ctx.siguientePaso('3')), 'true');
+t('Pasado el día 5, el siguiente paso es repetir IgM en convaleciente',
+  /suero convaleciente/.test(ctx.siguientePaso('7')), 'true');
+t('La regla del negativo aparece en el listado de laboratorio',
+  ctx.laboratorio(P({ edad: '34', peso: 70, dia: '3' })).some(x => /no descarta el dengue/.test(x)), 'true');
 t('Ecografía y radiografía aparecen en todo el listado de laboratorio',
   ctx.laboratorio(P({ edad: '34', peso: 70 })).some(x => /Ecografía abdominal y radiografía de tórax/.test(x)), 'true');
 t('B2 exige hemograma antes de hidratar',
@@ -270,7 +285,9 @@ t('Ítem 15 marca ecografía y radiografía como INDICADAS si hay acumulación d
 t('Ítem 16 marca los paraclínicos como indicados en B2',
   /INDICADOS/.test(aud[2].items[2].valor), 'true');
 t('Ítem 17 trae la prueba según el día de evolución',
-  /día 4 de evolución/.test(aud[2].items[3].valor), 'true');
+  /Día 4 de evolución/.test(aud[2].items[3].valor), 'true');
+t('Ítem 17 advierte que un negativo no descarta el evento',
+  /no descarta el evento/.test(aud[2].items[3].valor), 'true');
 t('Ítem 9 queda como campo por completar (no lo captura la app)',
   aud[1].items[1].valor, 'null');
 t('Ítem 12 queda como campo por completar', aud[1].items[2 + 2].valor === null, 'true');
@@ -285,6 +302,16 @@ t('El reporte incorpora el bloque de auditoría',
   ctx.construirReporte(P({ edad: '34', peso: 70 })).auditoria.length, 3);
 t('El reporte incorpora la tabla de signos vitales',
   ctx.construirReporte(P({ edad: '34', peso: 70 })).vitales.length, 9);
+
+console.log('\n── Dipirona y versión ─────────────────────────────');
+
+t('Dipirona: solo si es necesario y en dosis única',
+  ctx.NO_HACER.some(x => /solo si es necesario y en DOSIS ÚNICA/.test(x)), 'true');
+t('Dipirona conserva las restricciones de nivel y vía',
+  ctx.NO_HACER.some(x => /nunca por vía intramuscular ni en pacientes pediátricos/.test(x)), 'true');
+t('La conducta copiada incluye las restricciones completas',
+  /DOSIS ÚNICA/.test(ctx.construirReporte(P({ edad: '34', peso: 70 })).conductaTexto), 'true');
+t('Existe una única constante de versión', typeof ctx.APP_VERSION, 'string');
 
 console.log('\n── Modelo del reporte (pantalla y Word) ───────────');
 

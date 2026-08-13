@@ -207,7 +207,12 @@ footer b{color:var(--text)}
 
     <div id="peso-ideal-box" style="display:none">
       <div class="note warn" style="margin-bottom:8px">
-        <b>Peso ideal estimado: <span id="pi-val">—</span> kg.</b> En obesidad, la OPS recomienda calcular los volúmenes con peso ideal o ajustado para no sobrehidratar.
+        <b>Peso ideal estimado: <span id="pi-val">—</span> kg</b> (fórmula de Devine).
+        La <b>OMS</b> indica usar el peso ideal para calcular la infusión de líquidos en pacientes con sobrepeso u obesidad:
+        <i>«Use the ideal body weight for calculation of fluid infusion for obese and overweight patients»</i>
+        — Handbook for Clinical Management of Dengue, secciones 2.2.2 y 2.2.3.1.
+        La OMS trae su propia tabla de peso ideal por talla (Textbox J); esta app lo calcula con Devine, así que puede haber
+        diferencias de uno o dos kilos. Contraste con la tabla si el margen le resulta relevante.
       </div>
       <div class="seg" style="margin-bottom:6px">
         <button type="button" id="btn-preal" class="on" onclick="setPesoCalc(false)">Usar peso real</button>
@@ -252,7 +257,7 @@ footer b{color:var(--text)}
       <option value="pos">Positiva</option>
     </select>
     <div class="note info" style="margin-bottom:0">
-      <b>Técnica.</b> Infle el manguito hasta un punto intermedio entre la presión sistólica y la diastólica
+      <b>Técnica.</b> Insufle el manguito hasta un punto intermedio entre la presión sistólica y la diastólica
       y manténgalo <b>5 minutos</b> (3 minutos en niños). Suelte, espere a que la piel recupere el color y
       cuente las petequias en un cuadro de <b>2,5 × 2,5 cm</b> en la cara anterior del antebrazo.
       Se considera <b>positiva con 10 o más petequias</b> (algunos textos usan el umbral previo de 20).<br><br>
@@ -268,7 +273,7 @@ footer b{color:var(--text)}
 
 <!-- ============ 3. SIGNOS DE ALARMA ============ -->
 <div id="s3" class="screen">
-  <div class="step-title">Signos de alarma</div>
+  <div class="step-title">Verifique signos de alarma</div>
   <p class="step-sub">Aparecen cerca de y preferentemente a la caída de la fiebre. Basta <b>uno</b> para dengue con signos de alarma y categoría de intervención B2.</p>
 
   <div class="note warn">Entre el <b>día 3 y 6</b> de enfermedad, o cuando cae la fiebre, búsquelos de forma dirigida: es la ventana de la fase crítica.</div>
@@ -291,7 +296,7 @@ footer b{color:var(--text)}
 
 <!-- ============ 4. DENGUE GRAVE ============ -->
 <div id="s4" class="screen">
-  <div class="step-title">Manifestaciones graves de dengue</div>
+  <div class="step-title">Verifique manifestaciones graves de dengue</div>
   <p class="step-sub">Cualquiera de estas cuatro define dengue grave y categoría de intervención C: intervención inmediata.</p>
 
   <div class="card tight">
@@ -361,7 +366,7 @@ footer b{color:var(--text)}
 </div><!-- /content -->
 
 <footer>
-  <b>CeroAedes by AR</b> · v2.1 &copy; 2026<br>
+  <b>CeroAedes by AR</b> · <span id="app-version">v—</span> &copy; 2026<br>
   Desarrollado por <b>Andrés Rodríguez Cardona</b> — Epidemiólogo<br>
   Ficha de notificación SIVIGILA 210/220/580 y Algoritmo de diagnóstico y tratamiento de dengue (OPS/OMS — MinSalud, Colombia)<br>
   <span style="font-size:.9em">Herramienta de apoyo. No reemplaza el juicio clínico.</span>
@@ -382,6 +387,8 @@ footer b{color:var(--text)}
    ================================================================== */
 
 /* === ENGINE START === */
+
+var APP_VERSION = '2.2.1';   /* fuente única: pie de página, Word y service worker */
 
 /* Origen de cada criterio: 'ficha' = casilla de la sección 6 de la ficha;
    'prot' = está en la definición del protocolo pero no como casilla. */
@@ -614,15 +621,28 @@ function antipiretico(S){
    ubica la ventana óptima de RT-PCR/NS1 en los días 1 a 4. */
 function pruebaConfirmatoria(dia){
   var d = parseInt(dia,10);
-  if(isNaN(d) || d === 0) return 'Prueba confirmatoria según el tiempo de evolución de la fiebre: ≤ 5 días NS1 por ELISA (o RT-PCR); > 5 días IgM dengue.';
-  if(d <= 4) return 'NS1 por ELISA o RT-PCR — día ' + d + ' de evolución, dentro de la ventana óptima (días 1 a 4).';
-  if(d === 5) return 'Día 5: ventana de traslape. Solicite NS1 por ELISA e IgM dengue.';
-  return 'IgM dengue — día ' + (d >= 8 ? '8 o más' : d) + ' de evolución (> 5 días). Si es negativa, repetir de 10 a 14 días después.';
+  if(isNaN(d) || d === 0) return 'Prueba confirmatoria según el tiempo de evolución de la fiebre: hasta el día 5, NS1 por ELISA o prueba rápida y RT-PCR; desde el día 6, IgM dengue por ELISA.';
+  if(d <= 5) return 'Día ' + d + ' de evolución (≤ 5 días): NS1 por ELISA o prueba rápida, y RT-PCR. La detección molecular solo es útil sobre sueros de los primeros cinco días.';
+  return 'Día ' + (d >= 8 ? '8 o más' : d) + ' de evolución (> 5 días): IgM dengue por ELISA. Si es negativa, repetir sobre suero convaleciente de 10 a 14 días después.';
+}
+
+/* Regla del resultado negativo — CDC, OMS e INS coinciden: no descarta el evento */
+var NS1_NEGATIVO = 'Un NS1 o una prueba rápida NEGATIVA no descarta el dengue. Si sale positiva, el caso queda confirmado; ' +
+  'si sale negativa, continúe el estudio: hasta el día 5 solicite RT-PCR — es una técnica distinta, molecular, no de detección de antígeno — ' +
+  'y desde el día 6 solicite IgM dengue. Considere además el diagnóstico diferencial con las arbovirosis que cocirculan (chikungunya y Zika).';
+
+function siguientePaso(dia){
+  var d = parseInt(dia,10);
+  if(!isNaN(d) && d >= 1 && d <= 5) return 'Si el NS1 o la prueba rápida sale negativa: solicitar RT-PCR (aún está dentro de los primeros 5 días) y, si pasa del día 5 sin diagnóstico, IgM dengue.';
+  if(!isNaN(d) && d > 5) return 'Si la IgM sale negativa: no descarta el evento. Repetir sobre suero convaleciente de 10 a 14 días después y evaluar el diagnóstico diferencial.';
+  return 'Si la primera prueba sale negativa: no descarta el evento. Escalar a la prueba que corresponda al día de evolución.';
 }
 
 function laboratorio(S){
   var cat = clasificar(S), d = parseInt(S.dia,10), L = [];
   L.push(pruebaConfirmatoria(S.dia));
+  L.push(NS1_NEGATIVO);
+  L.push(siguientePaso(S.dia));
   L.push('Ecografía abdominal y radiografía de tórax ante hallazgos clínicos sugestivos de fuga vascular — documentan ascitis y derrame pleural (instrumento de auditoría, ítem 15).');
 
   if(cat === 'A'){
@@ -731,7 +751,8 @@ function auditoria(S){
           : 'Solicitar si aparecen dolor abdominal, aumento del perímetro abdominal, matidez en bases o ruidos respiratorios disminuidos.'),
       reg('16. Función hepática, glucosa, electrolitos séricos, urea, creatinina, gases arteriales o lactato y enzimas cardiacas, según indicación médica; interpretados y consignados.',
         (clasificar(S) === 'B2' || clasificar(S) === 'C') ? 'INDICADOS por la categoría de intervención.' : 'Según indicación del médico tratante.'),
-      reg('17. Pruebas confirmatorias según el tiempo de evolución de la fiebre.', pruebaConfirmatoria(S.dia))
+      reg('17. Pruebas confirmatorias según el tiempo de evolución de la fiebre.',
+        pruebaConfirmatoria(S.dia) + ' ' + siguientePaso(S.dia) + ' Un resultado negativo no descarta el evento.')
     ]}
   ];
 }
@@ -764,7 +785,7 @@ var NO_HACER = [
   'No administrar aspirina (ácido acetilsalicílico) ni AINES.',
   'No administrar esteroides ni antibióticos de rutina.',
   'Vía intramuscular y rectal contraindicadas.',
-  'La dipirona se reserva para segundo y tercer nivel; nunca intramuscular ni en pacientes pediátricos.'
+  'Dipirona: solo si es necesario y en DOSIS ÚNICA. Reservada al segundo y tercer nivel de atención; nunca por vía intramuscular ni en pacientes pediátricos. Informe los riesgos al paciente.'
 ];
 var ALTA = [
   'Ausencia de fiebre por 48 horas sin haber administrado antipiréticos.',
@@ -867,7 +888,7 @@ function construirReporte(S){
   L.push('');
   L.push('MANEJO SINTOMÁTICO');
   L.push('· ' + anti.titulo + ': ' + anti.dosis + '. ' + anti.max);
-  L.push('· No administrar: aspirina, AINES, esteroides ni antibióticos de rutina. Vía intramuscular y rectal contraindicadas.');
+  m.noHacer.forEach(function(x){ L.push('· ' + x); });
   L.push('');
   L.push('LABORATORIO');
   m.laboratorio.forEach(function(x){ L.push('· ' + x); });
@@ -878,7 +899,7 @@ function construirReporte(S){
   L.push(m.criterios.titulo.toUpperCase());
   m.criterios.items.forEach(function(x){ L.push('· ' + x); });
   L.push('');
-  L.push('Generado con CeroAedes by AR. Herramienta de apoyo; no reemplaza el juicio clínico.');
+  L.push('Generado con CeroAedes by AR v' + APP_VERSION + '. Herramienta de apoyo; no reemplaza el juicio clínico.');
   m.conductaTexto = L.join('\n');
 
   return m;
@@ -1140,7 +1161,7 @@ function evaluar(){
     '<div class="phase-rate">' + m.anti.dosis + '</div>' +
     '<div class="phase-meta">' + m.anti.base + (m.anti.jarabe ? '<br>' + m.anti.jarabe : '') + '</div>' +
     '<div class="phase-note">' + m.anti.max + ' Utilizar medios físicos hasta que descienda la fiebre.</div></div>' +
-    '<div class="note danger" style="margin:10px 0 0"><b>No administrar:</b><ul class="clean" style="margin-top:6px">' +
+    '<div class="note danger" style="margin:10px 0 0"><b>Restricciones y contraindicaciones:</b><ul class="clean" style="margin-top:6px">' +
     m.noHacer.map(function(x){ return '<li>' + x + '</li>'; }).join('') + '</ul></div></div>');
 
   o.push('<details class="acc"><summary>Signos vitales y estado hemodinámico</summary><div class="acc-body"><table class="t">' +
@@ -1341,7 +1362,7 @@ function documentoXml(m){
     ['Presentación', m.anti.jarabe || m.anti.base],
     ['Máximo', m.anti.max]
   ], [3000, 6200]));
-  b.push(wP(wR('No administrar', { b:true, sz:20, color:'B71C1C' }), { before:100, after:40 }));
+  b.push(wP(wR('Restricciones y contraindicaciones', { b:true, sz:20, color:'B71C1C' }), { before:100, after:40 }));
   m.noHacer.forEach(function(x){ b.push(wBullet(x)); });
 
   b.push(wH1('Laboratorio'));
@@ -1367,7 +1388,7 @@ function documentoXml(m){
     });
   });
 
-  b.push(wP(wR('Generado con CeroAedes by AR — Andrés Rodríguez Cardona, Epidemiólogo. Herramienta de apoyo a la decisión clínica: los cálculos son orientativos y no reemplazan la valoración clínica ni la reestratificación continua del paciente. Verifique siempre los volúmenes antes de administrarlos.', { sz:16, i:true, color:'8A8A97' }), { before:240, after:0 }));
+  b.push(wP(wR('Generado con CeroAedes by AR v' + APP_VERSION + ' — Andrés Rodríguez Cardona, Epidemiólogo. Herramienta de apoyo a la decisión clínica: los cálculos son orientativos y no reemplazan la valoración clínica ni la reestratificación continua del paciente. Verifique siempre los volúmenes antes de administrarlos.', { sz:16, i:true, color:'8A8A97' }), { before:240, after:0 }));
 
   return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
     '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' +
@@ -1452,6 +1473,7 @@ function bindInv(id, cb){
   bindInv('chk-vo', function(v){ S.toleraVO = !v; });
   bindInv('chk-di', function(v){ S.diuresisOk = !v; });
 
+  $('app-version').textContent = 'v' + APP_VERSION;
   setSexo('F');
   updateManifCount();
   go(1);

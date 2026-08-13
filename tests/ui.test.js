@@ -50,12 +50,16 @@ fs.mkdirSync(TMP, { recursive: true });
   await shot('02-definicion-caso');
   await avanzar(2);
 
+  if (!/Verifique signos de alarma/.test(await page.locator('#s3 .step-title').innerText()))
+    throw new Error('El título de la pantalla 3 no invita a verificar');
   const nAlarma = await page.locator('#list-alarma .chk').count();
   if (nAlarma !== 12) throw new Error('Se esperaban 12 signos de alarma, hay ' + nAlarma);
   await marcar('alarma', 2);  // diarrea — criterio nuevo, no estaba en la versión anterior
   await shot('03-alarma');
   await avanzar(3);
 
+  if (!/Verifique manifestaciones graves de dengue/.test(await page.locator('#s4 .step-title').innerText()))
+    throw new Error('El título de la pantalla 4 no invita a verificar');
   const nGrave = await page.locator('#list-grave .chk').count();
   if (nGrave !== 4) throw new Error('Se esperaban 4 criterios de gravedad, hay ' + nGrave);
   await page.fill('#f-pas', '95');
@@ -244,6 +248,36 @@ fs.mkdirSync(TMP, { recursive: true });
   ]);
   await dl2.saveAs(path.join(TMP, 'auditoria.docx'));
   console.log('  OK   │ Caso 8: torniquete, signos vitales y bloque de auditoría en pantalla y en Word');
+
+  // ---- Caso 9: textos corregidos (insuflar, NS1 negativo, dipirona, versión) ----
+  await llenarPaciente({ peso: '70', dia: '3' });
+  const pieVersion = await page.locator('#app-version').innerText();
+  if (!/^v\d+\.\d+\.\d+$/.test(pieVersion)) throw new Error('El pie no muestra la versión completa: ' + pieVersion);
+  await avanzar(1);
+  const txtTorniquete = await page.locator('#s2').innerText();
+  if (!/Insufle el manguito/.test(txtTorniquete)) throw new Error('Sigue diciendo "infle" en vez de "insufle"');
+  if (/\bInfle\b/.test(txtTorniquete)) throw new Error('Quedó un "Infle" sin corregir');
+  await page.locator('#f-endemica').click();
+  await page.locator('#f-fiebre').click();
+  await marcar('manif', 0); await marcar('manif', 1);
+  await avanzar(2);
+  await ninguno('alarma'); await avanzar(3);
+  await ninguno('grave'); await avanzar(4);
+  await page.click('button:has-text("Clasificar")');
+  await page.waitForSelector('#s6.active');
+  const out9 = await page.locator('#out').textContent();
+  for (const e of ['NEGATIVA no descarta el dengue', 'el caso queda confirmado',
+                   'técnica distinta, molecular', 'solicitar RT-PCR',
+                   'solo si es necesario y en DOSIS ÚNICA', 'Restricciones y contraindicaciones']) {
+    if (!out9.includes(e)) throw new Error('Falta en el resultado: ' + e);
+  }
+  await page.click('button:has-text("Copiar conducta")');
+  await page.waitForTimeout(300);
+  const cond9 = await page.evaluate(() => navigator.clipboard.readText());
+  if (!cond9.includes('DOSIS ÚNICA')) throw new Error('La conducta copiada no trae la restricción de dipirona');
+  if (!cond9.includes('v' + pieVersion.slice(1))) throw new Error('La conducta copiada no trae la versión');
+  await shot('12-textos-corregidos');
+  console.log('  OK   │ Caso 9: "insuflar", regla del NS1 negativo, dipirona en dosis única y versión única');
 
   // ---- Marca: no debe quedar rastro del nombre anterior ----
   const htmlCrudo = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
