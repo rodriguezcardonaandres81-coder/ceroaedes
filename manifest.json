@@ -8,7 +8,7 @@
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#F0F2F5",
-  "theme_color": "#8E1B4B",
+  "theme_color": "#1B6B5A",
   "categories": ["medical", "health", "productivity"],
   "icons": [
     { "src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },

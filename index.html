@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#8E1B4B">
+<meta name="theme-color" content="#1B6B5A">
 <meta name="description" content="CeroAedes by AR — Clasificación y manejo de dengue según la ficha SIVIGILA 210/220/580 y el algoritmo OPS/OMS. Cálculo de reposición hídrica por peso y exportación a Word.">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="assets/icon-192.png">
@@ -11,7 +11,7 @@
 <title>CeroAedes by AR — Clasificación y manejo de dengue</title>
 <style>
 :root{
-  --primary:#8E1B4B; --primary-dark:#65102F; --accent:#C2185B;
+  --primary:#1B6B5A; --primary-dark:#124A3E; --accent:#2E8B6F;
   --catA:#2E7D32; --catB1:#F9A825; --catB2:#E65100; --catC:#B71C1C;
   --bg:#F0F2F5; --card:#FFFFFF; --line:#E8E8EC;
   --text:#2B2B33; --muted:#6B6B78;
@@ -43,7 +43,7 @@ header{background:linear-gradient(140deg,var(--primary) 0%,var(--primary-dark) 1
 
 label{display:block;font-weight:700;margin-bottom:6px;font-size:.72rem;color:var(--primary);text-transform:uppercase;letter-spacing:.6px}
 input,select{width:100%;padding:11px 12px;margin-bottom:14px;border:1px solid #CFCFD8;border-radius:8px;box-sizing:border-box;font-size:16px;color:var(--text);background:#fff;font-family:inherit}
-input:focus,select:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 3px rgba(194,24,91,.12)}
+input:focus,select:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 3px rgba(46,139,111,.14)}
 .row.g2{display:grid;grid-template-columns:1.4fr 1fr;gap:10px}
 
 .btn{width:100%;padding:14px;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;color:#fff;margin-bottom:9px;transition:filter .15s,transform .08s;text-transform:uppercase;letter-spacing:.8px;font-family:inherit}
@@ -57,7 +57,7 @@ input:focus,select:focus{border-color:var(--accent);outline:none;box-shadow:0 0 
 .btn-ghost{background:#fff;color:var(--primary);border:1.5px solid var(--primary)}
 
 .chk{display:flex;align-items:flex-start;gap:10px;padding:11px 12px;border:1.5px solid var(--line);border-radius:10px;margin-bottom:8px;cursor:pointer;background:#fff;transition:all .15s}
-.chk.on{background:#FDF2F6;border-color:var(--accent)}
+.chk.on{background:#EAF5F1;border-color:var(--accent)}
 .chk.on.warn{background:#FFF4E5;border-color:var(--catB2)}
 .chk.on.danger{background:#FDECEC;border-color:var(--catC)}
 .chk input{width:20px;height:20px;margin:1px 0 0;accent-color:var(--accent);flex:0 0 auto}
@@ -65,13 +65,16 @@ input:focus,select:focus{border-color:var(--accent);outline:none;box-shadow:0 0 
 .chk.danger input{accent-color:var(--catC)}
 .chk .t{font-size:.9rem;font-weight:600;line-height:1.35}
 .chk .d{font-size:.75rem;color:var(--muted);font-weight:400;margin-top:2px;display:block}
+.chk.ninguno{border-width:2px;border-style:dashed}
+.chk.ninguno.on{background:#EAF6EC;border-color:var(--catA);border-style:solid}
+.chk.ninguno input{accent-color:var(--catA)}
 .chk .src{display:inline-block;font-size:.62rem;font-weight:700;letter-spacing:.4px;text-transform:uppercase;padding:2px 6px;border-radius:4px;margin-left:6px;vertical-align:1px}
 .src.ficha{background:#E7EFF9;color:#1B5E9E}
 .src.prot{background:#F3E9F6;color:#6A1B9A}
 
 .seg{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
 .seg button{padding:12px 8px;border:1.5px solid var(--line);background:#fff;border-radius:9px;font-weight:600;color:var(--muted);cursor:pointer;font-size:.88rem;font-family:inherit}
-.seg button.on{background:#FDF2F6;border-color:var(--accent);color:var(--accent)}
+.seg button.on{background:#EAF5F1;border-color:var(--accent);color:var(--accent)}
 
 .note{padding:11px 13px;border-radius:9px;font-size:.79rem;line-height:1.45;margin-bottom:12px;border-left:4px solid}
 .note.info{background:#EAF3FB;border-color:#1565C0;color:#0D3C6B}
@@ -91,7 +94,7 @@ input:focus,select:focus{border-color:var(--accent);outline:none;box-shadow:0 0 
 .sivi.nocumple{border-color:#B08300;background:#FFFCF2}
 .sivi.nocumple .lbl{color:#8A6100}.sivi.nocumple .val,.sivi.nocumple .det{color:#6D4C00}
 
-.sec-title{font-size:.72rem;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--primary);border-bottom:2px solid #F3E2E9;padding-bottom:6px;margin:0 0 12px}
+.sec-title{font-size:.72rem;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--primary);border-bottom:2px solid #DCEDE7;padding-bottom:6px;margin:0 0 12px}
 
 table.t{width:100%;border-collapse:collapse;font-size:.84rem}
 table.t td{padding:9px 6px;border-bottom:1px solid #F0F0F4;vertical-align:top}
@@ -240,6 +243,25 @@ footer b{color:var(--text)}
     <div class="note info" style="margin:10px 0 0" id="manif-count">Marcadas: 0 — se requieren 2 o más.</div>
   </div>
 
+  <div class="card tight">
+    <div class="sec-title">Prueba del torniquete</div>
+    <label>Resultado</label>
+    <select id="f-torniquete" onchange="S.torniquete=this.value">
+      <option value="nr">No realizada</option>
+      <option value="neg">Negativa</option>
+      <option value="pos">Positiva</option>
+    </select>
+    <div class="note info" style="margin-bottom:0">
+      <b>Técnica.</b> Infle el manguito hasta un punto intermedio entre la presión sistólica y la diastólica
+      y manténgalo <b>5 minutos</b> (3 minutos en niños). Suelte, espere a que la piel recupere el color y
+      cuente las petequias en un cuadro de <b>2,5 × 2,5 cm</b> en la cara anterior del antebrazo.
+      Se considera <b>positiva con 10 o más petequias</b> (algunos textos usan el umbral previo de 20).<br><br>
+      Es apoyo diagnóstico y hace parte de la búsqueda activa de manifestaciones hemorrágicas que exige el
+      instrumento de auditoría (ítem 11). <b>No es casilla de la sección 6 de la ficha</b>, así que no suma
+      para la definición de caso: se registra en el reporte y en el documento Word.
+    </div>
+  </div>
+
   <button class="btn btn-primary" onclick="next(2)">Siguiente</button>
   <button class="btn btn-back" onclick="go(1)">Atrás</button>
 </div>
@@ -251,7 +273,17 @@ footer b{color:var(--text)}
 
   <div class="note warn">Entre el <b>día 3 y 6</b> de enfermedad, o cuando cae la fiebre, búsquelos de forma dirigida: es la ventana de la fase crítica.</div>
 
-  <div class="card tight"><div id="list-alarma"></div></div>
+  <div class="card tight">
+    <div id="ninguno-alarma"></div>
+    <div id="list-alarma"></div>
+  </div>
+
+  <div class="note info">
+    <b>Ante hallazgos sugestivos de fuga vascular</b> —dolor abdominal, aumento del perímetro abdominal, matidez en bases,
+    ruidos respiratorios disminuidos— solicite <b>ecografía abdominal y radiografía de tórax</b>: son las que documentan
+    ascitis y derrame pleural, es decir la acumulación de líquidos. El instrumento de auditoría lo exige en el ítem 15
+    y el algoritmo OPS las ubica formalmente en la categoría C.
+  </div>
 
   <button class="btn btn-primary" onclick="next(3)">Siguiente</button>
   <button class="btn btn-back" onclick="go(2)">Atrás</button>
@@ -263,15 +295,40 @@ footer b{color:var(--text)}
   <p class="step-sub">Cualquiera de estas cuatro define dengue grave y categoría de intervención C: intervención inmediata.</p>
 
   <div class="card tight">
-    <div class="sec-title">Presión de pulso</div>
+    <div class="sec-title">Signos vitales y estado hemodinámico</div>
     <div class="row g2">
-      <div><label>PAS (mmHg)</label><input type="number" id="f-pas" min="0" placeholder="Ej: 90" oninput="calcPP()"></div>
-      <div><label>PAD (mmHg)</label><input type="number" id="f-pad" min="0" placeholder="Ej: 75" oninput="calcPP()"></div>
+      <div><label>PAS (mmHg)</label><input type="number" id="f-pas" min="0" placeholder="Ej: 90" oninput="syncVitales()"></div>
+      <div><label>PAD (mmHg)</label><input type="number" id="f-pad" min="0" placeholder="Ej: 75" oninput="syncVitales()"></div>
     </div>
-    <div id="pp-out" class="note info" style="margin-bottom:0">Presión de pulso = PAS − PAD. Un valor <b>≤ 20 mmHg</b> indica choque.</div>
+    <div class="row g2">
+      <div><label>Frec. cardiaca</label><input type="number" id="f-fc" min="0" placeholder="lpm" oninput="syncVitales()"></div>
+      <div><label>Frec. resp.</label><input type="number" id="f-fr" min="0" placeholder="rpm" oninput="syncVitales()"></div>
+    </div>
+    <div class="row g2">
+      <div><label>Temperatura (°C)</label><input type="number" id="f-temp" step="0.1" placeholder="Ej: 38.5" oninput="syncVitales()"></div>
+      <div><label>SatO₂ (%)</label><input type="number" id="f-sato2" min="0" max="100" placeholder="Ej: 96" oninput="syncVitales()"></div>
+    </div>
+    <label>Llenado capilar</label>
+    <select id="f-llenado" onchange="syncVitales()">
+      <option value="">Sin registrar</option>
+      <option value="&lt; 2 segundos">Menor de 2 segundos</option>
+      <option value="&gt; 2 segundos">Mayor de 2 segundos</option>
+    </select>
+    <label>Estado de conciencia</label>
+    <select id="f-conciencia" onchange="syncVitales()">
+      <option value="">Sin registrar</option>
+      <option value="Alerta">Alerta</option>
+      <option value="Somnoliento o irritable">Somnoliento o irritable</option>
+      <option value="Estuporoso">Estuporoso</option>
+      <option value="Inconsciente">Inconsciente</option>
+    </select>
+    <div id="pp-out" class="note info" style="margin-bottom:0">Presión de pulso = PAS − PAD. Un valor <b>≤ 20 mmHg</b> indica choque. La PAM se calcula sola.</div>
   </div>
 
-  <div class="card tight"><div id="list-grave"></div></div>
+  <div class="card tight">
+    <div id="ninguno-grave"></div>
+    <div id="list-grave"></div>
+  </div>
 
   <button class="btn btn-primary" onclick="next(4)">Siguiente</button>
   <button class="btn btn-back" onclick="go(3)">Atrás</button>
@@ -304,7 +361,7 @@ footer b{color:var(--text)}
 </div><!-- /content -->
 
 <footer>
-  <b>CeroAedes by AR</b> · v2.0 &copy; 2026<br>
+  <b>CeroAedes by AR</b> · v2.1 &copy; 2026<br>
   Desarrollado por <b>Andrés Rodríguez Cardona</b> — Epidemiólogo<br>
   Ficha de notificación SIVIGILA 210/220/580 y Algoritmo de diagnóstico y tratamiento de dengue (OPS/OMS — MinSalud, Colombia)<br>
   <span style="font-size:.9em">Herramienta de apoyo. No reemplaza el juicio clínico.</span>
@@ -552,30 +609,131 @@ function antipiretico(S){
   return { titulo:'Acetaminofén (adulto)', dosis:'500 mg cada 6 horas', base:'Vía oral', jarabe:'', max:'Nunca más de 4 g al día.' };
 }
 
+/* Prueba serológica/virológica según el tiempo de evolución.
+   El instrumento de auditoría (ítem 17) usa el corte en 5 días; el algoritmo OPS
+   ubica la ventana óptima de RT-PCR/NS1 en los días 1 a 4. */
+function pruebaConfirmatoria(dia){
+  var d = parseInt(dia,10);
+  if(isNaN(d) || d === 0) return 'Prueba confirmatoria según el tiempo de evolución de la fiebre: ≤ 5 días NS1 por ELISA (o RT-PCR); > 5 días IgM dengue.';
+  if(d <= 4) return 'NS1 por ELISA o RT-PCR — día ' + d + ' de evolución, dentro de la ventana óptima (días 1 a 4).';
+  if(d === 5) return 'Día 5: ventana de traslape. Solicite NS1 por ELISA e IgM dengue.';
+  return 'IgM dengue — día ' + (d >= 8 ? '8 o más' : d) + ' de evolución (> 5 días). Si es negativa, repetir de 10 a 14 días después.';
+}
+
 function laboratorio(S){
   var cat = clasificar(S), d = parseInt(S.dia,10), L = [];
-  if(!isNaN(d) && d >= 1 && d <= 4) L.push('RT-PCR o NS1 — ventana óptima (días 1 a 4 de fiebre).');
-  else if(!isNaN(d) && d >= 5) L.push('IgM dengue — a partir del 5.º día de inicio de la fiebre.');
-  else L.push('Pruebas según el día de inicio de la fiebre: RT-PCR/NS1 en días 1 a 4; IgM desde el día 5.');
+  L.push(pruebaConfirmatoria(S.dia));
+  L.push('Ecografía abdominal y radiografía de tórax ante hallazgos clínicos sugestivos de fuga vascular — documentan ascitis y derrame pleural (instrumento de auditoría, ítem 15).');
 
   if(cat === 'A'){
     L.push('Hemograma completo al menos cada 48 horas.');
-    L.push('IgM a partir del quinto día de inicio.');
   } else if(cat === 'B1'){
     L.push('Hemograma completo en los primeros tres días.');
     L.push('Laboratorio según la condición asociada: hematocrito, leucocitos, glucosa, electrolitos, entre otros.');
     L.push('Hemograma de control cada 24 a 48 horas.');
   } else if(cat === 'B2'){
     L.push('Hemograma completo ANTES de hidratar al paciente.');
-    L.push('RT-PCR, NS1, IgM e IgG en el primer contacto. Repetir IgM/IgG de 10 a 14 días después si son negativas.');
     L.push('Transaminasas (ALT, AST) y tiempos de coagulación (PT, PTT).');
+    L.push('Según indicación médica: función hepática, glucosa, electrolitos séricos, urea, creatinina, gases arteriales o lactato, enzimas cardiacas. Interpretar y consignar los resultados.');
   } else {
-    L.push('Hemograma completo. RT-PCR o NS1 en los primeros cuatro días; IgM/IgG desde el quinto día. Si RT-PCR o NS1 son negativos, repetir IgM e IgG 14 a 21 días después.');
-    L.push('Según el órgano afectado: transaminasas, gases arteriales, electrolitos, glicemia, nitrógeno ureico y creatinina, enzimas cardiacas, cultivos.');
-    L.push('Radiografía de tórax, ultrasonografía torácica o abdominal, ecocardiograma y electrocardiograma.');
-    L.push('IgM dengue o aislamiento viral: OBLIGATORIO.');
+    L.push('Hemograma completo ANTES de iniciar la terapia intravenosa. Hematocrito antes y después de cada hidratación.');
+    L.push('Según el órgano afectado: transaminasas, gases arteriales o lactato, electrolitos, glicemia, nitrógeno ureico y creatinina, enzimas cardiacas y troponinas, cultivos.');
+    L.push('Ultrasonografía torácica o abdominal, radiografía de tórax, ecocardiograma y electrocardiograma.');
+    L.push('IgM dengue o aislamiento viral: OBLIGATORIO. Si RT-PCR o NS1 son negativos, repetir IgM e IgG 14 a 21 días después.');
   }
   return L;
+}
+
+/* ---------- Signos vitales derivados ---------- */
+function presionPulso(S){
+  var s = parseFloat(S.pas), d = parseFloat(S.pad);
+  if(isNaN(s) || isNaN(d)) return null;
+  return s - d;
+}
+function pam(S){
+  var s = parseFloat(S.pas), d = parseFloat(S.pad);
+  if(isNaN(s) || isNaN(d)) return null;
+  return Math.round((s + 2*d)/3);
+}
+function vitalesTabla(S){
+  var pp = presionPulso(S), pm = pam(S), F = [];
+  F.push(['Tensión arterial', (S.pas && S.pad) ? (S.pas + '/' + S.pad + ' mmHg') : 'Sin registrar']);
+  F.push(['Presión arterial media (PAM)', pm !== null ? pm + ' mmHg' : 'Sin registrar']);
+  F.push(['Presión de pulso', pp !== null ? (pp + ' mmHg' + (pp <= 20 ? ' — ≤ 20 mmHg: criterio de choque' : '')) : 'Sin registrar']);
+  F.push(['Frecuencia cardiaca', S.fc ? S.fc + ' lpm' : 'Sin registrar']);
+  F.push(['Frecuencia respiratoria', S.fr ? S.fr + ' rpm' : 'Sin registrar']);
+  F.push(['Temperatura', S.temp ? S.temp + ' °C' : 'Sin registrar']);
+  F.push(['Saturación de oxígeno', S.sato2 ? S.sato2 + ' %' : 'Sin registrar']);
+  F.push(['Llenado capilar', S.llenado || 'Sin registrar']);
+  F.push(['Estado de conciencia', S.conciencia || 'Sin registrar']);
+  return F;
+}
+
+var TORNIQUETE = { nr:'No realizada', neg:'Negativa', pos:'Positiva (10 o más petequias en 2,5 × 2,5 cm)' };
+
+/* ---------- Registro para historia clínica (instrumento de auditoría, ítems 1–17) ---------- */
+function auditoria(S){
+  var reg = function(txt, valor){ return { item: txt, valor: valor || null }; };
+  var lista = function(arr){ return arr.length ? arr.join('; ') : null; };
+  var manifs = (S.fiebre ? ['Fiebre'] : []).concat(S.manif.map(function(k){ return nombreDe(MANIF,k); }));
+  var alarmas = S.alarma.map(function(k){ return nombreDe(ALARMA,k); });
+  var cond = autoCondiciones(S).concat(S.cond.map(function(k){ return nombreDe(COND,k); }));
+  var soc = S.social.map(function(k){ return nombreDe(SOCIAL,k); });
+  var graves = S.grave.map(function(k){ return nombreDe(GRAVE,k); });
+  var pp = presionPulso(S), pm = pam(S);
+
+  return [
+    { bloque:'A. Anamnesis (ítems 1 a 7)', items: [
+      reg('1. Fiebre caracterizada: fecha de inicio, intensidad en °C y patrón de evolución.',
+        (S.fiebre ? 'Fiebre presente' : 'Sin fiebre') + (S.dia && S.dia !== '0' ? ' · día ' + S.dia + ' de evolución' : '') +
+        (S.temp ? ' · ' + S.temp + ' °C' : '') + '. Complete fecha de inicio y patrón: '),
+      reg('2. Interrogatorio que permite construir la definición de caso.', lista(manifs)),
+      reg('3. Nexo epidemiológico para arbovirosis y otras infecciones tropicales (tiempo, lugar y persona).',
+        S.endemica ? 'Procedente de área endémica. Precise municipio y fecha de exposición: ' : 'No procedente de área endémica. Consigne el diagnóstico diferencial: '),
+      reg('4. Antecedentes personales y familiares; fecha de última menstruación y método de planificación cuando aplique.',
+        lista(cond) || 'Sin condiciones asociadas registradas. '),
+      reg('5. Factores de riesgo social: vive solo, difícil acceso, pobreza u otros.',
+        lista(soc) || 'Sin riesgo social registrado.'),
+      reg('6. Síntomas y signos de alarma interrogados, más ingesta de al menos 200 cc de líquido en la última hora sin vomitarlo y diuresis en las últimas 6 horas.',
+        (S.sinAlarma ? 'Buscados dirigidamente: ninguno presente' : (alarmas.length ? 'Presentes: ' + alarmas.join('; ') : 'Sin registrar')) +
+        ' · Tolerancia a la vía oral: ' + (S.toleraVO ? 'conservada' : 'no tolera') +
+        ' · Diuresis últimas 6 h: ' + (S.diuresisOk ? 'normal' : 'ausente o disminuida')),
+      reg('7. Conciliación medicamentosa: antihipertensivos, hipoglicemiantes, diuréticos, esteroides, AINES, anticoagulantes, antiagregantes.',
+        S.cond.indexOf('anticoag') >= 0 ? 'Recibe tratamiento anticoagulante. Complete el resto: ' : 'Complete: ')
+    ]},
+    { bloque:'B. Examen físico (ítems 8 a 13)', items: [
+      reg('8. Frecuencia cardiaca, frecuencia respiratoria, temperatura, saturación de oxígeno, peso y nivel de conciencia.',
+        [S.fc ? 'FC ' + S.fc + ' lpm' : null, S.fr ? 'FR ' + S.fr + ' rpm' : null,
+         S.temp ? 'T ' + S.temp + ' °C' : null, S.sato2 ? 'SatO₂ ' + S.sato2 + ' %' : null,
+         S.peso ? 'Peso ' + S.peso + ' kg' : null, S.conciencia || null].filter(Boolean).join(' · ') || null),
+      reg('9. Estado de hidratación: mucosas, edema palpebral, de pared abdominal y extremidades, fontanela anterior en lactantes.', null),
+      reg('10. Estado hemodinámico: TA, PAM, presión de pulso, llenado capilar, estado de la piel y calidad del pulso, con pruebas dinámicas para hipotensión ortostática.',
+        [(S.pas && S.pad) ? 'TA ' + S.pas + '/' + S.pad + ' mmHg' : null, pm !== null ? 'PAM ' + pm + ' mmHg' : null,
+         pp !== null ? 'Presión de pulso ' + pp + ' mmHg' : null, S.llenado ? 'Llenado capilar ' + S.llenado : null,
+         S.alarma.indexOf('hipotension') >= 0 ? 'Hipotensión postural presente' : null].filter(Boolean).join(' · ') +
+        '. Complete estado de la piel y calidad del pulso: '),
+      reg('11. Búsqueda activa de manifestaciones hemorrágicas: petequias, sangrado por mucosas, prueba del torniquete.',
+        'Prueba del torniquete: ' + TORNIQUETE[S.torniquete || 'nr'] +
+        ' · Hemorragia en mucosas: ' + (S.alarma.indexOf('mucosas') >= 0 ? 'presente' : 'no referida') +
+        '. Complete petequias y otros sangrados: '),
+      reg('12. Examen torácico: patrón respiratorio, uso de músculos accesorios, ruidos respiratorios disminuidos, agregados pulmonares, matidez en bases.', null),
+      reg('13. Examen abdominal: dolor provocado, hepatomegalia, esplenomegalia, aumento del perímetro abdominal, ascitis.',
+        [S.alarma.indexOf('abdominal') >= 0 ? 'Dolor abdominal intenso y continuo' : null,
+         S.alarma.indexOf('hepatomegalia') >= 0 ? 'Hepatomegalia dolorosa > 2 cm' : null,
+         S.alarma.indexOf('liquidos') >= 0 ? 'Acumulación de líquidos' : null].filter(Boolean).join(' · ') || 'Complete: ')
+    ]},
+    { bloque:'C. Laboratorio e imágenes diagnósticas (ítems 14 a 17)', items: [
+      reg('14. Hemograma completo solicitado e interpretado.',
+        clasificar(S) === 'A' ? 'Solicitar; control al menos cada 48 horas.' : 'Solicitar ANTES de iniciar líquidos intravenosos.'),
+      reg('15. Ecografía abdominal y radiografía de tórax ante hallazgos clínicos sugestivos de fuga vascular.',
+        (S.alarma.indexOf('liquidos') >= 0 || S.grave.indexOf('extravasacion') >= 0)
+          ? 'INDICADAS: hay acumulación de líquidos o extravasación registrada.'
+          : 'Solicitar si aparecen dolor abdominal, aumento del perímetro abdominal, matidez en bases o ruidos respiratorios disminuidos.'),
+      reg('16. Función hepática, glucosa, electrolitos séricos, urea, creatinina, gases arteriales o lactato y enzimas cardiacas, según indicación médica; interpretados y consignados.',
+        (clasificar(S) === 'B2' || clasificar(S) === 'C') ? 'INDICADOS por la categoría de intervención.' : 'Según indicación del médico tratante.'),
+      reg('17. Pruebas confirmatorias según el tiempo de evolución de la fiebre.', pruebaConfirmatoria(S.dia))
+    ]}
+  ];
 }
 
 function monitoreo(S){
@@ -653,9 +811,14 @@ function construirReporte(S){
 
   m.hallazgos = [];
   var manifs = (S.fiebre ? ['Fiebre'] : []).concat(S.manif.map(function(k){ return nombreDe(MANIF,k); }));
-  if(manifs.length) m.hallazgos.push({ titulo:'Manifestaciones', color:'8E1B4B', items: manifs });
+  if(S.torniquete && S.torniquete !== 'nr') manifs.push('Prueba del torniquete: ' + TORNIQUETE[S.torniquete].toLowerCase());
+  if(manifs.length) m.hallazgos.push({ titulo:'Manifestaciones', color:'1B6B5A', items: manifs });
+
   if(S.alarma.length) m.hallazgos.push({ titulo:'Signos de alarma', color:'E65100', items: S.alarma.map(function(k){ return nombreDe(ALARMA,k); }) });
+  else if(S.sinAlarma) m.hallazgos.push({ titulo:'Signos de alarma', color:'2E7D32', items:['Ninguno — buscados dirigidamente y ausentes'] });
+
   if(S.grave.length) m.hallazgos.push({ titulo:'Manifestaciones graves', color:'B71C1C', items: S.grave.map(function(k){ return nombreDe(GRAVE,k); }) });
+  else if(S.sinGrave) m.hallazgos.push({ titulo:'Manifestaciones graves', color:'2E7D32', items:['Ninguna — buscadas dirigidamente y ausentes'] });
   var cond = autoCondiciones(S).concat(S.cond.map(function(k){ return nombreDe(COND,k); }));
   if(cond.length) m.hallazgos.push({ titulo:'Condiciones asociadas', color:'B08300', items: cond });
   if(S.social.length) m.hallazgos.push({ titulo:'Riesgo social', color:'B08300', items: S.social.map(function(k){ return nombreDe(SOCIAL,k); }) });
@@ -668,6 +831,8 @@ function construirReporte(S){
   if(cat === 'B2') m.avisos.push({ tono:'danger', texto:'Escalar a categoría C si hay deterioro clínico o incremento rápido del hematocrito. Criterios de mejoría: desaparición progresiva de signos de alarma, signos vitales estables, diuresis normal o aumentada, descenso del hematocrito, tolerancia a la vía oral y recuperación del apetito.' });
   if(cat === 'C') m.avisos.push({ tono:'danger', texto:'Si sigue inestable y el hematocrito cae bruscamente, sospeche sangrado: tome prueba cruzada y transfunda — ' + plan.hemorragia.gr + '; ' + plan.hemorragia.sangre + '. Si no mejora, reevalúe la hemodinamia, valore función de bomba (miocarditis o miocardiopatía) y defina uso de aminas. Corrija la acidosis persistente y estabilice las comorbilidades.' });
 
+  m.vitales = vitalesTabla(S);
+  m.auditoria = auditoria(S);
   m.laboratorio = laboratorio(S);
   m.monitoreo = monitoreo(S);
   m.noHacer = NO_HACER;
@@ -682,6 +847,17 @@ function construirReporte(S){
   L.push('Clasificación (definición operativa de caso): ' + def.clasificacion + '.');
   L.push('Categoría de intervención (algoritmo OPS): ' + cat + ' — ' + meta.nombre + '.');
   L.push('Conducta: ' + meta.conducta + '. ' + meta.donde);
+  L.push('');
+  L.push('SIGNOS DE ALARMA: ' + (S.alarma.length
+    ? S.alarma.map(function(k){ return nombreDe(ALARMA,k); }).join('; ')
+    : (S.sinAlarma ? 'ninguno, buscados dirigidamente y ausentes' : 'no consignados')) + '.');
+  L.push('MANIFESTACIONES GRAVES: ' + (S.grave.length
+    ? S.grave.map(function(k){ return nombreDe(GRAVE,k); }).join('; ')
+    : (S.sinGrave ? 'ninguna, buscadas dirigidamente y ausentes' : 'no consignadas')) + '.');
+  L.push('Prueba del torniquete: ' + TORNIQUETE[S.torniquete || 'nr'] + '.');
+  var _pp = presionPulso(S), _pm = pam(S);
+  L.push('Signos vitales: ' + m.vitales.filter(function(f){ return f[1] !== 'Sin registrar'; })
+    .map(function(f){ return f[0] + ' ' + f[1]; }).join('; ') + '.');
   L.push('');
   L.push('REPOSICIÓN HÍDRICA (peso de cálculo ' + plan.peso + ' kg) — ' + (plan.via === 'oral' ? 'vía oral' : 'vía intravenosa'));
   if(plan.oral) L.push('· ' + plan.oral.titulo + ': ' + plan.oral.principal + ' (' + plan.oral.horaria + '; ' + plan.oral.vasos + '). ' + plan.oral.que);
@@ -714,11 +890,55 @@ function construirReporte(S){
 var S = {
   nombre:'', fecha:'', hora:'', sexo:'F', edad:'', edadU:'a',
   peso:0, talla:0, usarPesoIdeal:false, embarazo:false, dia:'',
-  endemica:false, fiebre:false, manif:[], alarma:[], grave:[], cond:[], social:[],
-  toleraVO:true, diuresisOk:true
+  endemica:false, fiebre:false, manif:[], torniquete:'nr',
+  alarma:[], sinAlarma:false, grave:[], sinGrave:false,
+  cond:[], social:[], toleraVO:true, diuresisOk:true,
+  pas:'', pad:'', fc:'', fr:'', temp:'', sato2:'', llenado:'', conciencia:''
 };
 var MODELO = null;
+var NINGUNO = { alarma:'sinAlarma', grave:'sinGrave' };
 function $(id){ return document.getElementById(id); }
+
+/* Opción excluyente "Ninguno": obliga a confirmar la ausencia en vez de asumirla */
+function renderNinguno(contenedor, bucket, texto, sub){
+  var key = NINGUNO[bucket], el = $(contenedor);
+  el.innerHTML = '<div class="chk ninguno' + (S[key] ? ' on' : '') + '"><input type="checkbox"' +
+    (S[key] ? ' checked' : '') + '><div class="t">' + texto + '<span class="d">' + sub + '</span></div></div>';
+  var div = el.firstChild;
+  div.onclick = function(e){
+    var box = div.querySelector('input');
+    if(e.target !== box) box.checked = !box.checked;
+    div.classList.toggle('on', box.checked);
+    S[key] = box.checked;
+    if(box.checked){
+      S[bucket].length = 0;
+      var chks = $('list-' + bucket).querySelectorAll('.chk');
+      for(var i=0;i<chks.length;i++){ chks[i].classList.remove('on'); chks[i].querySelector('input').checked = false; }
+    }
+    atenuarLista(bucket);
+  };
+  atenuarLista(bucket);
+}
+function atenuarLista(bucket){
+  var key = NINGUNO[bucket];
+  $('list-' + bucket).style.opacity = S[key] ? '.45' : '1';
+}
+function apagarNinguno(bucket){
+  var key = NINGUNO[bucket];
+  if(!S[key]) return;
+  S[key] = false;
+  var div = $('ninguno-' + bucket).firstChild;
+  if(div){ div.classList.remove('on'); div.querySelector('input').checked = false; }
+  atenuarLista(bucket);
+}
+
+function syncVitales(){
+  S.pas = $('f-pas').value; S.pad = $('f-pad').value;
+  S.fc = $('f-fc').value; S.fr = $('f-fr').value;
+  S.temp = $('f-temp').value; S.sato2 = $('f-sato2').value;
+  S.llenado = $('f-llenado').value; S.conciencia = $('f-conciencia').value;
+  calcPP();
+}
 
 function buildList(containerId, items, bucket, cls){
   var c = $(containerId); c.innerHTML = '';
@@ -736,6 +956,7 @@ function buildList(containerId, items, bucket, cls){
       var i = S[bucket].indexOf(it[0]);
       if(box.checked && i < 0) S[bucket].push(it[0]);
       if(!box.checked && i >= 0) S[bucket].splice(i,1);
+      if(box.checked && NINGUNO[bucket]) apagarNinguno(bucket);
       if(bucket === 'manif') updateManifCount();
     };
     c.appendChild(div);
@@ -818,16 +1039,15 @@ function renderAutoCond(){
 }
 
 function calcPP(){
-  var s = parseFloat($('f-pas').value), d = parseFloat($('f-pad').value), o = $('pp-out');
+  var pp = presionPulso(S), pm = pam(S), o = $('pp-out');
   o.style.marginBottom = '0';
-  if(isNaN(s) || isNaN(d)){
+  if(pp === null){
     o.className = 'note info';
-    o.innerHTML = 'Presión de pulso = PAS − PAD. Un valor <b>≤ 20 mmHg</b> indica choque.';
+    o.innerHTML = 'Presión de pulso = PAS − PAD. Un valor <b>≤ 20 mmHg</b> indica choque. La PAM se calcula sola.';
     return;
   }
-  var pp = s - d;
   o.className = 'note ' + (pp <= 20 ? 'danger' : 'ok');
-  o.innerHTML = 'Presión de pulso = <b>' + pp + ' mmHg</b>. ' + (pp <= 20
+  o.innerHTML = 'Presión de pulso <b>' + pp + ' mmHg</b> · PAM <b>' + pm + ' mmHg</b>. ' + (pp <= 20
     ? '≤ 20 mmHg → criterio de <b>choque por dengue</b>. Márquelo en el listado.'
     : 'Por encima del umbral de choque (≤ 20 mmHg).');
 }
@@ -845,6 +1065,14 @@ function next(n){
     if(!(parseFloat($('f-peso').value) > 0)){ alert('Ingrese el peso del paciente: todos los cálculos de líquidos dependen de él.'); return; }
     if($('f-edad').value === ''){ alert('Ingrese la edad del paciente.'); return; }
     S.nombre = $('f-nombre').value; S.fecha = $('f-fecha').value; S.hora = $('f-hora').value;
+  }
+  if(n === 3 && !S.sinAlarma && S.alarma.length === 0){
+    alert('Indique si el paciente tiene signos de alarma.\n\nSi los buscó y no encontró ninguno, marque "Ninguno": queda constancia del negativo en la historia clínica.');
+    return;
+  }
+  if(n === 4 && !S.sinGrave && S.grave.length === 0){
+    alert('Indique si hay manifestaciones graves de dengue.\n\nSi las buscó y no encontró ninguna, marque "Ninguna": queda constancia del negativo en la historia clínica.');
+    return;
   }
   go(n+1);
 }
@@ -914,6 +1142,23 @@ function evaluar(){
     '<div class="phase-note">' + m.anti.max + ' Utilizar medios físicos hasta que descienda la fiebre.</div></div>' +
     '<div class="note danger" style="margin:10px 0 0"><b>No administrar:</b><ul class="clean" style="margin-top:6px">' +
     m.noHacer.map(function(x){ return '<li>' + x + '</li>'; }).join('') + '</ul></div></div>');
+
+  o.push('<details class="acc"><summary>Signos vitales y estado hemodinámico</summary><div class="acc-body"><table class="t">' +
+    m.vitales.map(function(f){ return '<tr><td class="k">' + f[0] + '</td><td class="v">' + f[1] + '</td></tr>'; }).join('') +
+    '</table></div></details>');
+
+  o.push('<details class="acc"><summary>Registro para historia clínica — instrumento de auditoría</summary><div class="acc-body">' +
+    '<div class="note info" style="margin:0 0 10px">Ítems 1 a 17 del <i>Instrumento de seguimiento y evaluación de casos de dengue</i>. ' +
+    'Lo que la app ya registró va marcado; lo demás queda como campo para completar en la historia clínica. Todo esto se incluye en el documento Word.</div>' +
+    m.auditoria.map(function(b){
+      return '<div style="font-size:.76rem;font-weight:800;color:var(--primary);margin:12px 0 6px;text-transform:uppercase;letter-spacing:.5px">' + b.bloque + '</div>' +
+        b.items.map(function(it){
+          return '<div style="font-size:.8rem;margin-bottom:9px;padding-left:16px;position:relative">' +
+            '<span style="position:absolute;left:0;color:' + (it.valor ? 'var(--catA)' : '#B0B0BC') + ';font-weight:800">' + (it.valor ? '✓' : '☐') + '</span>' +
+            it.item + (it.valor ? '<br><b style="color:var(--primary)">' + it.valor + '</b>' : '<br><span style="color:var(--muted)">Completar: ______________________</span>') +
+            '</div>';
+        }).join('');
+    }).join('') + '</div></details>');
 
   o.push(acc('Laboratorio', m.laboratorio, true, 'No contar con hematocrito antes de hidratar no debe retrasar la hidratación.'));
   o.push(acc('Monitoreo y seguimiento', m.monitoreo, true));
@@ -1013,7 +1258,7 @@ function wP(runs, o){
   return '<w:p>' + pPr + runs + '</w:p>';
 }
 function wBullet(t){ return wP(wR('•  ' + t, { sz:19 }), { ind:283, hang:170, after:40 }); }
-function wH1(t){ return wP(wR(t, { b:true, sz:26, color:'8E1B4B' }), { before:220, after:90 }); }
+function wH1(t){ return wP(wR(t, { b:true, sz:26, color:'1B6B5A' }), { before:220, after:90 }); }
 function wTabla(filas, anchos){
   var borde = '<w:tblBorders>' +
     ['top','left','bottom','right','insideH','insideV'].map(function(x){
@@ -1026,7 +1271,7 @@ function wTabla(filas, anchos){
     fila.forEach(function(celda, j){
       var enc = (idx === 0 && fila.encabezado !== false);
       xml += '<w:tc><w:tcPr><w:tcW w:w="' + anchos[j] + '" w:type="dxa"/>' +
-        (enc ? '<w:shd w:val="clear" w:color="auto" w:fill="F3E2E9"/>' : '') +
+        (enc ? '<w:shd w:val="clear" w:color="auto" w:fill="E4F0EC"/>' : '') +
         '<w:vAlign w:val="top"/></w:tcPr>' +
         wP(wR(celda, { sz:19, b: enc }), { after:20 }) + '</w:tc>';
     });
@@ -1037,7 +1282,7 @@ function wTabla(filas, anchos){
 
 function documentoXml(m){
   var b = [];
-  b.push(wP(wR('CeroAedes by AR', { b:true, sz:34, color:'8E1B4B' }), { after:0 }));
+  b.push(wP(wR('CeroAedes by AR', { b:true, sz:34, color:'1B6B5A' }), { after:0 }));
   b.push(wP(wR('Reporte de clasificación y manejo de dengue', { sz:22, color:'6B6B78' }), { after:40 }));
   b.push(wP(wR('Ficha SIVIGILA 210/220/580 · Algoritmo OPS/OMS — MinSalud Colombia', { sz:16, color:'8A8A97' }), { after:160 }));
 
@@ -1061,6 +1306,9 @@ function documentoXml(m){
       h.items.forEach(function(x){ b.push(wBullet(x)); });
     });
   }
+
+  b.push(wH1('Signos vitales y estado hemodinámico'));
+  b.push(wTabla([['Parámetro','Valor']].concat(m.vitales.map(function(f){ return [f[0], String(f[1])]; })), [3400, 5800]));
 
   b.push(wH1('Reposición hídrica — ' + (m.plan.via === 'oral' ? 'vía oral' : 'vía intravenosa')));
   b.push(wP(wR('Peso de cálculo: ' + m.plan.peso + ' kg. Cristaloides: Lactato de Ringer o solución salina 0,9 %.', { sz:19, i:true, color:'6B6B78' }), { after:100 }));
@@ -1104,6 +1352,20 @@ function documentoXml(m){
   m.criterios.items.forEach(function(x){ b.push(wBullet(x)); });
   b.push(wH1('Notificación y control vectorial'));
   m.notificacion.forEach(function(x){ b.push(wBullet(x)); });
+
+  b.push(wH1('Registro para historia clínica'));
+  b.push(wP(wR('Ítems 1 a 17 del Instrumento de seguimiento y evaluación de casos de dengue. Lo registrado por la aplicación aparece en negrilla; los campos con línea deben completarse en la historia clínica.',
+    { sz:18, i:true, color:'6B6B78' }), { after:120 }));
+  m.auditoria.forEach(function(bl){
+    b.push(wP(wR(bl.bloque, { b:true, sz:20, color:'1B6B5A' }), { before:140, after:60 }));
+    bl.items.forEach(function(it){
+      b.push(wP(wR((it.valor ? '☑  ' : '☐  ') + it.item, { sz:18 }), { ind:283, hang:170, after:20 }));
+      b.push(wP(it.valor
+        ? wR(it.valor, { sz:18, b:true, color:'124A3E' })
+        : wR('Completar: ______________________________________________', { sz:18, color:'8A8A97' }),
+        { ind:453, after:70 }));
+    });
+  });
 
   b.push(wP(wR('Generado con CeroAedes by AR — Andrés Rodríguez Cardona, Epidemiólogo. Herramienta de apoyo a la decisión clínica: los cálculos son orientativos y no reemplazan la valoración clínica ni la reestratificación continua del paciente. Verifique siempre los volúmenes antes de administrarlos.', { sz:16, i:true, color:'8A8A97' }), { before:240, after:0 }));
 
@@ -1177,6 +1439,10 @@ function bindInv(id, cb){
   buildList('list-manif', MANIF, 'manif');
   buildList('list-alarma', ALARMA, 'alarma', 'warn');
   buildList('list-grave', GRAVE, 'grave', 'danger');
+  renderNinguno('ninguno-alarma', 'alarma', 'Ninguno — los busqué y no hay',
+    'Marque esta casilla para dejar constancia del negativo. Si marca cualquier signo de la lista, esta opción se desactiva sola.');
+  renderNinguno('ninguno-grave', 'grave', 'Ninguna — las busqué y no hay',
+    'Deja constancia de que se descartaron las cuatro manifestaciones graves de dengue.');
   renderCondList();
   buildList('list-social', SOCIAL, 'social');
 

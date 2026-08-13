@@ -184,13 +184,107 @@ t('23:30 + 60 min = 00:30 (cruza medianoche)', ctx.addMin('23:30', 60), '00:30')
 
 console.log('\n── Laboratorio y monitoreo ────────────────────────');
 
-t('Día 2 → NS1/RT-PCR',
-  /RT-PCR o NS1/.test(ctx.laboratorio(P({ edad: '34', peso: 70, dia: '2' }))[0]), 'true');
-t('Día 6 → IgM', /IgM dengue/.test(ctx.laboratorio(P({ edad: '34', peso: 70, dia: '6' }))[0]), 'true');
+t('Día 2 → NS1 por ELISA o RT-PCR',
+  /NS1 por ELISA o RT-PCR/.test(ctx.pruebaConfirmatoria('2')), 'true');
+t('Día 5 → ventana de traslape NS1 + IgM',
+  /traslape/.test(ctx.pruebaConfirmatoria('5')), 'true');
+t('Día 6 → IgM', /IgM dengue/.test(ctx.pruebaConfirmatoria('6')), 'true');
+t('Sin día registrado → enuncia ambos cortes',
+  /≤ 5 días/.test(ctx.pruebaConfirmatoria('')), 'true');
+t('Ecografía y radiografía aparecen en todo el listado de laboratorio',
+  ctx.laboratorio(P({ edad: '34', peso: 70 })).some(x => /Ecografía abdominal y radiografía de tórax/.test(x)), 'true');
 t('B2 exige hemograma antes de hidratar',
   ctx.laboratorio(P({ edad: '34', peso: 70, alarma: ['abdominal'] })).some(x => /ANTES de hidratar/.test(x)), 'true');
 t('B2: diuresis meta 0,5 ml/kg/h en 70 kg = 35 ml/h',
   ctx.monitoreo(P({ edad: '34', peso: 70, alarma: ['abdominal'] })).some(x => x.includes('35 ml/h')), 'true');
+
+console.log('\n── Ausencia confirmada de signos ──────────────────');
+
+const sinNada = P({ edad: '34', peso: 70, sinAlarma: true, sinGrave: true });
+const repSin = ctx.construirReporte(sinNada);
+t('Confirmar "ninguno" deja constancia del negativo en signos de alarma',
+  repSin.hallazgos.some(h => h.titulo === 'Signos de alarma' && /Ninguno — buscados/.test(h.items[0])), 'true');
+t('Confirmar "ninguna" deja constancia en manifestaciones graves',
+  repSin.hallazgos.some(h => h.titulo === 'Manifestaciones graves' && /Ninguna — buscadas/.test(h.items[0])), 'true');
+t('El negativo confirmado va en verde, no en naranja',
+  repSin.hallazgos.find(h => h.titulo === 'Signos de alarma').color, '2E7D32');
+t('El texto de conducta consigna el negativo de alarma',
+  /ninguno, buscados dirigidamente y ausentes/.test(repSin.conductaTexto), 'true');
+t('El texto de conducta consigna el negativo de gravedad',
+  /ninguna, buscadas dirigidamente y ausentes/.test(repSin.conductaTexto), 'true');
+
+const sinConfirmar = ctx.construirReporte(P({ edad: '34', peso: 70 }));
+t('Sin confirmar, el reporte NO afirma que no haya signos de alarma',
+  sinConfirmar.hallazgos.some(h => h.titulo === 'Signos de alarma'), 'false');
+t('Sin confirmar, la conducta dice "no consignados"',
+  /SIGNOS DE ALARMA: no consignados/.test(sinConfirmar.conductaTexto), 'true');
+t('Confirmar ausencia no cambia la categoría de intervención',
+  ctx.clasificar(sinNada), 'A');
+
+console.log('\n── Torniquete y signos vitales ────────────────────');
+
+t('Torniquete positivo entra en las manifestaciones del reporte',
+  ctx.construirReporte(P({ edad: '34', peso: 70, torniquete: 'pos' })).hallazgos[0].items
+    .some(x => /torniquete: positiva/.test(x)), 'true');
+t('Torniquete no realizado no ensucia el reporte',
+  ctx.construirReporte(P({ edad: '34', peso: 70, torniquete: 'nr' })).hallazgos[0].items
+    .some(x => /torniquete/.test(x)), 'false');
+t('El torniquete no altera la definición de caso',
+  ctx.definicionCaso(P({ edad: '34', peso: 70, manif: ['cefalea'], torniquete: 'pos' })).cumple, 'false');
+
+t('PAM de 90/60 = 70 mmHg', ctx.pam(P({ pas: '90', pad: '60' })), 70);
+t('Presión de pulso de 95/78 = 17 mmHg', ctx.presionPulso(P({ pas: '95', pad: '78' })), 17);
+t('Presión de pulso ≤ 20 se anota como criterio de choque',
+  /criterio de choque/.test(ctx.vitalesTabla(P({ pas: '95', pad: '78' }))[2][1]), 'true');
+t('Sin tensión arterial no inventa PAM', ctx.pam(P({ pas: '', pad: '' })), null);
+t('Los parámetros no registrados se marcan como tales',
+  ctx.vitalesTabla(P({}))[3][1], 'Sin registrar');
+
+console.log('\n── Instrumento de auditoría (ítems 1–17) ──────────');
+
+const aud = ctx.auditoria(P({
+  edad: '34', peso: 70, dia: '4', temp: '38.5', fc: '110', fr: '22', sato2: '96',
+  pas: '95', pad: '78', llenado: '> 2 segundos', conciencia: 'Alerta',
+  torniquete: 'pos', alarma: ['abdominal', 'liquidos'], cond: ['dm'], social: ['solo']
+}));
+t('Tres bloques: anamnesis, examen físico y laboratorio', aud.length, 3);
+t('Bloque A cubre los ítems 1 a 7', aud[0].items.length, 7);
+t('Bloque B cubre los ítems 8 a 13', aud[1].items.length, 6);
+t('Bloque C cubre los ítems 14 a 17', aud[2].items.length, 4);
+t('Ítem 3 recoge el nexo epidemiológico',
+  /área endémica/.test(aud[0].items[2].valor), 'true');
+t('Ítem 4 recoge los antecedentes marcados',
+  /Diabetes mellitus/.test(aud[0].items[3].valor), 'true');
+t('Ítem 5 recoge el riesgo social',
+  /Vive solo/.test(aud[0].items[4].valor), 'true');
+t('Ítem 8 recoge los signos vitales capturados',
+  /FC 110 lpm/.test(aud[1].items[0].valor), 'true');
+t('Ítem 10 calcula la PAM y la presión de pulso',
+  /PAM 84 mmHg · Presión de pulso 17 mmHg/.test(aud[1].items[2].valor), 'true');
+t('Ítem 11 consigna el resultado del torniquete',
+  /torniquete: Positiva/.test(aud[1].items[3].valor), 'true');
+t('Ítem 13 recoge los hallazgos abdominales marcados',
+  /Dolor abdominal intenso y continuo/.test(aud[1].items[5].valor), 'true');
+t('Ítem 15 marca ecografía y radiografía como INDICADAS si hay acumulación de líquidos',
+  /INDICADAS/.test(aud[2].items[1].valor), 'true');
+t('Ítem 16 marca los paraclínicos como indicados en B2',
+  /INDICADOS/.test(aud[2].items[2].valor), 'true');
+t('Ítem 17 trae la prueba según el día de evolución',
+  /día 4 de evolución/.test(aud[2].items[3].valor), 'true');
+t('Ítem 9 queda como campo por completar (no lo captura la app)',
+  aud[1].items[1].valor, 'null');
+t('Ítem 12 queda como campo por completar', aud[1].items[2 + 2].valor === null, 'true');
+
+const audSin = ctx.auditoria(P({ edad: '34', peso: 70, sinAlarma: true }));
+t('Ítem 6 registra la ausencia confirmada de signos de alarma',
+  /ninguno presente/.test(audSin.items ? '' : audSin[0].items[5].valor), 'true');
+t('Ítem 15 sin fuga vascular queda como condicional',
+  /Solicitar si aparecen/.test(ctx.auditoria(P({ edad: '34', peso: 70 }))[2].items[1].valor), 'true');
+
+t('El reporte incorpora el bloque de auditoría',
+  ctx.construirReporte(P({ edad: '34', peso: 70 })).auditoria.length, 3);
+t('El reporte incorpora la tabla de signos vitales',
+  ctx.construirReporte(P({ edad: '34', peso: 70 })).vitales.length, 9);
 
 console.log('\n── Modelo del reporte (pantalla y Word) ───────────');
 

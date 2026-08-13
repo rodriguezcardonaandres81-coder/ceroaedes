@@ -20,6 +20,7 @@ fs.mkdirSync(TMP, { recursive: true });
 
   const shot = n => page.screenshot({ path: path.join(OUT, n + '.png'), fullPage: true });
   const marcar = (lista, i) => page.locator(`#list-${lista} .chk`).nth(i).click();
+  const ninguno = zona => page.locator(`#ninguno-${zona} .chk`).click();
   const avanzar = async n => page.click(`#s${n} button:has-text("Siguiente")`);
 
   async function llenarPaciente({ edad = '34', unidad = 'a', peso = '70', dia = '4', hora = '08:00', nombre = '' } = {}) {
@@ -59,9 +60,18 @@ fs.mkdirSync(TMP, { recursive: true });
   if (nGrave !== 4) throw new Error('Se esperaban 4 criterios de gravedad, hay ' + nGrave);
   await page.fill('#f-pas', '95');
   await page.fill('#f-pad', '78');
-  if (!/17 mmHg/.test(await page.locator('#pp-out').innerText())) throw new Error('Presión de pulso mal calculada');
+  await page.fill('#f-fc', '110');
+  await page.fill('#f-fr', '22');
+  await page.fill('#f-temp', '38.5');
+  await page.fill('#f-sato2', '96');
+  await page.selectOption('#f-llenado', '> 2 segundos');
+  await page.selectOption('#f-conciencia', 'Alerta');
+  const pptxt = await page.locator('#pp-out').innerText();
+  if (!/17 mmHg/.test(pptxt)) throw new Error('Presión de pulso mal calculada');
+  if (!/PAM 84 mmHg/.test(pptxt)) throw new Error('PAM mal calculada: ' + pptxt);
   if (!(await page.locator('#pp-out.danger').count())) throw new Error('PP ≤20 no marcó alerta');
   await shot('04-grave');
+  await ninguno('grave');
   await avanzar(4);
   await shot('05-condiciones');
 
@@ -107,6 +117,7 @@ fs.mkdirSync(TMP, { recursive: true });
   await avanzar(2);
   await marcar('alarma', 1);                        // vómito persistente
   await avanzar(3);
+  await ninguno('grave');
   await avanzar(4);
   await page.click('button:has-text("Clasificar")');
   await page.waitForSelector('#s6.active');
@@ -124,7 +135,9 @@ fs.mkdirSync(TMP, { recursive: true });
   await page.locator('#f-endemica').click();
   await page.locator('#f-fiebre').click();
   await marcar('manif', 1); await marcar('manif', 3);
-  await avanzar(2); await avanzar(3); await avanzar(4);
+  await avanzar(2);
+  await ninguno('alarma'); await avanzar(3);
+  await ninguno('grave'); await avanzar(4);
   await page.click('button:has-text("Clasificar")');
   await page.waitForSelector('#s6.active');
   const out3 = await page.locator('#out').innerText();
@@ -142,7 +155,8 @@ fs.mkdirSync(TMP, { recursive: true });
   await page.locator('#f-endemica').click();
   await page.locator('#f-fiebre').click();
   await marcar('manif', 0); await marcar('manif', 4);
-  await avanzar(2); await avanzar(3);
+  await avanzar(2);
+  await ninguno('alarma'); await avanzar(3);
   await marcar('grave', 2);                          // shock por dengue
   await avanzar(4);
   await page.click('button:has-text("Clasificar")');
@@ -170,6 +184,66 @@ fs.mkdirSync(TMP, { recursive: true });
   if (await page.locator('#peso-ideal-box').isHidden()) throw new Error('No ofreció el ajuste por peso ideal');
   if ((await page.locator('#pi-val').innerText()) !== '70.5') throw new Error('Peso ideal incorrecto');
   console.log('  OK   │ Caso 5: exige peso y ofrece peso ideal en obesidad (70.5 kg)');
+
+  // ---- Caso 7: bloquea el avance sin confirmar ausencia de signos ----
+  await llenarPaciente({ peso: '70' });
+  await avanzar(1);
+  await page.locator('#f-endemica').click();
+  await page.locator('#f-fiebre').click();
+  await marcar('manif', 0); await marcar('manif', 1);
+  await avanzar(2);
+  dialogos.length = 0;
+  await avanzar(3);
+  await page.waitForTimeout(200);
+  if (!dialogos.some(d => /signos de alarma/i.test(d))) throw new Error('No exigió confirmar los signos de alarma');
+  if (!(await page.locator('#s3.active').count())) throw new Error('Avanzó sin confirmar signos de alarma');
+
+  await ninguno('alarma');
+  await avanzar(3);
+  if (!(await page.locator('#s4.active').count())) throw new Error('No avanzó tras marcar "Ninguno"');
+  dialogos.length = 0;
+  await avanzar(4);
+  await page.waitForTimeout(200);
+  if (!dialogos.some(d => /manifestaciones graves/i.test(d))) throw new Error('No exigió confirmar las manifestaciones graves');
+  console.log('  OK   │ Caso 7: no deja avanzar sin confirmar ausencia de signos de alarma ni de gravedad');
+
+  // "Ninguno" y marcar un signo son excluyentes
+  await page.click('#s4 button:has-text("Atrás")');
+  await page.waitForSelector('#s3.active');
+  await marcar('alarma', 0);
+  const nBox = page.locator('#ninguno-alarma .chk input');
+  if (await nBox.isChecked()) throw new Error('Marcar un signo debería desactivar "Ninguno"');
+  await ninguno('alarma');
+  if (await page.locator('#list-alarma .chk.on').count()) throw new Error('Marcar "Ninguno" debería limpiar la lista');
+  console.log('  OK   │ "Ninguno" y los signos marcados son mutuamente excluyentes');
+
+  // ---- Caso 8: torniquete y sección de auditoría en el resultado ----
+  await llenarPaciente({ peso: '70', dia: '4', nombre: 'Auditoria' });
+  await avanzar(1);
+  await page.locator('#f-endemica').click();
+  await page.locator('#f-fiebre').click();
+  await marcar('manif', 0); await marcar('manif', 2);
+  await page.selectOption('#f-torniquete', 'pos');
+  await avanzar(2);
+  await marcar('alarma', 10);                         // acumulación de líquidos
+  await avanzar(3);
+  await page.fill('#f-pas', '100'); await page.fill('#f-pad', '70');
+  await page.fill('#f-fc', '105');
+  await ninguno('grave'); await avanzar(4);
+  await page.click('button:has-text("Clasificar")');
+  await page.waitForSelector('#s6.active');
+  const out8 = await page.locator('#out').textContent();   // incluye los acordeones cerrados
+  for (const e of ['torniquete: positiva', 'Registro para historia clínica',
+                   'Ninguna — buscadas dirigidamente y ausentes', 'PAM', 'Ecografía abdominal y radiografía de tórax']) {
+    if (!out8.includes(e)) throw new Error('Falta en el resultado: ' + e);
+  }
+  await shot('11-auditoria');
+  const [dl2] = await Promise.all([
+    page.waitForEvent('download'),
+    page.click('button:has-text("Exportar a Word")')
+  ]);
+  await dl2.saveAs(path.join(TMP, 'auditoria.docx'));
+  console.log('  OK   │ Caso 8: torniquete, signos vitales y bloque de auditoría en pantalla y en Word');
 
   // ---- Marca: no debe quedar rastro del nombre anterior ----
   const htmlCrudo = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');

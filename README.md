@@ -43,10 +43,22 @@ Las etiquetas `ficha §6` y `protocolo` sobre cada casilla indican de dónde sal
 
 Cada fase muestra **ml/h, volumen total, hora proyectada y goteo sin bomba** (macrogotero de 20 gotas/ml y microgotero de 60 µgotas/ml).
 
-### 4. Salida en Word y copiado de conducta
+### 4. Ausencia confirmada, no asumida
+
+En signos de alarma y en manifestaciones graves hay una casilla **"Ninguno — los busqué y no hay"**. La app no deja avanzar sin que se elija una de las dos cosas: o se marca al menos un signo, o se confirma explícitamente que se buscaron y no hay. No marcar nada ya no equivale a decir que no hay: el negativo queda registrado como tal en el reporte, en la conducta copiada y en el Word, que es lo que exige una historia clínica auditable.
+
+### 5. Torniquete, signos vitales e imágenes
+
+- **Prueba del torniquete** con la técnica completa en la pantalla de definición de caso. Es apoyo diagnóstico y parte de la búsqueda activa de manifestaciones hemorrágicas que exige el instrumento de auditoría (ítem 11); no suma para la definición de caso porque no es casilla de la sección 6.
+- **Signos vitales**: TA, FC, FR, temperatura, SatO₂, llenado capilar y estado de conciencia, con **PAM y presión de pulso calculadas**.
+- **Ecografía abdominal y radiografía de tórax** sugeridas ante hallazgos de fuga vascular, que son las que documentan ascitis y derrame pleural.
+
+### 6. Salida en Word y copiado de conducta
 
 - **Exportar a Word** genera un `.docx` real con tablas: clasificación, ficha del paciente, hallazgos, plan de líquidos fase por fase, manejo sintomático, laboratorio, monitoreo y criterios de alta o de referencia. El médico lo abre, copia y pega en la historia clínica.
 - **Copiar conducta** deja en el portapapeles la misma información como texto plano, para pegar directamente sin abrir Word.
+
+El documento Word cierra con una sección **«Registro para historia clínica»** que reproduce los ítems 1 a 17 del *Instrumento de seguimiento y evaluación de casos de dengue*: anamnesis, examen físico, laboratorio e imágenes diagnósticas. Lo que la app ya capturó aparece marcado y en negrilla; lo demás queda como campo con línea para completar. El objetivo es que la historia clínica quede lista para la auditoría.
 
 El escritor de `.docx` está implementado en JavaScript puro dentro del mismo archivo — sin librerías, sin servidor y funcionando sin conexión.
 
@@ -87,7 +99,7 @@ ceroaedes/
 ├── sw.js                   # Service worker (uso sin conexión)
 ├── assets/                 # Iconos
 ├── tests/
-│   ├── engine.test.js      # 88 pruebas del motor clínico
+│   ├── engine.test.js      # 127 pruebas del motor clínico
 │   └── ui.test.js          # Recorridos en navegador real + validación del .docx
 ├── LICENSE
 └── README.md
@@ -111,7 +123,7 @@ El motor verifica la definición operativa de caso, la clasificación en los cua
 Después de editar `index.html`, suba el número de versión en `sw.js`:
 
 ```js
-const VERSION = 'ceroaedes-v2.0.1';
+const VERSION = 'ceroaedes-v2.1.0';
 ```
 
 Sin ese cambio, los celulares que ya la tengan instalada seguirán mostrando la versión cacheada.
@@ -125,6 +137,7 @@ Sin ese cambio, los celulares que ya la tengan instalada seguirán mostrando la 
 - Ministerio de Salud y Protección Social de Colombia. *Algoritmo de diagnóstico y tratamiento de dengue*; 2019.
 - Organización Panamericana de la Salud. *Dengue: guías para la atención de enfermos en la Región de las Américas*. 2.ª edición. Washington, D.C.: OPS; 2016.
 - Ministerio de Salud y Protección Social — Federación Médica Colombiana. *Dengue: memorias*. Bogotá; 2012–2013.
+- *Instrumento de seguimiento y evaluación de casos de dengue*, versión 15/06/23.
 
 ## Autor
 
