@@ -92,6 +92,7 @@ fs.mkdirSync(TMP, { recursive: true });
   const pptxt = await page.locator('#pp-out').innerText();
   if (!/17 mmHg/.test(pptxt)) throw new Error('Presión de pulso mal calculada');
   if (!/PAM 84 mmHg/.test(pptxt)) throw new Error('PAM mal calculada: ' + pptxt);
+  if (!/choque compensado/i.test(pptxt)) throw new Error('No reconoció el choque compensado: ' + pptxt);
   if (!(await page.locator('#pp-out.danger').count())) throw new Error('PP ≤20 no marcó alerta');
   await shot('02-paciente-vitales');
   await avanzar(2);
@@ -117,7 +118,7 @@ fs.mkdirSync(TMP, { recursive: true });
   const nGrave = await page.locator('#list-grave .chk').count();
   if (nGrave !== 4) throw new Error('Se esperaban 4 criterios de gravedad, hay ' + nGrave);
   const hemo = await page.locator('#resumen-hemo').innerText();
-  for (const e of ['TA 95/78', 'PAM 84', 'presión de pulso 17', 'criterios compatibles con choque'])
+  for (const e of ['TA 95/78', 'PAM 84', 'presión de pulso 17', 'choque compensado'])
     if (!hemo.includes(e)) throw new Error('El resumen hemodinámico no trae: ' + e);
   if (!(await page.locator('#resumen-hemo .note.danger').count()))
     throw new Error('El resumen hemodinámico no marcó la alerta de choque');
@@ -317,6 +318,38 @@ fs.mkdirSync(TMP, { recursive: true });
   await dl2.saveAs(path.join(TMP, 'auditoria.docx'));
   await shot('12-auditoria');
   console.log('  OK   │ Caso 7: auditoría, NS1 negativo, dipirona en dosis única y versión única');
+
+  // ================= Caso 8: hipotensión con presión de pulso amplia =================
+  /* El caso que reportó el usuario: TA 80/40. La app decía "por encima del umbral
+     de choque" — falsa tranquilidad. Ahora debe reconocer choque hipotenso. */
+  await definicionCaso();
+  await llenarPaciente({
+    peso: '70',
+    vitales: { pas: '80', pad: '40', fc: '100', fr: '25', temp: '38', sato2: '89',
+               llenado: '> 2 segundos', conciencia: 'Somnoliento o irritable' }
+  });
+  const alerta = await page.locator('#pp-out').innerText();
+  if (/[Pp]or encima del umbral de choque/.test(alerta))
+    throw new Error('Sigue tranquilizando pese a la hipotensión: ' + alerta);
+  for (const e of ['Choque hipotenso', 'Hipotensión: PAS 80', 'signo TARDÍO',
+                   'NO descarta el choque', 'Llenado capilar > 2 segundos', 'PAM 53'])
+    if (!alerta.includes(e)) throw new Error('Falta en la evaluación hemodinámica: ' + e);
+  if (!(await page.locator('#pp-out.danger').count())) throw new Error('La hipotensión no quedó marcada en rojo');
+  await shot('13-choque-hipotenso');
+
+  await avanzar(2); await avanzar(3);
+  await ninguno('alarma'); await avanzar(4);
+  const hemo8 = await page.locator('#resumen-hemo').innerText();
+  if (!/Choque hipotenso/.test(hemo8)) throw new Error('La pantalla de graves no advierte el choque hipotenso');
+  if (!(await page.locator('#resumen-hemo .note.danger').count())) throw new Error('El resumen no quedó en rojo');
+  await marcar('grave', 2);                          // shock por dengue
+  await avanzar(5);
+  await page.click('button:has-text("Clasificar")');
+  await page.waitForSelector('#s7.active');
+  const out8 = await page.locator('#out').textContent();
+  for (const e of ['Choque hipotenso', 'signo TARDÍO', 'categoría de intervención C'.toLowerCase()])
+    if (!out8.toLowerCase().includes(e.toLowerCase())) throw new Error('Falta en el resultado: ' + e);
+  console.log('  OK   │ Caso 8: TA 80/40 con presión de pulso amplia → choque hipotenso, ya no tranquiliza');
 
   // ================= Comprobaciones de marca y consola =================
   const htmlCrudo = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');

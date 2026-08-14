@@ -516,7 +516,7 @@ footer b{color:var(--text)}
 
 /* === ENGINE START === */
 
-var APP_VERSION = '2.4.0';   /* fuente única: pie de página, Word y service worker */
+var APP_VERSION = '2.5.0';   /* fuente única: pie de página, Word y service worker */
 
 /* Origen de cada criterio: 'ficha' = casilla de la sección 6 de la ficha;
    'prot' = está en la definición del protocolo pero no como casilla. */
@@ -826,11 +826,82 @@ function pam(S){
   if(isNaN(s) || isNaN(d)) return null;
   return Math.round((s + 2*d)/3);
 }
+/* Umbral de hipotensión por edad — tabla del CDC (equivale a 70 + 2 x edad
+   entre 1 y 9 años, y a 90 mmHg desde los 10). */
+function umbralHipotension(S){
+  var m = edadMeses(S.edad, S.edadU);
+  if(S.edad === '') return 90;
+  if(m < 12) return 70;
+  if(m < 120) return 70 + 2*Math.floor(m/12);
+  return 90;
+}
+
+/* Umbral de taquicardia por edad */
+function umbralTaquicardia(S){
+  var m = edadMeses(S.edad, S.edadU);
+  if(S.edad === '') return 100;
+  if(m < 12) return 160;
+  if(m < 36) return 150;
+  if(m < 72) return 140;
+  if(m < 144) return 120;
+  return 100;
+}
+
+/* Evaluación hemodinámica compuesta.
+   La presión de pulso estrecha es el signo PRECOZ (choque compensado); la
+   hipotensión es el signo TARDÍO. Una presión de pulso amplia nunca descarta
+   el choque si ya hay hipotensión. */
+function evaluacionHemodinamica(S){
+  var pp = presionPulso(S), pm = pam(S);
+  var pas = parseFloat(S.pas), fc = parseFloat(S.fc), sat = parseFloat(S.sato2);
+  var uh = umbralHipotension(S), ut = umbralTaquicardia(S);
+  var H = [], hipotenso = false, compensado = false;
+
+  if(!isNaN(pas) && pas < uh){
+    hipotenso = true;
+    H.push('Hipotensión: PAS ' + pas + ' mmHg, por debajo de ' + uh + ' mmHg para la edad');
+  }
+  if(pp !== null && pp <= 20){
+    compensado = true;
+    H.push('Presión de pulso ' + pp + ' mmHg (≤ 20): choque compensado');
+  }
+  if(S.llenado === '> 2 segundos'){ compensado = true; H.push('Llenado capilar > 2 segundos'); }
+  if(!isNaN(fc) && fc > ut){ compensado = true; H.push('Taquicardia: FC ' + fc + ' lpm, por encima de ' + ut + ' para la edad'); }
+  if(pm !== null && !esPediatrico(S) && pm < 65) H.push('PAM ' + pm + ' mmHg, por debajo de 65 mmHg');
+  if(['Somnoliento o irritable','Estuporoso','Inconsciente'].indexOf(S.conciencia) >= 0)
+    H.push('Alteración del estado de conciencia: ' + S.conciencia.toLowerCase());
+  if(!isNaN(sat) && sat < 92) H.push('Saturación de oxígeno ' + sat + ' %: evalúe dificultad respiratoria');
+
+  var r = { hallazgos: H, hipotenso: hipotenso, nivel: 'estable', titulo: '', mensaje: '' };
+
+  if(hipotenso){
+    r.nivel = 'hipotenso';
+    r.titulo = 'Choque hipotenso (descompensado)';
+    r.mensaje = 'La hipotensión es un signo TARDÍO: la OMS la describe como colapso cardiorrespiratorio inminente. ' +
+      'Una presión de pulso amplia NO descarta el choque cuando ya hay hipotensión — al contrario, indica que el paciente ' +
+      'dejó de compensar. Marque "Shock por dengue" y trate como categoría C.';
+  } else if(compensado){
+    r.nivel = 'compensado';
+    r.titulo = 'Hallazgos compatibles con choque compensado';
+    r.mensaje = 'La presión arterial sistólica todavía se sostiene, pero hay signos de mala perfusión. ' +
+      'Es la fase en que la reanimación cambia el pronóstico. Revise el criterio "Shock por dengue".';
+  } else if(H.length){
+    r.nivel = 'alerta';
+    r.titulo = 'Hallazgos que exigen vigilancia estrecha';
+    r.mensaje = 'No se cumplen los criterios plenos de choque con lo registrado, pero hay parámetros alterados. Reevalúe en poco tiempo.';
+  } else {
+    r.nivel = 'estable';
+    r.titulo = 'Sin hallazgos de choque en los parámetros registrados';
+    r.mensaje = 'Esto no descarta un deterioro posterior: en dengue el choque se instala en horas. Repita la evaluación hemodinámica según la categoría.';
+  }
+  return r;
+}
+
 function vitalesTabla(S){
   var pp = presionPulso(S), pm = pam(S), F = [];
   F.push(['Tensión arterial', (S.pas && S.pad) ? (S.pas + '/' + S.pad + ' mmHg') : 'Sin registrar']);
   F.push(['Presión arterial media (PAM)', pm !== null ? pm + ' mmHg' : 'Sin registrar']);
-  F.push(['Presión de pulso', pp !== null ? (pp + ' mmHg' + (pp <= 20 ? ' — ≤ 20 mmHg: criterio de choque' : '')) : 'Sin registrar']);
+  F.push(['Presión de pulso', pp !== null ? (pp + ' mmHg' + (pp <= 20 ? ' — ≤ 20 mmHg: choque compensado' : '')) : 'Sin registrar']);
   F.push(['Frecuencia cardiaca', S.fc ? S.fc + ' lpm' : 'Sin registrar']);
   F.push(['Frecuencia respiratoria', S.fr ? S.fr + ' rpm' : 'Sin registrar']);
   F.push(['Temperatura', S.temp ? S.temp + ' °C' : 'Sin registrar']);
@@ -1004,6 +1075,7 @@ function construirReporte(S){
   if(cat === 'C') m.avisos.push({ tono:'danger', texto:'Si sigue inestable y el hematocrito cae bruscamente, sospeche sangrado: tome prueba cruzada y transfunda — ' + plan.hemorragia.gr + '; ' + plan.hemorragia.sangre + '. Si no mejora, reevalúe la hemodinamia, valore función de bomba (miocarditis o miocardiopatía) y defina uso de aminas. Corrija la acidosis persistente y estabilice las comorbilidades.' });
 
   m.vitales = vitalesTabla(S);
+  m.hemo = evaluacionHemodinamica(S);
   m.auditoria = auditoria(S);
   m.laboratorio = laboratorio(S);
   m.monitoreo = monitoreo(S);
@@ -1030,6 +1102,8 @@ function construirReporte(S){
   var _pp = presionPulso(S), _pm = pam(S);
   L.push('Signos vitales: ' + m.vitales.filter(function(f){ return f[1] !== 'Sin registrar'; })
     .map(function(f){ return f[0] + ' ' + f[1]; }).join('; ') + '.');
+  L.push('Evaluación hemodinámica: ' + m.hemo.titulo +
+    (m.hemo.hallazgos.length ? ' — ' + m.hemo.hallazgos.join('; ') : '') + '.');
   L.push('');
   L.push('REPOSICIÓN HÍDRICA (peso de cálculo ' + plan.peso + ' kg) — ' + (plan.via === 'oral' ? 'vía oral' : 'vía intravenosa'));
   if(plan.oral) L.push('· ' + plan.oral.titulo + ': ' + plan.oral.principal + ' (' + plan.oral.horaria + '; ' + plan.oral.vasos + '). ' + plan.oral.que);
@@ -1239,18 +1313,26 @@ function renderAutoCond(){
       '</div><div style="margin-top:8px">Con cualquiera de estas, el paciente sin signos de alarma es como mínimo <b>categoría B1</b>.</div></div>' : '';
 }
 
+var TONO_HEMO = { hipotenso:'danger', compensado:'danger', alerta:'warn', estable:'ok' };
+
 function calcPP(){
-  var pp = presionPulso(S), pm = pam(S), o = $('pp-out');
+  var pp = presionPulso(S), pm = pam(S), o = $('pp-out'), h = evaluacionHemodinamica(S);
   o.style.marginBottom = '0';
-  if(pp === null){
+  var cifras = [];
+  if(pp !== null) cifras.push('Presión de pulso <b>' + pp + ' mmHg</b>');
+  if(pm !== null) cifras.push('PAM <b>' + pm + ' mmHg</b>');
+
+  if(!cifras.length && !h.hallazgos.length){
     o.className = 'note info';
-    o.innerHTML = 'Presión de pulso = PAS − PAD. Un valor <b>≤ 20 mmHg</b> indica choque. La PAM se calcula sola.';
+    o.innerHTML = 'Presión de pulso = PAS − PAD; la PAM se calcula sola. Al registrar los signos vitales, la app evalúa los criterios de choque en conjunto.';
     return;
   }
-  o.className = 'note ' + (pp <= 20 ? 'danger' : 'ok');
-  o.innerHTML = 'Presión de pulso <b>' + pp + ' mmHg</b> · PAM <b>' + pm + ' mmHg</b>. ' + (pp <= 20
-    ? '≤ 20 mmHg → criterio de <b>choque por dengue</b>. Márquelo en el listado.'
-    : 'Por encima del umbral de choque (≤ 20 mmHg).');
+  o.className = 'note ' + TONO_HEMO[h.nivel];
+  o.innerHTML = (cifras.length ? cifras.join(' · ') + '.<br>' : '') +
+    '<b>' + h.titulo + '.</b>' +
+    (h.hallazgos.length ? '<ul class="clean" style="margin:6px 0 0">' +
+      h.hallazgos.map(function(x){ return '<li>' + x + '</li>'; }).join('') + '</ul>' : '') +
+    '<div style="margin-top:6px">' + h.mensaje + '</div>';
 }
 
 function go(n){
@@ -1282,21 +1364,25 @@ function next(n){
 
 /* Recuerda en la pantalla de gravedad lo que se midió en el primer contacto */
 function renderResumenHemo(){
-  var pp = presionPulso(S), pm = pam(S), partes = [];
+  var pp = presionPulso(S), pm = pam(S), partes = [], box = $('resumen-hemo');
   if(S.pas && S.pad) partes.push('TA ' + S.pas + '/' + S.pad + ' mmHg');
   if(pm !== null) partes.push('PAM ' + pm + ' mmHg');
   if(pp !== null) partes.push('presión de pulso ' + pp + ' mmHg');
   if(S.fc) partes.push('FC ' + S.fc + ' lpm');
+  if(S.sato2) partes.push('SatO₂ ' + S.sato2 + ' %');
   if(S.llenado) partes.push('llenado capilar ' + S.llenado);
   if(S.conciencia) partes.push(S.conciencia.toLowerCase());
-  var box = $('resumen-hemo');
+
   if(!partes.length){
-    box.innerHTML = '<div class="note info">No registró signos vitales en el primer contacto. Puede volver atrás y completarlos: la presión de pulso y el llenado capilar son parte del criterio de choque.</div>';
+    box.innerHTML = '<div class="note info">No registró signos vitales en el primer contacto. Puede volver atrás y completarlos: la tensión arterial, la presión de pulso y el llenado capilar son parte del criterio de choque.</div>';
     return;
   }
-  var choque = (pp !== null && pp <= 20) || S.llenado === '> 2 segundos';
-  box.innerHTML = '<div class="note ' + (choque ? 'danger' : 'info') + '"><b>Del primer contacto:</b> ' + partes.join(' · ') + '.' +
-    (choque ? '<br><b>Hay criterios compatibles con choque</b> (presión de pulso ≤ 20 mmHg o llenado capilar > 2 s). Revise el primer y el tercer criterio del listado.' : '') + '</div>';
+  var h = evaluacionHemodinamica(S);
+  box.innerHTML = '<div class="note ' + TONO_HEMO[h.nivel] + '"><b>Del primer contacto:</b> ' + partes.join(' · ') + '.' +
+    '<div style="margin-top:7px"><b>' + h.titulo + '.</b></div>' +
+    (h.hallazgos.length ? '<ul class="clean" style="margin:5px 0 0">' +
+      h.hallazgos.map(function(x){ return '<li>' + x + '</li>'; }).join('') + '</ul>' : '') +
+    '<div style="margin-top:6px">' + h.mensaje + '</div></div>';
 }
 function reiniciar(){ location.reload(); }
 
@@ -1365,9 +1451,13 @@ function evaluar(){
     '<div class="note danger" style="margin:10px 0 0"><b>Restricciones y contraindicaciones:</b><ul class="clean" style="margin-top:6px">' +
     m.noHacer.map(function(x){ return '<li>' + x + '</li>'; }).join('') + '</ul></div></div>');
 
-  o.push('<details class="acc"><summary>Signos vitales y estado hemodinámico</summary><div class="acc-body"><table class="t">' +
+  o.push('<details class="acc"' + (m.hemo.nivel === 'hipotenso' || m.hemo.nivel === 'compensado' ? ' open' : '') +
+    '><summary>Signos vitales y estado hemodinámico</summary><div class="acc-body"><table class="t">' +
     m.vitales.map(function(f){ return '<tr><td class="k">' + f[0] + '</td><td class="v">' + f[1] + '</td></tr>'; }).join('') +
-    '</table></div></details>');
+    '</table><div class="note ' + TONO_HEMO[m.hemo.nivel] + '" style="margin:12px 0 0"><b>' + m.hemo.titulo + '.</b>' +
+    (m.hemo.hallazgos.length ? '<ul class="clean" style="margin:6px 0 0">' +
+      m.hemo.hallazgos.map(function(x){ return '<li>' + x + '</li>'; }).join('') + '</ul>' : '') +
+    '<div style="margin-top:6px">' + m.hemo.mensaje + '</div></div></div></details>');
 
   o.push('<details class="acc"><summary>Registro para historia clínica — instrumento de auditoría</summary><div class="acc-body">' +
     '<div class="note info" style="margin:0 0 10px">Ítems 1 a 17 del <i>Instrumento de seguimiento y evaluación de casos de dengue</i>. ' +
@@ -1531,6 +1621,10 @@ function documentoXml(m){
 
   b.push(wH1('Signos vitales y estado hemodinámico'));
   b.push(wTabla([['Parámetro','Valor']].concat(m.vitales.map(function(f){ return [f[0], String(f[1])]; })), [3400, 5800]));
+  var alarmante = (m.hemo.nivel === 'hipotenso' || m.hemo.nivel === 'compensado');
+  b.push(wP(wR(m.hemo.titulo, { b:true, sz:20, color: alarmante ? 'B71C1C' : '1B6B5A' }), { before:120, after:40 }));
+  m.hemo.hallazgos.forEach(function(x){ b.push(wBullet(x)); });
+  b.push(wP(wR(m.hemo.mensaje, { sz:18, color:'4A4A55' }), { after:60 }));
 
   b.push(wH1('Reposición hídrica — ' + (m.plan.via === 'oral' ? 'vía oral' : 'vía intravenosa')));
   b.push(wP(wR('Peso de cálculo: ' + m.plan.peso + ' kg. Cristaloides: Lactato de Ringer o solución salina 0,9 %.', { sz:19, i:true, color:'6B6B78' }), { after:100 }));

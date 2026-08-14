@@ -280,11 +280,76 @@ t('El torniquete no altera la definición de caso',
 
 t('PAM de 90/60 = 70 mmHg', ctx.pam(P({ pas: '90', pad: '60' })), 70);
 t('Presión de pulso de 95/78 = 17 mmHg', ctx.presionPulso(P({ pas: '95', pad: '78' })), 17);
-t('Presión de pulso ≤ 20 se anota como criterio de choque',
-  /criterio de choque/.test(ctx.vitalesTabla(P({ pas: '95', pad: '78' }))[2][1]), 'true');
+t('Presión de pulso ≤ 20 se anota como choque compensado',
+  /choque compensado/.test(ctx.vitalesTabla(P({ pas: '95', pad: '78' }))[2][1]), 'true');
 t('Sin tensión arterial no inventa PAM', ctx.pam(P({ pas: '', pad: '' })), null);
 t('Los parámetros no registrados se marcan como tales',
   ctx.vitalesTabla(P({}))[3][1], 'Sin registrar');
+
+console.log('\n── Umbral de choque (evaluación compuesta) ────────');
+
+/* El caso que reportó el usuario: TA 80/40 con presión de pulso amplia.
+   La app antes decía "por encima del umbral de choque" — falsa tranquilidad. */
+const choqueReal = P({ edad: '34', peso: 70, pas: '80', pad: '40', fc: '100', fr: '25',
+                       temp: '38', sato2: '89', llenado: '> 2 segundos', conciencia: 'Somnoliento o irritable' });
+const hReal = ctx.evaluacionHemodinamica(choqueReal);
+t('TA 80/40 en adulto se reconoce como choque hipotenso', hReal.nivel, 'hipotenso');
+t('Detecta la hipotensión pese a que la presión de pulso es de 40 mmHg',
+  hReal.hallazgos.some(x => /Hipotensión: PAS 80/.test(x)), 'true');
+t('Advierte que la hipotensión es signo TARDÍO', /signo TARDÍO/.test(hReal.mensaje), 'true');
+t('Dice explícitamente que una presión de pulso amplia no descarta el choque',
+  /NO descarta el choque/.test(hReal.mensaje), 'true');
+t('Recoge el llenado capilar prolongado',
+  hReal.hallazgos.some(x => /Llenado capilar > 2 segundos/.test(x)), 'true');
+t('Recoge la PAM baja', hReal.hallazgos.some(x => /PAM 53 mmHg/.test(x)), 'true');
+t('Recoge la alteración de conciencia',
+  hReal.hallazgos.some(x => /somnoliento o irritable/.test(x)), 'true');
+t('Recoge la desaturación', hReal.hallazgos.some(x => /Saturación de oxígeno 89/.test(x)), 'true');
+t('Nunca dice "por encima del umbral de choque"',
+  /por encima del umbral de choque/i.test(hReal.mensaje + hReal.titulo), 'false');
+
+t('Presión de pulso ≤ 20 con PAS conservada = choque compensado',
+  ctx.evaluacionHemodinamica(P({ edad: '34', pas: '110', pad: '95' })).nivel, 'compensado');
+t('Llenado capilar > 2 s por sí solo levanta la bandera de choque compensado',
+  ctx.evaluacionHemodinamica(P({ edad: '34', llenado: '> 2 segundos' })).nivel, 'compensado');
+t('Signos vitales normales no generan alarma',
+  ctx.evaluacionHemodinamica(P({ edad: '34', pas: '120', pad: '80', fc: '88',
+    sato2: '98', llenado: '< 2 segundos', conciencia: 'Alerta' })).nivel, 'estable');
+t('Aun estable, recuerda que el choque se instala en horas',
+  /se instala en horas/.test(ctx.evaluacionHemodinamica(P({ edad: '34', pas: '120', pad: '80' })).mensaje), 'true');
+t('Sin datos registrados no afirma que el paciente esté bien',
+  ctx.evaluacionHemodinamica(P({ edad: '34' })).hallazgos.length, 0);
+
+console.log('\n── Umbrales por edad (tabla del CDC) ──────────────');
+
+t('Lactante de 6 meses: hipotensión con PAS < 70',
+  ctx.umbralHipotension(P({ edad: '6', edadU: 'm' })), 70);
+t('12 meses: PAS < 72', ctx.umbralHipotension(P({ edad: '12', edadU: 'm' })), 72);
+t('2 años: PAS < 74', ctx.umbralHipotension(P({ edad: '2' })), 74);
+t('5 años: PAS < 80', ctx.umbralHipotension(P({ edad: '5' })), 80);
+t('8 años: PAS < 86', ctx.umbralHipotension(P({ edad: '8' })), 86);
+t('10 años: PAS < 90', ctx.umbralHipotension(P({ edad: '10' })), 90);
+t('Adulto: PAS < 90', ctx.umbralHipotension(P({ edad: '34' })), 90);
+
+t('Niño de 6 meses con PAS 68 es hipotenso',
+  ctx.evaluacionHemodinamica(P({ edad: '6', edadU: 'm', pas: '68', pad: '40' })).nivel, 'hipotenso');
+t('Niño de 6 meses con PAS 80 no es hipotenso por ese criterio',
+  ctx.evaluacionHemodinamica(P({ edad: '6', edadU: 'm', pas: '80', pad: '55' })).hipotenso, 'false');
+t('Adulto con PAS 85 sí es hipotenso',
+  ctx.evaluacionHemodinamica(P({ edad: '34', pas: '85', pad: '45' })).hipotenso, 'true');
+
+t('Taquicardia del lactante: umbral 160', ctx.umbralTaquicardia(P({ edad: '6', edadU: 'm' })), 160);
+t('Taquicardia del preescolar de 4 años: umbral 140', ctx.umbralTaquicardia(P({ edad: '4' })), 140);
+t('Taquicardia del adulto: umbral 100', ctx.umbralTaquicardia(P({ edad: '34' })), 100);
+t('FC 130 en adulto se marca como taquicardia',
+  ctx.evaluacionHemodinamica(P({ edad: '34', fc: '130' })).hallazgos.some(x => /Taquicardia/.test(x)), 'true');
+t('FC 130 en lactante NO se marca como taquicardia',
+  ctx.evaluacionHemodinamica(P({ edad: '6', edadU: 'm', fc: '130' })).hallazgos.some(x => /Taquicardia/.test(x)), 'false');
+
+t('El reporte incorpora la evaluación hemodinámica',
+  ctx.construirReporte(choqueReal).hemo.nivel, 'hipotenso');
+t('La conducta copiada consigna el choque hipotenso',
+  /Choque hipotenso/.test(ctx.construirReporte(choqueReal).conductaTexto), 'true');
 
 console.log('\n── Instrumento de auditoría (ítems 1–17) ──────────');
 

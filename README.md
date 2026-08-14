@@ -86,7 +86,7 @@ El escritor de `.docx` está implementado en JavaScript puro dentro del mismo ar
 - **Adultos y pediátricos** en el mismo flujo: el umbral de 18 años cambia la dosis de acetaminofén (500 mg c/6 h frente a 10–15 mg/kg/dosis, con equivalencia en jarabe de 150 mg/5 ml) y el inicio de la fase crítica (día 4–6 en adultos, día 3–6 en niños).
 - **Condiciones asociadas automáticas** por edad y gestación: menor de 1 año, ≥ 65 años y embarazo elevan el caso a B1 sin que haya que marcarlas. El *menor de 5 años* se ofrece marcado y es desmarcable, porque la guía nacional lo incluye en el grupo B y el algoritmo OPS 2019 no.
 - **Peso ideal en obesidad**: si la talla está registrada y el peso supera en más del 20 % el peso ideal, la app ofrece calcular los volúmenes con peso ideal. La indicación es de la OMS — *«Use the ideal body weight for calculation of fluid infusion for obese and overweight patients»*, Handbook for Clinical Management of Dengue, secciones 2.2.2 y 2.2.3.1. La OMS publica una tabla de peso ideal por talla (Textbox J); la app lo calcula con la **fórmula de Devine**, que puede diferir en uno o dos kilos.
-- **Presión de pulso**: calculadora integrada que marca el umbral de choque (≤ 20 mmHg).
+- **Evaluación hemodinámica compuesta, no un solo umbral**: la app no decide el choque únicamente por la presión de pulso. Evalúa en conjunto hipotensión según la edad (tabla del CDC, equivalente a 70 + 2 × edad entre 1 y 9 años y a 90 mmHg desde los 10), presión de pulso ≤ 20 mmHg, llenado capilar > 2 s, taquicardia según la edad, PAM baja, alteración del estado de conciencia y desaturación. Distingue **choque compensado** —presión de pulso estrecha con presión sistólica conservada, el signo precoz— de **choque hipotenso o descompensado**, que la OMS describe como *«a late finding [that] signals an imminent total cardiorespiratory collapse»*. Una presión de pulso amplia **nunca** se presenta como tranquilizadora si ya hay hipotensión.
 - **Un NS1 negativo no cierra el caso**: la app lo dice explícitamente y encadena el siguiente paso según el día de evolución — RT-PCR hasta el día 5 (técnica molecular, distinta de la detección de antígeno) e IgM desde el día 6, más el diferencial con chikungunya y Zika. Coinciden el CDC (*«A negative result from an NAAT or NS1 antigen test does not rule out infection»*), la guía provisional de la OMS de abril de 2025 y el protocolo del INS (*«resultados negativos de las pruebas inmunocromatográficas para la detección de NS1 e IgM no excluyen la infección por dengue»*).
 
 ---
@@ -119,7 +119,7 @@ ceroaedes/
 ├── sw.js                   # Service worker (uso sin conexión)
 ├── assets/                 # Iconos
 ├── tests/
-│   ├── engine.test.js      # 154 pruebas del motor clínico
+│   ├── engine.test.js      # 185 pruebas del motor clínico
 │   └── ui.test.js          # Recorridos en navegador real + validación del .docx
 ├── LICENSE
 └── README.md
@@ -143,7 +143,7 @@ El motor verifica la definición operativa de caso, la clasificación en los cua
 Después de editar `index.html`, suba el número de versión en `sw.js`:
 
 ```js
-const VERSION = 'ceroaedes-v2.4.1';
+const VERSION = 'ceroaedes-v2.5.1';
 ```
 
 Sin ese cambio, los celulares que ya la tengan instalada seguirán mostrando la versión cacheada.
@@ -160,6 +160,7 @@ Sin ese cambio, los celulares que ya la tengan instalada seguirán mostrando la 
 - Ministerio de Salud y Protección Social — Federación Médica Colombiana. *Dengue: memorias*. Bogotá; 2012–2013.
 - *Instrumento de seguimiento y evaluación de casos de dengue*, versión 15/06/23.
 - Centers for Disease Control and Prevention. *Clinical Testing Guidance for Dengue*. Atlanta: CDC.
+- Centers for Disease Control and Prevention. *Dengue Clinical Case Management — Pocket Guide*. Atlanta: CDC; 2024. (Umbrales de hipotensión por edad.)
 - Organización Mundial de la Salud. *Laboratory testing for dengue virus: interim guidance*. Abril de 2025.
 
 ## Autor
