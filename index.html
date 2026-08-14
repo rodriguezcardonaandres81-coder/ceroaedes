@@ -132,6 +132,65 @@ ul.clean li{margin-bottom:5px}
 footer{text-align:center;padding:14px;font-size:.72rem;color:var(--muted);border-top:1px solid var(--line);line-height:1.6;background:#FAFAFC}
 footer b{color:var(--text)}
 
+
+/* ===== Bienvenida ===== */
+.welcome{text-align:center;padding:4px 2px 0}
+.w-scene{width:100%;max-width:300px;margin:0 auto 2px}
+.w-svg{width:100%;height:auto;display:block;overflow:visible}
+.w-title{font-size:1.5rem;font-weight:800;color:var(--primary);letter-spacing:.3px;margin-top:2px}
+.w-title em{font-style:normal;font-weight:300;opacity:.7}
+.w-sub{font-size:.86rem;color:var(--muted);margin:4px 0 14px;line-height:1.45}
+.w-chips{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:14px}
+.w-chips span{background:#EAF5F1;color:var(--primary);border:1px solid #CFE6DE;border-radius:20px;
+  padding:6px 12px;font-size:.75rem;font-weight:600;opacity:0;animation:chipIn .5s ease forwards}
+.w-chips span:nth-child(1){animation-delay:.9s}
+.w-chips span:nth-child(2){animation-delay:1.05s}
+.w-chips span:nth-child(3){animation-delay:1.2s}
+.w-note{font-size:.76rem;color:var(--muted);background:#FAFAFC;border:1px dashed #DCDCE4;
+  border-radius:9px;padding:10px 12px;margin-bottom:16px;line-height:1.5}
+@keyframes chipIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* gota y ondas */
+.w-svg .gota{fill:var(--primary);transform-box:fill-box;transform-origin:center;
+  animation:flotar 3.2s ease-in-out infinite}
+.w-svg .cruz{stroke:#fff;stroke-width:5;stroke-linecap:round;fill:none}
+.w-svg .onda{fill:none;stroke:var(--accent);stroke-width:2;transform-box:fill-box;transform-origin:center;
+  opacity:0;animation:onda 3.2s ease-out infinite}
+.w-svg .onda.o2{animation-delay:1.6s}
+@keyframes flotar{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-5px) scale(1.03)}}
+@keyframes onda{0%{transform:scale(.6);opacity:.55}70%{opacity:0}100%{transform:scale(2.1);opacity:0}}
+
+/* mosquito */
+.w-svg .mosco{fill:#3B4A52;transform-box:fill-box;transform-origin:center;
+  animation:vuelo 5.2s cubic-bezier(.4,.1,.3,1) infinite}
+.w-svg .ala{fill:#8FB8AC;opacity:.85;transform-box:fill-box;transform-origin:100% 100%;
+  animation:alas .16s ease-in-out infinite alternate}
+.w-svg .pata{stroke:#3B4A52;stroke-width:2;stroke-linecap:round;fill:none}
+@keyframes vuelo{
+  0%{transform:translate(-120px,26px) rotate(-14deg);opacity:0}
+  8%{opacity:1}
+  30%{transform:translate(-18px,-10px) rotate(6deg)}
+  46%,100%{transform:translate(0,0) rotate(0deg);opacity:1}
+}
+@keyframes alas{from{transform:scaleY(1)}to{transform:scaleY(.3)}}
+
+/* señal de prohibido */
+.w-svg .ban{stroke:var(--catC);stroke-width:5;stroke-linecap:round;fill:none;
+  stroke-dasharray:360;stroke-dashoffset:360;opacity:0;
+  animation:trazo 5.2s ease-out infinite}
+@keyframes trazo{
+  0%,52%{stroke-dashoffset:360;opacity:0}
+  56%{opacity:1}
+  74%,100%{stroke-dashoffset:0;opacity:1}
+}
+
+@media (prefers-reduced-motion: reduce){
+  .w-svg .gota,.w-svg .onda,.w-svg .mosco,.w-svg .ala,.w-svg .ban,.w-chips span{animation:none}
+  .w-svg .ban{stroke-dashoffset:0;opacity:1}
+  .w-svg .onda{opacity:0}
+  .w-chips span{opacity:1}
+}
+
 @media print{
   body{background:#fff;display:block}
   #app-container{max-width:100%;box-shadow:none;margin:0;border-radius:0}
@@ -156,8 +215,51 @@ footer b{color:var(--text)}
 
 <div class="content">
 
+<!-- ============ 0. BIENVENIDA ============ -->
+<div id="s0" class="screen active">
+  <div class="welcome">
+    <div class="w-scene">
+      <svg class="w-svg" viewBox="0 0 300 132" role="img" aria-label="Gota de hidratación y mosquito Aedes tachado">
+        <circle class="onda" cx="72" cy="74" r="26"/>
+        <circle class="onda o2" cx="72" cy="74" r="26"/>
+        <g class="gota">
+          <path d="M72 22 C72 22 100 58 100 78 a28 28 0 0 1-56 0 C44 58 72 22 72 22 Z"/>
+          <path class="cruz" d="M72 66 v26 M59 79 h26"/>
+        </g>
+        <g class="mosco">
+          <ellipse class="ala" cx="196" cy="50" rx="26" ry="9" transform="rotate(-24 196 50)"/>
+          <ellipse class="ala" cx="208" cy="54" rx="22" ry="8" transform="rotate(-6 208 54)"/>
+          <path class="pata" d="M196 76 l-14 22 M206 78 l-2 24 M216 76 l14 22"/>
+          <path class="pata" d="M192 66 l-22 -8 M226 70 l20 14"/>
+          <ellipse cx="212" cy="74" rx="24" ry="8" transform="rotate(14 212 74)"/>
+          <circle cx="186" cy="68" r="7"/>
+          <path class="pata" d="M180 70 l-16 10"/>
+        </g>
+        <g class="ban">
+          <circle cx="206" cy="68" r="42"/>
+          <line x1="177" y1="39" x2="235" y2="97"/>
+        </g>
+      </svg>
+    </div>
+
+    <div class="w-title">CeroAedes <em>by AR</em></div>
+    <div class="w-sub">Apoyo a la decisión clínica en dengue<br>Clasificación, reposición hídrica y registro para la historia clínica</div>
+
+    <div class="w-chips">
+      <span>Clasifica</span><span>Calcula líquidos</span><span>Exporta a Word</span>
+    </div>
+
+    <div class="w-note">
+      Esta aplicación <b>acompaña</b> la consulta: ordena la definición de caso, calcula los volúmenes por peso
+      y arma el registro. <b>No reemplaza el juicio clínico</b> ni la reestratificación del paciente.
+    </div>
+
+    <button class="btn btn-primary" onclick="go(1)">Comenzar evaluación</button>
+  </div>
+</div>
+
 <!-- ============ 1. DEFINICIÓN DE CASO ============ -->
-<div id="s1" class="screen active">
+<div id="s1" class="screen">
   <div class="step-title">Definición de caso de dengue</div>
   <p class="step-sub">Paciente procedente de área endémica con enfermedad febril aguda de 2 a 7 días en la que se observan <b>fiebre y dos o más</b> de las manifestaciones del listado.</p>
 
@@ -179,6 +281,7 @@ footer b{color:var(--text)}
   </div>
 
   <button class="btn btn-primary" onclick="next(1)">Siguiente</button>
+  <button class="btn btn-back" onclick="go(0)">Atrás</button>
 </div>
 
 <!-- ============ 2. PACIENTE Y SIGNOS VITALES ============ -->
@@ -413,7 +516,7 @@ footer b{color:var(--text)}
 
 /* === ENGINE START === */
 
-var APP_VERSION = '2.3.0';   /* fuente única: pie de página, Word y service worker */
+var APP_VERSION = '2.4.0';   /* fuente única: pie de página, Word y service worker */
 
 /* Origen de cada criterio: 'ficha' = casilla de la sección 6 de la ficha;
    'prot' = está en la definición del protocolo pero no como casilla. */
@@ -1154,6 +1257,7 @@ function go(n){
   var s = document.querySelectorAll('.screen');
   for(var i=0;i<s.length;i++) s[i].classList.remove('active');
   $('s'+n).classList.add('active');
+  $('progress').style.display = (n === 0) ? 'none' : 'flex';
   var p = $('progress').children;
   for(var j=0;j<p.length;j++) p[j].classList.toggle('on', j < n);
   window.scrollTo(0,0);
@@ -1576,7 +1680,7 @@ function bindInv(id, cb){
   $('app-version').textContent = 'v' + APP_VERSION;
   setSexo('F');
   updateManifCount();
-  go(1);
+  go(0);
 
   if('serviceWorker' in navigator && location.protocol.indexOf('http') === 0){
     navigator.serviceWorker.register('sw.js').catch(function(){});

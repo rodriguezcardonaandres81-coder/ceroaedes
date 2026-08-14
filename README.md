@@ -46,6 +46,8 @@ Cada fase muestra **ml/h, volumen total, hora proyectada y goteo sin bomba** (ma
 
 ### 4. Flujo en siete pasos
 
+Se abre con una **pantalla de bienvenida** breve —gota de hidratación y mosquito *Aedes* tachado, animados en SVG puro— que recuerda en una línea que la aplicación acompaña la consulta y no reemplaza el juicio clínico. Un botón entra a la evaluación; la barra de pasos aparece solo a partir de ahí. Respeta `prefers-reduced-motion`.
+
 El orden sigue el razonamiento clínico, no la estructura de los datos:
 
 1. **Definición de caso** — es lo primero que ve el médico al abrir, para recordar qué es un caso probable de dengue antes de mirar al paciente.
@@ -141,7 +143,7 @@ El motor verifica la definición operativa de caso, la clasificación en los cua
 Después de editar `index.html`, suba el número de versión en `sw.js`:
 
 ```js
-const VERSION = 'ceroaedes-v2.3.1';
+const VERSION = 'ceroaedes-v2.4.1';
 ```
 
 Sin ese cambio, los celulares que ya la tengan instalada seguirán mostrando la versión cacheada.

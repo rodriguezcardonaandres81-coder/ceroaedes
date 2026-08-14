@@ -28,6 +28,8 @@ fs.mkdirSync(TMP, { recursive: true });
   /* Paso 1 — definición de caso */
   async function definicionCaso({ endemica = true, fiebre = true, manifs = [0, 2] } = {}) {
     await page.goto(URL);
+    await page.click('#s0 button:has-text("Comenzar")');
+    await page.waitForSelector('#s1.active');
     if (endemica) await page.locator('#f-endemica').click();
     if (fiebre) await page.locator('#f-fiebre').click();
     for (const i of manifs) await marcar('manif', i);
@@ -49,6 +51,25 @@ fs.mkdirSync(TMP, { recursive: true });
       else await page.fill('#f-' + campo, valor);
     }
   }
+
+  // ================= Caso 0: bienvenida =================
+  await page.goto(URL);
+  if (!(await page.locator('#s0.active').count())) throw new Error('La app no abre en la bienvenida');
+  if (!(await page.locator('#progress').isHidden())) throw new Error('La barra de pasos no debe verse en la bienvenida');
+  const bienv = await page.locator('#s0').innerText();
+  for (const e of ['CeroAedes', 'Apoyo a la decisión clínica en dengue', 'No reemplaza el juicio clínico',
+                   'Clasifica', 'Calcula líquidos', 'Exporta a Word'])
+    if (!bienv.includes(e)) throw new Error('Falta en la bienvenida: ' + e);
+  if (!(await page.locator('#s0 .w-svg .mosco').count())) throw new Error('Falta el mosquito animado');
+  if (!(await page.locator('#s0 .w-svg .ban').count())) throw new Error('Falta la señal de prohibido');
+  await page.waitForTimeout(1500);
+  await shot('00-bienvenida');
+  await page.click('#s0 button:has-text("Comenzar")');
+  await page.waitForSelector('#s1.active');
+  if (await page.locator('#progress').isHidden()) throw new Error('La barra de pasos debe reaparecer al entrar');
+  await page.click('#s1 button:has-text("Atrás")');
+  await page.waitForSelector('#s0.active');
+  console.log('  OK   │ Caso 0: bienvenida animada, sin barra de pasos, con ida y vuelta a la definición de caso');
 
   // ================= Caso 1: recorrido completo → B2 =================
   await definicionCaso();
