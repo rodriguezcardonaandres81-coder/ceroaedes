@@ -151,24 +151,45 @@ footer b{color:var(--text)}
 </header>
 
 <div class="progress no-print" id="progress">
-  <span></span><span></span><span></span><span></span><span></span><span></span>
+  <span></span><span></span><span></span><span></span><span></span><span></span><span></span>
 </div>
 
 <div class="content">
 
-<!-- ============ 1. PACIENTE ============ -->
+<!-- ============ 1. DEFINICIÓN DE CASO ============ -->
 <div id="s1" class="screen active">
-  <div class="step-title">Datos del paciente</div>
-  <p class="step-sub">El peso y la edad determinan todos los cálculos de líquidos.</p>
+  <div class="step-title">Definición de caso de dengue</div>
+  <p class="step-sub">Paciente procedente de área endémica con enfermedad febril aguda de 2 a 7 días en la que se observan <b>fiebre y dos o más</b> de las manifestaciones del listado.</p>
+
+  <div class="card tight">
+    <div class="chk" onclick="toggleChk(this,'endemica')">
+      <input type="checkbox" id="f-endemica" onclick="event.stopPropagation();toggleChk(this.parentNode,'endemica')">
+      <div class="t">Procedente de área endémica<span class="d">Reside o estuvo en municipio con transmisión de dengue. Es el criterio de entrada de la definición operativa de caso.</span></div>
+    </div>
+    <div class="chk warn" onclick="toggleChk(this,'fiebre')">
+      <input type="checkbox" id="f-fiebre" onclick="event.stopPropagation();toggleChk(this.parentNode,'fiebre')">
+      <div class="t">Fiebre<span class="d">Criterio obligatorio. Sin fiebre no se cumple ninguna de las tres definiciones de caso.</span></div>
+    </div>
+  </div>
+
+  <div class="card tight">
+    <div class="sec-title">Manifestaciones — se requieren dos o más</div>
+    <div id="list-manif"></div>
+    <div class="note info" style="margin:10px 0 0" id="manif-count">Marcadas: 0 — se requieren 2 o más.</div>
+  </div>
+
+  <button class="btn btn-primary" onclick="next(1)">Siguiente</button>
+</div>
+
+<!-- ============ 2. PACIENTE Y SIGNOS VITALES ============ -->
+<div id="s2" class="screen">
+  <div class="step-title">Paciente y signos vitales</div>
+  <p class="step-sub">Primer contacto. El peso y la edad determinan todos los cálculos de líquidos.</p>
 
   <div class="card">
+    <div class="sec-title">Identificación</div>
     <label>Nombre / identificación</label>
     <input type="text" id="f-nombre" placeholder="Nombre completo o documento">
-
-    <div class="row g2">
-      <div><label>Fecha</label><input type="date" id="f-fecha"></div>
-      <div><label>Hora inicio</label><input type="time" id="f-hora"></div>
-    </div>
 
     <div class="row g2">
       <div><label>Edad</label><input type="number" id="f-edad" min="0" step="1" placeholder="Ej: 34" oninput="syncEdad()"></div>
@@ -195,16 +216,6 @@ footer b{color:var(--text)}
       </div>
     </div>
 
-    <label style="margin-top:4px">Día de enfermedad (día de fiebre)</label>
-    <select id="f-dia" onchange="syncDia()">
-      <option value="">Seleccione…</option>
-      <option value="1">Día 1</option><option value="2">Día 2</option>
-      <option value="3">Día 3</option><option value="4">Día 4</option>
-      <option value="5">Día 5</option><option value="6">Día 6</option>
-      <option value="7">Día 7</option><option value="8">Día 8 o más</option>
-      <option value="0">Afebril / no precisa</option>
-    </select>
-
     <div id="peso-ideal-box" style="display:none">
       <div class="note warn" style="margin-bottom:8px">
         <b>Peso ideal estimado: <span id="pi-val">—</span> kg</b> (fórmula de Devine).
@@ -219,87 +230,39 @@ footer b{color:var(--text)}
         <button type="button" id="btn-pideal" onclick="setPesoCalc(true)">Usar peso ideal</button>
       </div>
     </div>
+  </div>
+
+  <div class="card">
+    <div class="sec-title">Fechas y día de enfermedad</div>
+    <div class="row g2">
+      <div><label>Inicio de síntomas</label><input type="date" id="f-inicio" onchange="syncFechas()"></div>
+      <div><label>Fecha de consulta</label><input type="date" id="f-fecha" onchange="syncFechas()"></div>
+    </div>
+    <label>Hora de inicio de líquidos</label>
+    <input type="time" id="f-hora">
+
+    <div id="dia-calc"></div>
+
+    <div class="chk" id="chk-sinfecha" style="margin-top:4px">
+      <input type="checkbox"><div class="t">No precisa la fecha de inicio<span class="d">Habilita la selección manual del día de enfermedad.</span></div>
+    </div>
+
+    <div id="wrap-dia-manual" style="display:none">
+      <label>Día de enfermedad (día de fiebre)</label>
+      <select id="f-dia" onchange="syncDia()">
+        <option value="">Seleccione…</option>
+        <option value="1">Día 1</option><option value="2">Día 2</option>
+        <option value="3">Día 3</option><option value="4">Día 4</option>
+        <option value="5">Día 5</option><option value="6">Día 6</option>
+        <option value="7">Día 7</option><option value="8">Día 8 o más</option>
+        <option value="0">Afebril / no precisa</option>
+      </select>
+    </div>
 
     <div id="fase-critica-alert"></div>
   </div>
 
-  <button class="btn btn-primary" onclick="next(1)">Siguiente</button>
-</div>
-
-<!-- ============ 2. DEFINICIÓN DE CASO ============ -->
-<div id="s2" class="screen">
-  <div class="step-title">Definición de caso — dengue sin signos de alarma</div>
-  <p class="step-sub">Paciente procedente de área endémica con enfermedad febril aguda de 2 a 7 días en la que se observan <b>fiebre y dos o más</b> de las manifestaciones del listado.</p>
-
-  <div class="card tight">
-    <div class="chk" onclick="toggleChk(this,'endemica')">
-      <input type="checkbox" id="f-endemica" onclick="event.stopPropagation();toggleChk(this.parentNode,'endemica')">
-      <div class="t">Procedente de área endémica<span class="d">Reside o estuvo en municipio con transmisión de dengue. Es el criterio de entrada de la definición operativa de caso.</span></div>
-    </div>
-    <div class="chk warn" onclick="toggleChk(this,'fiebre')">
-      <input type="checkbox" id="f-fiebre" onclick="event.stopPropagation();toggleChk(this.parentNode,'fiebre')">
-      <div class="t">Fiebre<span class="d">Criterio obligatorio. Sin fiebre no se cumple ninguna de las tres definiciones de caso.</span></div>
-    </div>
-  </div>
-
-  <div class="card tight">
-    <div class="sec-title">Manifestaciones — se requieren dos o más</div>
-    <div id="list-manif"></div>
-    <div class="note info" style="margin:10px 0 0" id="manif-count">Marcadas: 0 — se requieren 2 o más.</div>
-  </div>
-
-  <div class="card tight">
-    <div class="sec-title">Prueba del torniquete</div>
-    <label>Resultado</label>
-    <select id="f-torniquete" onchange="S.torniquete=this.value">
-      <option value="nr">No realizada</option>
-      <option value="neg">Negativa</option>
-      <option value="pos">Positiva</option>
-    </select>
-    <div class="note info" style="margin-bottom:0">
-      <b>Técnica.</b> Insufle el manguito hasta un punto intermedio entre la presión sistólica y la diastólica
-      y manténgalo <b>5 minutos</b> (3 minutos en niños). Suelte, espere a que la piel recupere el color y
-      cuente las petequias en un cuadro de <b>2,5 × 2,5 cm</b> en la cara anterior del antebrazo.
-      Se considera <b>positiva con 10 o más petequias</b> (algunos textos usan el umbral previo de 20).<br><br>
-      Es apoyo diagnóstico y hace parte de la búsqueda activa de manifestaciones hemorrágicas que exige el
-      instrumento de auditoría (ítem 11). <b>No es casilla de la sección 6 de la ficha</b>, así que no suma
-      para la definición de caso: se registra en el reporte y en el documento Word.
-    </div>
-  </div>
-
-  <button class="btn btn-primary" onclick="next(2)">Siguiente</button>
-  <button class="btn btn-back" onclick="go(1)">Atrás</button>
-</div>
-
-<!-- ============ 3. SIGNOS DE ALARMA ============ -->
-<div id="s3" class="screen">
-  <div class="step-title">Verifique signos de alarma</div>
-  <p class="step-sub">Aparecen cerca de y preferentemente a la caída de la fiebre. Basta <b>uno</b> para dengue con signos de alarma y categoría de intervención B2.</p>
-
-  <div class="note warn">Entre el <b>día 3 y 6</b> de enfermedad, o cuando cae la fiebre, búsquelos de forma dirigida: es la ventana de la fase crítica.</div>
-
-  <div class="card tight">
-    <div id="ninguno-alarma"></div>
-    <div id="list-alarma"></div>
-  </div>
-
-  <div class="note info">
-    <b>Ante hallazgos sugestivos de fuga vascular</b> —dolor abdominal, aumento del perímetro abdominal, matidez en bases,
-    ruidos respiratorios disminuidos— solicite <b>ecografía abdominal y radiografía de tórax</b>: son las que documentan
-    ascitis y derrame pleural, es decir la acumulación de líquidos. El instrumento de auditoría lo exige en el ítem 15
-    y el algoritmo OPS las ubica formalmente en la categoría C.
-  </div>
-
-  <button class="btn btn-primary" onclick="next(3)">Siguiente</button>
-  <button class="btn btn-back" onclick="go(2)">Atrás</button>
-</div>
-
-<!-- ============ 4. DENGUE GRAVE ============ -->
-<div id="s4" class="screen">
-  <div class="step-title">Verifique manifestaciones graves de dengue</div>
-  <p class="step-sub">Cualquiera de estas cuatro define dengue grave y categoría de intervención C: intervención inmediata.</p>
-
-  <div class="card tight">
+  <div class="card">
     <div class="sec-title">Signos vitales y estado hemodinámico</div>
     <div class="row g2">
       <div><label>PAS (mmHg)</label><input type="number" id="f-pas" min="0" placeholder="Ej: 90" oninput="syncVitales()"></div>
@@ -330,17 +293,79 @@ footer b{color:var(--text)}
     <div id="pp-out" class="note info" style="margin-bottom:0">Presión de pulso = PAS − PAD. Un valor <b>≤ 20 mmHg</b> indica choque. La PAM se calcula sola.</div>
   </div>
 
+  <button class="btn btn-primary" onclick="next(2)">Siguiente</button>
+  <button class="btn btn-back" onclick="go(1)">Atrás</button>
+</div>
+
+<!-- ============ 3. PRUEBA DEL TORNIQUETE ============ -->
+<div id="s3" class="screen">
+  <div class="step-title">Realice la prueba del torniquete</div>
+  <p class="step-sub">Apoyo diagnóstico y parte de la búsqueda activa de manifestaciones hemorrágicas.</p>
+
   <div class="card tight">
-    <div id="ninguno-grave"></div>
-    <div id="list-grave"></div>
+    <label>Resultado</label>
+    <select id="f-torniquete" onchange="S.torniquete=this.value">
+      <option value="nr">No realizada</option>
+      <option value="neg">Negativa</option>
+      <option value="pos">Positiva</option>
+    </select>
+    <div class="note info" style="margin-bottom:0">
+      <b>Técnica.</b> Insufle el manguito hasta un punto intermedio entre la presión sistólica y la diastólica
+      y manténgalo <b>5 minutos</b> (3 minutos en niños). Suelte, espere a que la piel recupere el color y
+      cuente las petequias en un cuadro de <b>2,5 × 2,5 cm</b> en la cara anterior del antebrazo.
+      Se considera <b>positiva con 10 o más petequias</b> (algunos textos usan el umbral previo de 20).
+    </div>
+    <div class="note warn" style="margin-bottom:0">
+      El instrumento de auditoría la exige dentro del ítem 11. <b>No es casilla de la sección 6 de la ficha</b>,
+      así que no suma para la definición de caso: se registra en el reporte y en el documento Word.
+    </div>
+  </div>
+
+  <button class="btn btn-primary" onclick="next(3)">Siguiente</button>
+  <button class="btn btn-back" onclick="go(2)">Atrás</button>
+</div>
+
+<!-- ============ 4. SIGNOS DE ALARMA ============ -->
+<div id="s4" class="screen">
+  <div class="step-title">Verifique signos de alarma</div>
+  <p class="step-sub">Aparecen cerca de y preferentemente a la caída de la fiebre. Basta <b>uno</b> para dengue con signos de alarma y categoría de intervención B2.</p>
+
+  <div class="note warn">Entre el <b>día 3 y 6</b> de enfermedad, o cuando cae la fiebre, búsquelos de forma dirigida: es la ventana de la fase crítica.</div>
+
+  <div class="card tight">
+    <div id="ninguno-alarma"></div>
+    <div id="list-alarma"></div>
+  </div>
+
+  <div class="note info">
+    <b>Ante hallazgos sugestivos de fuga vascular</b> —dolor abdominal, aumento del perímetro abdominal, matidez en bases,
+    ruidos respiratorios disminuidos— solicite <b>ecografía abdominal y radiografía de tórax</b>: son las que documentan
+    ascitis y derrame pleural, es decir la acumulación de líquidos. El instrumento de auditoría lo exige en el ítem 15
+    y el algoritmo OPS las ubica formalmente en la categoría C.
   </div>
 
   <button class="btn btn-primary" onclick="next(4)">Siguiente</button>
   <button class="btn btn-back" onclick="go(3)">Atrás</button>
 </div>
 
-<!-- ============ 5. CONDICIONES ============ -->
+<!-- ============ 5. MANIFESTACIONES GRAVES ============ -->
 <div id="s5" class="screen">
+  <div class="step-title">Verifique manifestaciones graves de dengue</div>
+  <p class="step-sub">Cualquiera de estas cuatro define dengue grave y categoría de intervención C: intervención inmediata.</p>
+
+  <div id="resumen-hemo"></div>
+
+  <div class="card tight">
+    <div id="ninguno-grave"></div>
+    <div id="list-grave"></div>
+  </div>
+
+  <button class="btn btn-primary" onclick="next(5)">Siguiente</button>
+  <button class="btn btn-back" onclick="go(4)">Atrás</button>
+</div>
+
+<!-- ============ 6. CONDICIONES ============ -->
+<div id="s6" class="screen">
   <div class="step-title">Condiciones asociadas y riesgo social</div>
   <p class="step-sub">Definen si el paciente sin signos de alarma se maneja en casa (A) o supervisado (B1).</p>
 
@@ -351,15 +376,15 @@ footer b{color:var(--text)}
   <div class="card tight"><div class="sec-title">Criterios de manejo en casa</div><div id="list-via"></div></div>
 
   <button class="btn btn-calc" onclick="evaluar()">Clasificar y calcular manejo</button>
-  <button class="btn btn-back" onclick="go(4)">Atrás</button>
+  <button class="btn btn-back" onclick="go(5)">Atrás</button>
 </div>
 
-<!-- ============ 6. RESULTADO ============ -->
-<div id="s6" class="screen">
+<!-- ============ 7. RESULTADO ============ -->
+<div id="s7" class="screen">
   <div id="out"></div>
   <button class="btn btn-word no-print" onclick="exportarWord()">Exportar a Word</button>
   <button class="btn btn-copy no-print" onclick="copiarConducta()">Copiar conducta</button>
-  <button class="btn btn-ghost no-print" onclick="go(5)">Ajustar datos</button>
+  <button class="btn btn-ghost no-print" onclick="go(6)">Ajustar datos</button>
   <button class="btn btn-back no-print" onclick="reiniciar()">Nueva evaluación</button>
 </div>
 
@@ -388,7 +413,7 @@ footer b{color:var(--text)}
 
 /* === ENGINE START === */
 
-var APP_VERSION = '2.2.1';   /* fuente única: pie de página, Word y service worker */
+var APP_VERSION = '2.3.0';   /* fuente única: pie de página, Word y service worker */
 
 /* Origen de cada criterio: 'ficha' = casilla de la sección 6 de la ficha;
    'prot' = está en la definición del protocolo pero no como casilla. */
@@ -517,10 +542,26 @@ function addMin(hhmm, min){
   t = ((t % 1440) + 1440) % 1440;
   return String(Math.floor(t/60)).padStart(2,'0') + ':' + String(t%60).padStart(2,'0');
 }
+/* Holliday-Segar: 100 ml/kg los primeros 10 kg, 50 ml/kg los siguientes 10 kg
+   y 20 ml/kg por cada kilo adicional. */
 function holliday(p){
   if(p <= 10) return p*100;
   if(p <= 20) return 1000 + (p-10)*50;
   return 1500 + (p-20)*20;
+}
+
+/* Día de enfermedad a partir de las fechas.
+   El INS cuenta como día 1 el día en que inicia la fiebre: inicio el 12 y
+   consulta el 13 son dos días de evolución. */
+function diaDeEnfermedad(inicio, consulta){
+  if(!inicio || !consulta) return null;
+  var a = String(inicio).split('-'), b = String(consulta).split('-');
+  if(a.length !== 3 || b.length !== 3) return null;
+  var d1 = Date.UTC(+a[0], +a[1]-1, +a[2]), d2 = Date.UTC(+b[0], +b[1]-1, +b[2]);
+  if(isNaN(d1) || isNaN(d2)) return null;
+  var dias = Math.round((d2 - d1)/86400000);
+  if(dias < 0) return null;             /* el inicio no puede ser posterior a la consulta */
+  return dias + 1;
 }
 
 /* ---------- Plan de líquidos ---------- */
@@ -530,15 +571,22 @@ function planLiquidos(S){
 
   if(cat === 'A' || cat === 'B1'){
     plan.via = 'oral';
-    var mant = holliday(p), meta = Math.round(mant*1.05/10)*10;
+    /* Ambulatorio (A): Holliday-Segar puro — instrumento de auditoría, ítem 22.
+       Grupo de riesgo (B1): Holliday-Segar + 5 % de déficit — ítem 27. */
+    var mant = holliday(p), conDeficit = (cat === 'B1');
+    var meta = conDeficit ? Math.round(mant*1.05/10)*10 : Math.round(mant/10)*10;
     plan.oral = ped
-      ? { titulo:'Hidratación oral supervisada', principal: meta + ' ml en 24 h',
-          detalle:'Mantenimiento Holliday-Segar (' + r0(mant) + ' ml/día) + 5 % de déficit.',
+      ? { titulo: conDeficit ? 'Hidratación oral supervisada' : 'Hidratación oral',
+          principal: meta + ' ml en 24 h',
+          detalle: conDeficit
+            ? 'Holliday-Segar ' + r0(mant) + ' ml/día + 5 % de déficit, por pertenecer a grupo de riesgo.'
+            : 'Holliday-Segar: 100 ml/kg los primeros 10 kg, 50 ml/kg los siguientes 10 kg y 20 ml/kg por cada kilo adicional.',
           horaria: Math.round(meta/24) + ' ml/hora aprox.',
           vasos: (p >= 30 ? Math.round(meta/250) + ' vasos de 250 ml' : Math.round(meta/120) + ' porciones de 120 ml'),
           que:'Sales de rehidratación oral (SRO), leche, sopas o jugos de frutas (excepto cítricos). El agua sola no repone los electrolitos perdidos.' }
-      : { titulo:'Hidratación oral', principal:'2.000 ml o más en 24 h',
-          detalle:'Mínimo 2 litros/día en adultos; aumentar con fiebre alta, vómito o sudoración.',
+      : { titulo: conDeficit ? 'Hidratación oral supervisada' : 'Hidratación oral',
+          principal:'2.000 a 3.000 ml en 24 h',
+          detalle:'Mínimo 2 litros/día y hasta 3 litros/día en adultos; aumentar con fiebre alta, vómito o sudoración.',
           horaria: Math.round(2000/24) + ' – ' + Math.round(3000/24) + ' ml/hora aprox.',
           vasos:'8 – 12 vasos de 250 ml',
           que:'SRO, leche, sopas o jugos de frutas (excepto cítricos). El agua sola no repone los electrolitos perdidos.' };
@@ -909,12 +957,12 @@ function construirReporte(S){
 
 /* ================= Estado ================= */
 var S = {
-  nombre:'', fecha:'', hora:'', sexo:'F', edad:'', edadU:'a',
+  nombre:'', fecha:'', fechaInicio:'', hora:'', sexo:'F', edad:'', edadU:'a',
   peso:0, talla:0, usarPesoIdeal:false, embarazo:false, dia:'',
   endemica:false, fiebre:false, manif:[], torniquete:'nr',
   alarma:[], sinAlarma:false, grave:[], sinGrave:false,
   cond:[], social:[], toleraVO:true, diuresisOk:true,
-  pas:'', pad:'', fc:'', fr:'', temp:'', sato2:'', llenado:'', conciencia:''
+  sinFecha:false, pas:'', pad:'', fc:'', fr:'', temp:'', sato2:'', llenado:'', conciencia:''
 };
 var MODELO = null;
 var NINGUNO = { alarma:'sinAlarma', grave:'sinGrave' };
@@ -1040,6 +1088,35 @@ function setSexo(v){
 }
 function syncDia(){ S.dia = $('f-dia').value; renderFaseCritica(); }
 
+function syncFechas(){
+  S.fechaInicio = $('f-inicio').value;
+  S.fecha = $('f-fecha').value;
+  var d = diaDeEnfermedad(S.fechaInicio, S.fecha), box = $('dia-calc');
+  if(S.sinFecha){ box.innerHTML = ''; renderFaseCritica(); return; }
+  if(d === null){
+    if(S.fechaInicio && S.fecha){
+      box.innerHTML = '<div class="note danger">La fecha de inicio de síntomas es posterior a la fecha de consulta. Revise las dos fechas.</div>';
+      S.dia = '';
+    } else {
+      box.innerHTML = '<div class="note info">Registre el inicio de síntomas y la fecha de consulta: el día de enfermedad se calcula solo.</div>';
+      S.dia = '';
+    }
+  } else {
+    S.dia = String(d);
+    box.innerHTML = '<div class="note ok"><b>Día ' + d + ' de enfermedad.</b> El día 1 es el día de inicio de la fiebre (INS). ' +
+      (d > 14 ? 'Son más de 14 días de evolución: verifique las fechas.' : '') + '</div>';
+  }
+  renderFaseCritica();
+}
+
+function setSinFecha(v){
+  S.sinFecha = v;
+  $('wrap-dia-manual').style.display = v ? 'block' : 'none';
+  $('f-inicio').disabled = v;
+  if(v){ S.dia = $('f-dia').value; $('dia-calc').innerHTML = ''; renderFaseCritica(); }
+  else syncFechas();
+}
+
 function renderFaseCritica(){
   var d = parseInt(S.dia,10), box = $('fase-critica-alert'), ped = esPediatrico(S), ini = ped ? 3 : 4;
   if(!isNaN(d) && d >= ini && d <= 6){
@@ -1082,20 +1159,40 @@ function go(n){
   window.scrollTo(0,0);
 }
 function next(n){
-  if(n === 1){
+  if(n === 2){
     if(!(parseFloat($('f-peso').value) > 0)){ alert('Ingrese el peso del paciente: todos los cálculos de líquidos dependen de él.'); return; }
     if($('f-edad').value === ''){ alert('Ingrese la edad del paciente.'); return; }
-    S.nombre = $('f-nombre').value; S.fecha = $('f-fecha').value; S.hora = $('f-hora').value;
+    S.nombre = $('f-nombre').value; S.hora = $('f-hora').value;
   }
-  if(n === 3 && !S.sinAlarma && S.alarma.length === 0){
+  if(n === 4 && !S.sinAlarma && S.alarma.length === 0){
     alert('Indique si el paciente tiene signos de alarma.\n\nSi los buscó y no encontró ninguno, marque "Ninguno": queda constancia del negativo en la historia clínica.');
     return;
   }
-  if(n === 4 && !S.sinGrave && S.grave.length === 0){
+  if(n === 5 && !S.sinGrave && S.grave.length === 0){
     alert('Indique si hay manifestaciones graves de dengue.\n\nSi las buscó y no encontró ninguna, marque "Ninguna": queda constancia del negativo en la historia clínica.');
     return;
   }
+  if(n === 4) renderResumenHemo();
   go(n+1);
+}
+
+/* Recuerda en la pantalla de gravedad lo que se midió en el primer contacto */
+function renderResumenHemo(){
+  var pp = presionPulso(S), pm = pam(S), partes = [];
+  if(S.pas && S.pad) partes.push('TA ' + S.pas + '/' + S.pad + ' mmHg');
+  if(pm !== null) partes.push('PAM ' + pm + ' mmHg');
+  if(pp !== null) partes.push('presión de pulso ' + pp + ' mmHg');
+  if(S.fc) partes.push('FC ' + S.fc + ' lpm');
+  if(S.llenado) partes.push('llenado capilar ' + S.llenado);
+  if(S.conciencia) partes.push(S.conciencia.toLowerCase());
+  var box = $('resumen-hemo');
+  if(!partes.length){
+    box.innerHTML = '<div class="note info">No registró signos vitales en el primer contacto. Puede volver atrás y completarlos: la presión de pulso y el llenado capilar son parte del criterio de choque.</div>';
+    return;
+  }
+  var choque = (pp !== null && pp <= 20) || S.llenado === '> 2 segundos';
+  box.innerHTML = '<div class="note ' + (choque ? 'danger' : 'info') + '"><b>Del primer contacto:</b> ' + partes.join(' · ') + '.' +
+    (choque ? '<br><b>Hay criterios compatibles con choque</b> (presión de pulso ≤ 20 mmHg o llenado capilar > 2 s). Revise el primer y el tercer criterio del listado.' : '') + '</div>';
 }
 function reiniciar(){ location.reload(); }
 
@@ -1189,7 +1286,7 @@ function evaluar(){
   o.push('<div class="dis"><b>Aviso.</b> CeroAedes by AR es una herramienta de apoyo a la decisión basada en la ficha de notificación SIVIGILA 210/220/580, el protocolo de vigilancia del INS y el Algoritmo de diagnóstico y tratamiento de dengue de la OPS/OMS adoptado por el Ministerio de Salud y Protección Social de Colombia. Los cálculos son orientativos y no reemplazan la valoración clínica ni la reestratificación continua del paciente. Verifique siempre los volúmenes antes de administrarlos.</div>');
 
   $('out').innerHTML = o.join('');
-  go(6);
+  go(7);
 }
 
 function acc(titulo, items, abierto, nota){
@@ -1453,9 +1550,12 @@ function bindInv(id, cb){
 (function init(){
   var now = new Date();
   $('f-fecha').valueAsDate = now;
+  S.fecha = $('f-fecha').value;
   $('f-hora').value = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
   S.hora = $('f-hora').value;
   $('f-hora').addEventListener('change', function(){ S.hora = this.value; });
+  bindInv('chk-sinfecha', function(v){ setSinFecha(v); });
+  syncFechas();
 
   buildList('list-manif', MANIF, 'manif');
   buildList('list-alarma', ALARMA, 'alarma', 'warn');

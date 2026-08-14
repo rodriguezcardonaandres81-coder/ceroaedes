@@ -26,7 +26,7 @@ function t(nombre, real, esperado) {
 }
 
 const base = {
-  nombre: '', fecha: '2026-08-12', hora: '08:00', sexo: 'M', edad: '', edadU: 'a',
+  nombre: '', fecha: '2026-08-12', fechaInicio: '', sinFecha: false, hora: '08:00', sexo: 'M', edad: '', edadU: 'a',
   peso: 0, talla: 0, usarPesoIdeal: false, embarazo: false, dia: '4',
   endemica: true, fiebre: true, manif: ['cefalea', 'mialgias'],
   alarma: [], grave: [], cond: [], social: [], toleraVO: true, diuresisOk: true
@@ -120,17 +120,48 @@ t('Niño de 3 años si se desmarca (OPS 2019 estricto) → A',
   ctx.clasificar(P({ edad: '3', peso: 12 })), 'A');
 t('Niño de 8 años no ofrece "menor de 5 años"', ctx.mostrarMenor5(P({ edad: '8', peso: 25 })), 'false');
 
+console.log('\n── Día de enfermedad calculado por fechas ─────────');
+
+t('Inicio 12 y consulta 13 de agosto = día 2 (el INS cuenta el inicio como día 1)',
+  ctx.diaDeEnfermedad('2026-08-12', '2026-08-13'), 2);
+t('Inicio y consulta el mismo día = día 1',
+  ctx.diaDeEnfermedad('2026-08-13', '2026-08-13'), 1);
+t('Inicio 8 y consulta 12 de agosto = día 5',
+  ctx.diaDeEnfermedad('2026-08-08', '2026-08-12'), 5);
+t('Cruza el cambio de mes: 30 de julio a 2 de agosto = día 4',
+  ctx.diaDeEnfermedad('2026-07-30', '2026-08-02'), 4);
+t('Cruza el cambio de año: 30 de diciembre a 2 de enero = día 4',
+  ctx.diaDeEnfermedad('2025-12-30', '2026-01-02'), 4);
+t('Año bisiesto: 27 de febrero a 1 de marzo de 2028 = día 4',
+  ctx.diaDeEnfermedad('2028-02-27', '2028-03-01'), 4);
+t('Inicio posterior a la consulta no devuelve día',
+  ctx.diaDeEnfermedad('2026-08-14', '2026-08-13'), null);
+t('Sin fecha de inicio no devuelve día', ctx.diaDeEnfermedad('', '2026-08-13'), null);
+t('Fecha malformada no devuelve día', ctx.diaDeEnfermedad('13/08/2026', '2026-08-13'), null);
+
 console.log('\n── Grupo A / B1: hidratación oral ─────────────────');
 
 const A70 = ctx.planLiquidos(P({ edad: '34', peso: 70 }));
 t('Adulto A: vía oral', A70.via, 'oral');
-t('Adulto A: 2.000 ml o más en 24 h', A70.oral.principal, '2.000 ml o más en 24 h');
+t('Adulto A: 2.000 a 3.000 ml en 24 h', A70.oral.principal, '2.000 a 3.000 ml en 24 h');
 t('Adulto A: sin línea IV', A70.fases.length, 0);
 t('Holliday-Segar 8 kg = 800 ml/día', ctx.holliday(8), 800);
 t('Holliday-Segar 12 kg = 1.100 ml/día', ctx.holliday(12), 1100);
 t('Holliday-Segar 25 kg = 1.600 ml/día', ctx.holliday(25), 1600);
-t('Niño 12 kg: mantenimiento + 5 % = 1.160 ml/24 h',
-  ctx.planLiquidos(P({ edad: '3', peso: 12 })).oral.principal, '1160 ml en 24 h');
+t('Escolar 33 kg ambulatorio (A): Holliday-Segar puro = 1.760 ml/24 h',
+  ctx.planLiquidos(P({ edad: '10', peso: 33 })).oral.principal, '1760 ml en 24 h');
+t('Escolar 33 kg en grupo de riesgo (B1): Holliday-Segar + 5 % = 1.850 ml/24 h',
+  ctx.planLiquidos(P({ edad: '10', peso: 33, cond: ['dm'] })).oral.principal, '1850 ml en 24 h');
+t('Niño 12 kg ambulatorio (A): 1.100 ml/24 h',
+  ctx.planLiquidos(P({ edad: '3', peso: 12 })).oral.principal, '1100 ml en 24 h');
+t('Niño 12 kg en grupo de riesgo (B1): 1.160 ml/24 h',
+  ctx.planLiquidos(P({ edad: '3', peso: 12, cond: ['menor5'] })).oral.principal, '1160 ml en 24 h');
+t('El grupo A cita Holliday-Segar sin déficit',
+  /100 ml\/kg los primeros 10 kg/.test(ctx.planLiquidos(P({ edad: '10', peso: 33 })).oral.detalle), 'true');
+t('El grupo B1 explica por qué agrega el 5 %',
+  /grupo de riesgo/.test(ctx.planLiquidos(P({ edad: '10', peso: 33, cond: ['dm'] })).oral.detalle), 'true');
+t('Adulto: 2.000 a 3.000 ml en 24 h',
+  ctx.planLiquidos(P({ edad: '34', peso: 70 })).oral.principal, '2.000 a 3.000 ml en 24 h');
 const B1 = ctx.planLiquidos(P({ edad: '34', peso: 70, cond: ['dm'] }));
 t('B1 con intolerancia oral: 2–4 ml/kg/h = 140–280 ml/h', B1.fases[0].rate, '140 – 280 ml/h');
 

@@ -37,23 +37,40 @@ Las etiquetas `ficha §6` y `protocolo` sobre cada casilla indican de dónde sal
 
 ### 3. Reposición hídrica calculada por peso
 
-- **A / B1** — hidratación oral. Adultos: mínimo 2 000 ml/24 h. Pediátricos: mantenimiento por Holliday-Segar + 5 % de déficit. Si hay intolerancia oral en B1, cristaloides a 2–4 ml/kg/h.
+- **A** — hidratación oral. Adultos: 2 000 a 3 000 ml/24 h. Pediátricos: **Holliday-Segar puro** (100 ml/kg los primeros 10 kg, 50 ml/kg los siguientes 10 kg, 20 ml/kg por cada kilo adicional), conforme al ítem 22 del instrumento de auditoría.
+- **B1** — lo mismo, pero **más 5 % de déficit** en pediátricos por pertenecer a grupo de riesgo, conforme al ítem 27. Si hay intolerancia oral, cristaloides a 2–4 ml/kg/h.
 - **B2** — carga de 10 ml/kg en 1 h (repetible hasta 2 veces si persisten signos de alarma y la diuresis es < 1 ml/kg/h), luego 5–7 → 3–5 → 2–4 ml/kg/h.
 - **C** — bolo de 20 ml/kg en 15–30 min (10 ml/kg en gestantes y ≥ 65 años), luego 10 ml/kg/h → 5–7 → 3–5 → 2–4 ml/kg/h, con las rutas de rescate: segundo y tercer bolo, coloide y transfusión (glóbulos rojos 5–10 ml/kg o sangre fresca 10–20 ml/kg).
 
 Cada fase muestra **ml/h, volumen total, hora proyectada y goteo sin bomba** (macrogotero de 20 gotas/ml y microgotero de 60 µgotas/ml).
 
-### 4. Ausencia confirmada, no asumida
+### 4. Flujo en siete pasos
+
+El orden sigue el razonamiento clínico, no la estructura de los datos:
+
+1. **Definición de caso** — es lo primero que ve el médico al abrir, para recordar qué es un caso probable de dengue antes de mirar al paciente.
+2. **Paciente y signos vitales** — identificación, fechas, antropometría, tensión arterial, FC, FR, temperatura, SatO₂, llenado capilar y estado de conciencia en un solo módulo de primer contacto.
+3. **Prueba del torniquete**.
+4. **Verifique signos de alarma**.
+5. **Verifique manifestaciones graves de dengue** — con un resumen de lo medido en el primer contacto, que marca en rojo si la presión de pulso o el llenado capilar ya son compatibles con choque.
+6. **Condiciones asociadas y riesgo social**.
+7. **Resultado**.
+
+### 5. Día de enfermedad calculado por fechas
+
+Se registran la **fecha de inicio de síntomas** y la **fecha de consulta**, y el día se calcula solo. El día 1 es el día en que inicia la fiebre, como cuenta el INS: inicio el 12 y consulta el 13 son dos días de evolución. La app avisa si el inicio quedó después de la consulta, y permite seleccionar el día a mano cuando el paciente no precisa la fecha. Eso también deja registrar consultas de pacientes vistos días atrás.
+
+### 6. Ausencia confirmada, no asumida
 
 En signos de alarma y en manifestaciones graves hay una casilla **"Ninguno — los busqué y no hay"**. La app no deja avanzar sin que se elija una de las dos cosas: o se marca al menos un signo, o se confirma explícitamente que se buscaron y no hay. No marcar nada ya no equivale a decir que no hay: el negativo queda registrado como tal en el reporte, en la conducta copiada y en el Word, que es lo que exige una historia clínica auditable.
 
-### 5. Torniquete, signos vitales e imágenes
+### 7. Torniquete, signos vitales e imágenes
 
 - **Prueba del torniquete** con la técnica completa en la pantalla de definición de caso. Es apoyo diagnóstico y parte de la búsqueda activa de manifestaciones hemorrágicas que exige el instrumento de auditoría (ítem 11); no suma para la definición de caso porque no es casilla de la sección 6.
 - **Signos vitales**: TA, FC, FR, temperatura, SatO₂, llenado capilar y estado de conciencia, con **PAM y presión de pulso calculadas**.
 - **Ecografía abdominal y radiografía de tórax** sugeridas ante hallazgos de fuga vascular, que son las que documentan ascitis y derrame pleural.
 
-### 6. Salida en Word y copiado de conducta
+### 8. Salida en Word y copiado de conducta
 
 - **Exportar a Word** genera un `.docx` real con tablas: clasificación, ficha del paciente, hallazgos, plan de líquidos fase por fase, manejo sintomático, laboratorio, monitoreo y criterios de alta o de referencia. El médico lo abre, copia y pega en la historia clínica.
 - **Copiar conducta** deja en el portapapeles la misma información como texto plano, para pegar directamente sin abrir Word.
@@ -100,7 +117,7 @@ ceroaedes/
 ├── sw.js                   # Service worker (uso sin conexión)
 ├── assets/                 # Iconos
 ├── tests/
-│   ├── engine.test.js      # 139 pruebas del motor clínico
+│   ├── engine.test.js      # 154 pruebas del motor clínico
 │   └── ui.test.js          # Recorridos en navegador real + validación del .docx
 ├── LICENSE
 └── README.md
@@ -124,7 +141,7 @@ El motor verifica la definición operativa de caso, la clasificación en los cua
 Después de editar `index.html`, suba el número de versión en `sw.js`:
 
 ```js
-const VERSION = 'ceroaedes-v2.2.1';
+const VERSION = 'ceroaedes-v2.3.1';
 ```
 
 Sin ese cambio, los celulares que ya la tengan instalada seguirán mostrando la versión cacheada.
