@@ -1,6 +1,6 @@
 {
   "name": "ceroaedes",
-  "version": "2.6.0",
+  "version": "2.8.0",
   "description": "CeroAedes by AR — Clasificación y manejo de dengue con reposición hídrica por peso y exportación a Word. Ficha SIVIGILA 210/220/580 y algoritmo OPS/OMS - MinSalud Colombia.",
   "author": "Andrés Rodríguez Cardona",
   "license": "MIT",

@@ -133,6 +133,22 @@ footer{text-align:center;padding:14px;font-size:.72rem;color:var(--muted);border
 footer b{color:var(--text)}
 
 
+
+/* ===== Curva del curso de la enfermedad ===== */
+.curva{width:100%;height:auto;display:block;font-family:inherit}
+.curva text{text-anchor:middle}
+.curva .c-banda{font-size:8.5px;font-weight:800;letter-spacing:.4px;text-transform:uppercase}
+.curva .c-evento{font-size:7.2px;font-weight:600}
+.curva .c-dia{font-size:9px;fill:var(--muted);font-weight:600}
+.curva .c-eje{font-size:8px;fill:var(--muted);letter-spacing:.4px;text-transform:uppercase;font-weight:700}
+.curva .c-marca{stroke:#2B2B33;stroke-width:1.5;stroke-dasharray:3 3}
+.curva .c-chip{font-size:9px;fill:#fff;font-weight:800}
+.c-leyenda{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin-top:2px;
+  font-size:.74rem;color:var(--muted);font-weight:600}
+.c-leyenda span{display:flex;align-items:center;gap:5px}
+.c-leyenda i{width:14px;height:3px;border-radius:2px;display:inline-block}
+.c-nota{font-size:.7rem;color:var(--muted);text-align:center;margin-top:6px;line-height:1.45}
+
 /* ===== Bienvenida ===== */
 .welcome{text-align:center;padding:4px 2px 0}
 .w-scene{width:100%;max-width:300px;margin:0 auto 2px}
@@ -362,7 +378,12 @@ footer b{color:var(--text)}
       </select>
     </div>
 
+  </div>
+
+  <div class="card">
+    <div class="sec-title">Fase del curso de la enfermedad</div>
     <div id="fase-critica-alert"></div>
+    <div class="c-nota">Curvas esquemáticas del curso típico del dengue (OMS): ilustran la evolución esperada, no las mediciones de este paciente.</div>
   </div>
 
   <div class="card">
@@ -397,19 +418,43 @@ footer b{color:var(--text)}
   </div>
 
   <div class="card">
-    <div class="sec-title">Laboratorio y hemoconcentración</div>
+    <div class="sec-title">Hemograma y hemoconcentración</div>
+    <div class="note info" style="margin-bottom:12px">
+      Con <b>un solo hemograma</b> basta: la app lo compara con la referencia para la edad y el sexo y aplica los
+      umbrales absolutos de la OMS. Si además tiene un hemograma previo del mismo paciente, la comparación gana
+      confiabilidad y la app la prefiere.<br><br>
+      <b>Tómelo antes de hidratar.</b> La OMS lo indica así: <i>«Obtain reference HCT before fluid therapy»</i>.
+      Ese valor queda como basal del paciente para todos los controles siguientes.
+    </div>
+
     <div class="row g2">
-      <div><label>Hematocrito basal (%)</label><input type="number" id="f-hct-basal" step="0.1" min="0" placeholder="Ej: 38" oninput="syncLab()"></div>
-      <div><label>Hematocrito actual (%)</label><input type="number" id="f-hct" step="0.1" min="0" placeholder="Ej: 48" oninput="syncLab()"></div>
+      <div><label>Hematocrito (%)</label><input type="number" id="f-hct" step="0.1" min="0" placeholder="Ej: 52" oninput="syncLab()"></div>
+      <div><label>Hemoglobina (g/dL)</label><input type="number" id="f-hb" step="0.1" min="0" placeholder="Ej: 17.2" oninput="syncLab()"></div>
     </div>
     <div class="row g2">
-      <div><label>Hemoglobina (g/dL)</label><input type="number" id="f-hb" step="0.1" min="0" placeholder="Ej: 15.8" oninput="syncLab()"></div>
       <div><label>Plaquetas (/mm³)</label><input type="number" id="f-plaquetas" step="1000" min="0" placeholder="Ej: 85000" oninput="syncLab()"></div>
+      <div><label>Leucocitos (/mm³)</label><input type="number" id="f-leucocitos" step="100" min="0" placeholder="Ej: 3200" oninput="syncLab()"></div>
     </div>
-    <div id="hct-out" class="note info" style="margin-bottom:0">
-      El <b>basal</b> es el hematocrito de la fase febril temprana del propio paciente. Si no lo tiene, use el valor de referencia
-      para edad y sexo: la comparación sirve, pero pierde confiabilidad. Un ascenso del <b>20 %</b> marca extravasación de plasma.
+
+    <div id="hct-out" class="note info">
+      Registre el hematocrito para evaluar la hemoconcentración.
     </div>
+
+    <details class="acc" style="margin-bottom:0">
+      <summary>Ajustes: hemograma previo y referencia</summary>
+      <div class="acc-body">
+        <label>Hematocrito previo o basal (%) <span style="text-transform:none;font-weight:400">· opcional</span></label>
+        <input type="number" id="f-hct-basal" step="0.1" min="0" placeholder="De la fase febril temprana" oninput="syncLab()">
+        <div class="note info" style="font-size:.76rem">
+          Es el valor que la OMS prefiere: el hematocrito del propio paciente en la fase febril temprana.
+          Si lo registra, la app calcula el delta contra él en vez de contra la referencia poblacional.
+        </div>
+
+        <label>Referencia de hematocrito para este paciente (%) <span style="text-transform:none;font-weight:400">· opcional</span></label>
+        <input type="number" id="f-hct-ref" step="0.1" min="0" placeholder="Punto medio de su laboratorio" oninput="syncLab()">
+        <div id="ref-sugerida" class="note warn" style="font-size:.76rem;margin-bottom:0"></div>
+      </div>
+    </details>
   </div>
 
   <button class="btn btn-primary" onclick="next(2)">Siguiente</button>
@@ -532,7 +577,7 @@ footer b{color:var(--text)}
 
 /* === ENGINE START === */
 
-var APP_VERSION = '2.6.0';   /* fuente única: pie de página, Word y service worker */
+var APP_VERSION = '2.8.0';   /* fuente única: pie de página, Word y service worker */
 
 /* Origen de cada criterio: 'ficha' = casilla de la sección 6 de la ficha;
    'prot' = está en la definición del protocolo pero no como casilla. */
@@ -1108,70 +1153,182 @@ function deltaHematocrito(basal, actual){
   return Math.round(((a - b)/b)*1000)/10;
 }
 
-/* Interpretación cruzada: el mismo cambio de hematocrito significa cosas opuestas
-   según el estado hemodinámico. Ese cruce es el corazón del módulo. */
+/* Referencia poblacional de hematocrito por edad y sexo.
+   La OMS admite usarla cuando no se tiene el basal del propio paciente:
+   «In the absence of this, age-specific population haematocrit levels could be used».
+   Son valores orientativos y editables: prevalece el rango del laboratorio local. */
+function referenciaHematocrito(S){
+  var m = edadMeses(S.edad, S.edadU), h = (S.sexo === 'M');
+  if(S.edad === '') return null;
+  if(m < 1)   return { bajo:42, alto:65, medio:51, etiqueta:'recién nacido' };
+  if(m < 6)   return { bajo:31, alto:41, medio:36, etiqueta:'1 a 6 meses' };
+  if(m < 24)  return { bajo:33, alto:39, medio:36, etiqueta:'6 meses a 2 años' };
+  if(m < 72)  return { bajo:34, alto:40, medio:37, etiqueta:'2 a 6 años' };
+  if(m < 144) return { bajo:35, alto:45, medio:40, etiqueta:'6 a 12 años' };
+  if(m < 216) return h ? { bajo:37, alto:49, medio:43, etiqueta:'12 a 18 años, hombre' }
+                       : { bajo:36, alto:46, medio:41, etiqueta:'12 a 18 años, mujer' };
+  return h ? { bajo:41, alto:53, medio:47, etiqueta:'hombre adulto' }
+           : { bajo:36, alto:46, medio:41, etiqueta:'mujer adulta' };
+}
+
+/* Umbrales absolutos de la OMS 2009 (diagrama de manejo de casos, capítulo 2).
+   En choque: «if HCT was low (<40% in children and adult females, <45% in adult
+   males) this indicates bleeding». Y «if HCT increases/still high (>50%)» marca
+   fuga persistente. Sirven con una sola muestra, sin basal. */
+function umbralHctBajo(S){
+  var m = edadMeses(S.edad, S.edadU);
+  return (m < 216 || S.sexo === 'F') ? 40 : 45;
+}
+var HCT_ALTO_OMS = 50;
+
+/* Referencia efectiva: la que el usuario escribió, o la poblacional */
+function refEfectiva(S){
+  var manual = parseFloat(S.hctRef);
+  if(!isNaN(manual) && manual > 0) return { medio: manual, alto: manual*1.15, bajo: manual*0.85, etiqueta:'referencia ingresada', manual:true };
+  return referenciaHematocrito(S);
+}
+
+/* Interpretación del hematocrito.
+   Modo preferido: contra el basal del propio paciente.
+   Modo de un solo hemograma: contra la referencia por edad y sexo, con menor
+   confiabilidad, más el patrón hematológico del dengue. */
 function interpretarHematocrito(S){
-  var d = deltaHematocrito(S.hctBasal, S.hctActual);
-  var hb = parseFloat(S.hb), plq = parseFloat(S.plaquetas);
+  var act = parseFloat(S.hctActual);
+  var hb = parseFloat(S.hb), plq = parseFloat(S.plaquetas), leu = parseFloat(S.leucocitos);
+  var dBasal = deltaHematocrito(S.hctBasal, S.hctActual);
+  var ref = refEfectiva(S);
   var h = evaluacionHemodinamica(S);
   var inestable = (h.nivel === 'hipotenso' || h.nivel === 'compensado');
-  var r = { delta: d, nivel:'sin-datos', titulo:'', mensaje:'', acciones:[], notas:[] };
+  var r = { delta:dBasal, deltaRef:null, modo:'sin-datos', nivel:'sin-datos',
+            titulo:'', mensaje:'', acciones:[], notas:[], referencia:ref };
 
+  /* --- patrón hematológico, sirva o no el hematocrito --- */
   if(!isNaN(plq) && plq < 100000)
     r.notas.push('Plaquetas ' + plq.toLocaleString('es-CO') + ' /mm³: por debajo de 100.000 es signo de alarma de la ficha. Márquelo si no lo ha hecho.');
-  if(!isNaN(hb) && !isNaN(parseFloat(S.hctActual))){
-    var esperado = hb*3, act = parseFloat(S.hctActual);
+  if(!isNaN(leu) && leu < 4000)
+    r.notas.push('Leucocitos ' + leu.toLocaleString('es-CO') + ' /mm³: leucopenia. Es una de las manifestaciones que cuentan para la definición de caso.');
+  if(!isNaN(hb) && !isNaN(act)){
+    var esperado = hb*3;
     if(Math.abs(act - esperado) > 6)
       r.notas.push('Comprobación de coherencia: el hematocrito suele aproximarse a tres veces la hemoglobina (' +
         Math.round(esperado) + ' % esperado frente a ' + act + ' % informado). Una diferencia grande sugiere error de laboratorio o una condición hematológica de base; confirme antes de decidir sobre esa cifra.');
   }
+  var triada = (!isNaN(plq) && plq < 100000) && (!isNaN(leu) && leu < 4000);
 
-  if(d === null){
-    r.nivel = 'sin-datos';
-    r.titulo = 'Sin hematocrito basal y actual no se puede calcular la hemoconcentración';
-    r.mensaje = 'Registre el hematocrito de la fase febril temprana como basal del propio paciente. Si no lo tiene, use el valor de referencia para edad y sexo, sabiendo que la comparación pierde confiabilidad.';
+  /* --- 1. Con basal propio: es el modo preferido --- */
+  if(dBasal !== null){
+    r.modo = 'basal';
+    if(dBasal >= 20){
+      r.nivel = 'fuga';
+      r.titulo = 'Hemoconcentración significativa: hematocrito +' + dBasal + ' % sobre el basal del paciente';
+      r.mensaje = 'Un ascenso del 20 % o más es el marcador clásico de extravasación de plasma. ' +
+        (inestable
+          ? 'Con inestabilidad hemodinámica indica fuga activa: administre la carga de cristaloide de la categoría y repita el hematocrito después.'
+          : 'Con signos vitales estables indica fuga en curso: inicie o mantenga la reposición de la categoría B2 y vigile de forma estrecha.');
+      r.acciones.push('Marcar "Aumento del hematocrito" como signo de alarma: lleva al paciente a categoría B2 como mínimo.');
+      r.acciones.push('Repetir hematocrito después de cada carga y luego cada 12 a 24 horas.');
+      if(inestable) r.acciones.push('Si además hay choque o dificultad respiratoria, es extravasación grave de plasma: categoría C.');
+    } else if(dBasal > 0){
+      r.nivel = 'ascenso';
+      r.titulo = 'Hematocrito en ascenso: +' + dBasal + ' % sobre el basal';
+      r.mensaje = 'El ascenso del hematocrito precede a los cambios de tensión arterial y de volumen del pulso: es un aviso temprano. ' +
+        'Aún no alcanza el 20 % que marca extravasación significativa, pero un ascenso progresivo junto con caída rápida de plaquetas es signo de alarma.';
+      r.acciones.push('Repetir el control en 12 a 24 horas, o antes si aparecen signos de alarma.');
+    } else if(dBasal <= -10 && inestable){
+      r.nivel = 'sangrado';
+      r.titulo = 'Caída del hematocrito con inestabilidad hemodinámica: sospeche sangrado';
+      r.mensaje = 'La OMS es explícita: hematocrito que cae con signos vitales inestables señala hemorragia importante y necesidad de transfusión urgente. No lo interprete como mejoría.';
+      r.acciones.push('Tomar prueba cruzada de inmediato y transfundir.');
+      r.acciones.push('Buscar sangrado oculto: digestivo, ginecológico, retroperitoneal o del sistema nervioso central.');
+    } else if(dBasal < 0 && !inestable){
+      r.nivel = 'mejoria';
+      r.titulo = 'Hematocrito en descenso con hemodinamia estable: mejoría';
+      r.mensaje = 'La caída del hematocrito con buen volumen de pulso y diuresis conservada indica reabsorción del plasma extravasado. ' +
+        'Es criterio para reducir y luego suspender los líquidos intravenosos: mantenerlos aquí es la causa más frecuente de sobrecarga.';
+      r.acciones.push('Reducir el goteo de forma progresiva y suspender los líquidos intravenosos.');
+      r.acciones.push('Vigilar signos de sobrecarga durante las siguientes 48 a 72 horas de reabsorción.');
+    } else if(dBasal < 0){
+      r.nivel = 'descenso';
+      r.titulo = 'Hematocrito en descenso: ' + dBasal + ' %';
+      r.mensaje = 'Interprete siempre junto con la hemodinamia: con buen volumen de pulso indica reabsorción y es momento de reducir líquidos; con inestabilidad indica sangrado.';
+    } else {
+      r.nivel = 'estable';
+      r.titulo = 'Hematocrito sin cambio respecto al basal';
+      r.mensaje = 'Continúe el control seriado según la categoría de intervención.';
+    }
     return r;
   }
 
-  if(d >= 20){
-    r.nivel = 'fuga';
-    r.titulo = 'Hemoconcentración significativa: hematocrito ' + (d > 0 ? '+' : '') + d + ' % sobre el basal';
-    r.mensaje = 'Un ascenso del 20 % o más es el marcador clásico de extravasación de plasma. ' +
-      (inestable
-        ? 'Con inestabilidad hemodinámica esto indica fuga activa: administre la carga de cristaloide que corresponda a la categoría y repita el hematocrito después.'
-        : 'Con signos vitales estables, indica fuga en curso: inicie o mantenga la reposición de la categoría B2 y vigile de forma estrecha.');
-    r.acciones.push('Marcar "Aumento del hematocrito" como signo de alarma: lleva al paciente a categoría B2 como mínimo.');
-    r.acciones.push('Repetir hematocrito después de cada carga y luego cada 12 a 24 horas.');
-    if(inestable) r.acciones.push('Si además hay choque o dificultad respiratoria, es extravasación grave de plasma: categoría C.');
-  } else if(d > 0){
-    r.nivel = 'ascenso';
-    r.titulo = 'Hematocrito en ascenso: ' + '+' + d + ' % sobre el basal';
-    r.mensaje = 'El ascenso del hematocrito precede a los cambios de tensión arterial y de volumen del pulso: es un aviso temprano. ' +
-      'Aún no alcanza el 20 % que marca extravasación significativa, pero un ascenso progresivo junto con caída rápida de plaquetas es signo de alarma.';
-    r.acciones.push('Repetir el control en 12 a 24 horas, o antes si aparecen signos de alarma.');
-  } else if(d <= -10 && inestable){
-    r.nivel = 'sangrado';
-    r.titulo = 'Caída del hematocrito con inestabilidad hemodinámica: sospeche sangrado';
-    r.mensaje = 'La OMS es explícita: hematocrito que cae con signos vitales inestables señala hemorragia importante y necesidad de transfusión urgente. ' +
-      'No lo interprete como mejoría.';
-    r.acciones.push('Tomar prueba cruzada de inmediato y transfundir.');
-    r.acciones.push('Buscar sangrado oculto: digestivo, ginecológico, retroperitoneal o del sistema nervioso central.');
-  } else if(d < 0 && !inestable){
-    r.nivel = 'mejoria';
-    r.titulo = 'Hematocrito en descenso con hemodinamia estable: mejoría';
-    r.mensaje = 'La caída del hematocrito con buen volumen de pulso y diuresis conservada indica reabsorción del plasma extravasado. ' +
-      'Es criterio para reducir y luego suspender los líquidos intravenosos: mantenerlos aquí es la causa más frecuente de sobrecarga.';
-    r.acciones.push('Reducir el goteo de forma progresiva y suspender los líquidos intravenosos.');
-    r.acciones.push('Vigilar signos de sobrecarga durante las siguientes 48 a 72 horas de reabsorción.');
-  } else if(d < 0){
-    r.nivel = 'descenso';
-    r.titulo = 'Hematocrito en descenso: ' + d + ' %';
-    r.mensaje = 'Interprete siempre junto con la hemodinamia: con buen volumen de pulso indica reabsorción y es momento de reducir líquidos; con inestabilidad indica sangrado.';
-  } else {
-    r.nivel = 'estable';
-    r.titulo = 'Hematocrito sin cambio respecto al basal';
-    r.mensaje = 'Continúe el control seriado según la categoría de intervención.';
+  /* --- 2. Un solo hemograma: contra la referencia por edad y sexo --- */
+  if(!isNaN(act) && ref){
+    r.modo = 'referencia';
+    r.deltaRef = Math.round(((act - ref.medio)/ref.medio)*1000)/10;
+    var porEncima = act > ref.alto;
+    var base = 'Comparado con la referencia para ' + ref.etiqueta + ' (' +
+      (ref.manual ? ref.medio + ' %' : ref.bajo + ' – ' + ref.alto + ' %, punto medio ' + ref.medio + ' %') + '), ' +
+      'el hematocrito de ' + act + ' % está ' + (r.deltaRef >= 0 ? '+' : '') + r.deltaRef + ' % respecto al punto medio. ';
+    var aviso = 'Esta lectura es un sustituto: la OMS prefiere el hematocrito de la fase febril temprana del propio paciente. ' +
+      'Guarde este valor como basal para los controles siguientes.';
+
+    var uBajo = umbralHctBajo(S);
+
+    /* La OMS da reglas absolutas que no necesitan basal */
+    if(inestable && act < uBajo){
+      r.nivel = 'sangrado';
+      r.titulo = 'Hematocrito ' + act + ' % con inestabilidad hemodinámica: indica sangrado';
+      r.mensaje = 'La OMS lo fija sin necesidad de basal: en choque, un hematocrito por debajo de ' + uBajo + ' % ' +
+        '(< 40 % en niños y mujeres adultas, < 45 % en hombres adultos) señala hemorragia. ' + aviso;
+      r.acciones.push('Prueba cruzada urgente y transfusión.');
+      r.acciones.push('Buscar sangrado oculto: digestivo, ginecológico, retroperitoneal o del sistema nervioso central.');
+      if(triada) r.notas.push('Patrón hematológico compatible con dengue: trombocitopenia y leucopenia en la misma muestra.');
+      return r;
+    }
+    if(act > HCT_ALTO_OMS && inestable){
+      r.nivel = 'fuga';
+      r.titulo = 'Hematocrito ' + act + ' % (> 50 %) con inestabilidad: fuga de plasma persistente';
+      r.mensaje = 'La OMS usa el umbral de 50 % en el manejo del choque: hematocrito alto o en ascenso tras el primer bolo ' +
+        'indica que la extravasación continúa y justifica repetir la carga de cristaloide. ' + aviso;
+      r.acciones.push('Repetir carga de cristaloide según la categoría y volver a medir el hematocrito.');
+      r.acciones.push('Si el hematocrito no cede pese a las cargas, considerar coloide según el algoritmo.');
+      if(triada) r.notas.push('Patrón hematológico compatible con dengue: trombocitopenia y leucopenia en la misma muestra.');
+      return r;
+    }
+
+    if(r.deltaRef >= 20 || porEncima || act > HCT_ALTO_OMS){
+      r.nivel = 'fuga';
+      r.titulo = 'Hematocrito por encima de lo esperado para la edad y el sexo: sugiere hemoconcentración';
+      r.mensaje = base + (act > HCT_ALTO_OMS ? 'Supera el 50 % que la OMS usa como umbral de hematocrito alto. ' : (porEncima ? 'Supera el límite superior de referencia. ' : '')) +
+        'En un caso probable de dengue esto orienta a extravasación de plasma. ' + aviso;
+      r.acciones.push('Valorar "Aumento del hematocrito" como signo de alarma junto con la clínica: si lo marca, el paciente pasa a categoría B2.');
+      r.acciones.push('Repetir el hemograma en 12 a 24 horas para confirmar la tendencia, que es lo que realmente decide.');
+      if(inestable) r.acciones.push('Con inestabilidad hemodinámica, trate como fuga activa mientras confirma.');
+    } else if(act < ref.bajo){
+      r.nivel = inestable ? 'sangrado' : 'descenso';
+      r.titulo = inestable
+        ? 'Hematocrito bajo para la edad con inestabilidad hemodinámica: sospeche sangrado'
+        : 'Hematocrito por debajo de la referencia para la edad y el sexo';
+      r.mensaje = base + (inestable
+        ? 'Con signos vitales inestables, un hematocrito bajo obliga a descartar hemorragia antes que cualquier otra lectura. '
+        : 'Puede corresponder a anemia previa, a hemodilución por hidratación ya administrada, o a sangrado. Un hematocrito bajo NO descarta la extravasación: si el paciente partía de una anemia, la fuga puede estar ocurriendo con cifras aparentemente normales. ') + aviso;
+      if(inestable) r.acciones.push('Tomar prueba cruzada y valorar transfusión.');
+      r.acciones.push('Buscar anemia previa y sangrado activo antes de atribuirlo a hemodilución.');
+    } else {
+      r.nivel = 'estable';
+      r.titulo = 'Hematocrito dentro de la referencia para la edad y el sexo';
+      r.mensaje = base + 'No hay hemoconcentración evidente en esta única muestra. ' +
+        'Un valor normal no descarta la fase crítica: lo que decide es la tendencia. ' + aviso;
+      r.acciones.push('Repetir el hemograma en 12 a 24 horas, o antes si aparecen signos de alarma.');
+    }
+
+    if(triada) r.notas.push('Patrón hematológico compatible con dengue: hemoconcentración o hematocrito alto, trombocitopenia y leucopenia en la misma muestra.');
+    return r;
   }
+
+  /* --- 3. Sin nada útil --- */
+  r.nivel = 'sin-datos';
+  r.titulo = 'Registre al menos el hematocrito actual';
+  r.mensaje = 'Con un solo hemograma la app lo compara con la referencia para la edad y el sexo. ' +
+    'Si además tiene un hematocrito previo del mismo paciente, la comparación es más confiable y la app la prefiere.';
   return r;
 }
 
@@ -1267,6 +1424,8 @@ function moduloSeguridad(S){
     disparo:'El hematocrito cae durante la infusión.',
     conducta: [
       'Hematocrito que CAE con signos vitales INESTABLES o choque persistente → hemorragia importante. Prueba cruzada urgente y transfusión: glóbulos rojos ' + rango(p,5,10) + ' ml (5 – 10 ml/kg) o sangre fresca ' + rango(p,10,20) + ' ml (10 – 20 ml/kg).',
+      'Sin hematocrito basal, la OMS da el umbral absoluto: en choque, hematocrito por debajo de ' + umbralHctBajo(S) + ' % (< 40 % en niños y mujeres adultas, < 45 % en hombres adultos) indica sangrado.',
+      'Hematocrito por encima de 50 % o que sigue alto tras el primer bolo indica fuga persistente: repetir carga y reevaluar.',
       'Hematocrito que CAE con buen volumen de pulso, diuresis conservada y paciente estable → reabsorción y mejoría. Reduzca y suspenda los líquidos intravenosos.',
       'Hematocrito que SUBE con inestabilidad → fuga activa de plasma. Continúe la reposición según la categoría.'
     ],
@@ -1294,6 +1453,38 @@ function moduloSeguridad(S){
   });
 
   return { modulos: M, hct: hct, faseCriticaTerminada: fin, aplica: (cat === 'B2' || cat === 'C') };
+}
+
+/* Fase del curso clínico según el día de enfermedad.
+   La fase crítica comienza hacia el día 3 en niños y el 4 en adultos, y coincide
+   con la caída de la fiebre. Referencia: curso de la enfermedad, OMS 2009. */
+function faseDeLaEnfermedad(S){
+  var d = parseInt(S.dia,10), ped = esPediatrico(S), ini = ped ? 3 : 4, fin = 7;
+  var r = { dia: isNaN(d) ? null : d, inicioCritica: ini, finCritica: fin, ped: ped,
+            fase:'', tono:'info', titulo:'', mensaje:'' };
+  if(isNaN(d) || d === 0){
+    r.fase = 'sin-dato';
+    r.titulo = 'Sin día de enfermedad';
+    r.mensaje = 'Registre la fecha de inicio de síntomas para ubicar al paciente en el curso de la enfermedad.';
+    return r;
+  }
+  if(d < ini){
+    r.fase = 'febril'; r.tono = 'info';
+    r.titulo = 'Fase febril — día ' + d;
+    r.mensaje = 'Hidratación y vigilancia. La fase crítica inicia hacia el día ' + ini +
+      ' en ' + (ped ? 'niños' : 'adultos') + ' y se anuncia con la caída de la fiebre.';
+  } else if(d <= fin){
+    r.fase = 'critica'; r.tono = 'danger';
+    r.titulo = 'Fase crítica — día ' + d;
+    r.mensaje = 'Ventana de extravasación de plasma. La caída de la fiebre no es mejoría: es el momento de mayor riesgo de choque. ' +
+      'Busque signos de alarma de forma dirigida y controle hematocrito y plaquetas.';
+  } else {
+    r.fase = 'recuperacion'; r.tono = 'ok';
+    r.titulo = 'Fase de recuperación — día ' + d;
+    r.mensaje = 'Reabsorción del líquido extravasado durante 48 a 72 horas. El riesgo ahora es la sobrecarga: ' +
+      'suspenda los líquidos intravenosos cuando el hematocrito baje del basal en un paciente estable.';
+  }
+  return r;
 }
 
 /* ---------- Modelo único del reporte (alimenta pantalla y Word) ---------- */
@@ -1333,6 +1524,7 @@ function construirReporte(S){
 
   m.vitales = vitalesTabla(S);
   m.hemo = evaluacionHemodinamica(S);
+  m.fase = faseDeLaEnfermedad(S);
   m.hct = interpretarHematocrito(S);
   m.seguridad = moduloSeguridad(S);
   m.auditoria = auditoria(S);
@@ -1350,6 +1542,7 @@ function construirReporte(S){
   L.push('Clasificación (definición operativa de caso): ' + def.clasificacion + '.');
   L.push('Categoría de intervención (algoritmo OPS): ' + cat + ' — ' + meta.nombre + '.');
   L.push('Conducta: ' + meta.conducta + '. ' + meta.donde);
+  if(m.fase.fase !== 'sin-dato') L.push('Fase del curso clínico: ' + m.fase.titulo + '. ' + m.fase.mensaje);
   L.push('');
   L.push('SIGNOS DE ALARMA: ' + (S.alarma.length
     ? S.alarma.map(function(k){ return nombreDe(ALARMA,k); }).join('; ')
@@ -1413,7 +1606,7 @@ var S = {
   alarma:[], sinAlarma:false, grave:[], sinGrave:false,
   cond:[], social:[], toleraVO:true, diuresisOk:true,
   sinFecha:false, pas:'', pad:'', fc:'', fr:'', temp:'', sato2:'', llenado:'', conciencia:'',
-  hctBasal:'', hctActual:'', hb:'', plaquetas:''
+  hctBasal:'', hctActual:'', hctRef:'', hb:'', plaquetas:'', leucocitos:''
 };
 var MODELO = null;
 var NINGUNO = { alarma:'sinAlarma', grave:'sinGrave' };
@@ -1456,22 +1649,33 @@ var TONO_HCT = { fuga:'danger', sangrado:'danger', ascenso:'warn', descenso:'war
                  mejoria:'ok', estable:'info', 'sin-datos':'info' };
 
 function syncLab(){
-  S.hctBasal = $('f-hct-basal').value; S.hctActual = $('f-hct').value;
-  S.hb = $('f-hb').value; S.plaquetas = $('f-plaquetas').value;
+  S.hctActual = $('f-hct').value; S.hctBasal = $('f-hct-basal').value;
+  S.hctRef = $('f-hct-ref').value;
+  S.hb = $('f-hb').value; S.plaquetas = $('f-plaquetas').value; S.leucocitos = $('f-leucocitos').value;
   renderHct();
+}
+
+function renderRefSugerida(){
+  var ref = referenciaHematocrito(S), box = $('ref-sugerida');
+  if(!box) return;
+  box.innerHTML = ref
+    ? 'Referencia poblacional para <b>' + ref.etiqueta + '</b>: <b>' + ref.bajo + ' – ' + ref.alto + ' %</b> (punto medio ' + ref.medio + ' %). ' +
+      'Es orientativa: si su laboratorio maneja otro rango, escríbalo arriba y la app usará ese.'
+    : 'Registre la edad y el sexo para sugerir la referencia poblacional.';
 }
 
 function renderHct(){
   var r = interpretarHematocrito(S), o = $('hct-out');
-  o.style.marginBottom = '0';
+  renderRefSugerida();
   if(r.nivel === 'sin-datos' && !r.notas.length){
     o.className = 'note info';
-    o.innerHTML = 'El <b>basal</b> es el hematocrito de la fase febril temprana del propio paciente. Si no lo tiene, use el valor de referencia ' +
-      'para edad y sexo: la comparación sirve, pero pierde confiabilidad. Un ascenso del <b>20 %</b> marca extravasación de plasma.';
+    o.innerHTML = r.titulo + '. ' + r.mensaje;
     return;
   }
   o.className = 'note ' + TONO_HCT[r.nivel];
-  o.innerHTML = '<b>' + r.titulo + '.</b><div style="margin-top:5px">' + r.mensaje + '</div>' +
+  o.innerHTML = (r.modo === 'referencia' ? '<div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.5px;opacity:.75;margin-bottom:4px">Lectura con un solo hemograma</div>' :
+                 (r.modo === 'basal' ? '<div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.5px;opacity:.75;margin-bottom:4px">Comparado con el basal del paciente</div>' : '')) +
+    '<b>' + r.titulo + '.</b><div style="margin-top:5px">' + r.mensaje + '</div>' +
     (r.acciones.length ? '<ul class="clean" style="margin:7px 0 0">' +
       r.acciones.map(function(x){ return '<li>' + x + '</li>'; }).join('') + '</ul>' : '') +
     (r.notas.length ? '<div style="margin-top:8px;font-size:.95em;opacity:.9">' +
@@ -1534,7 +1738,7 @@ function syncEdad(){
   S.edad = $('f-edad').value; S.edadU = $('f-edad-u').value;
   $('wrap-embarazo').style.display = (S.sexo === 'F' && edadMeses(S.edad,S.edadU) >= 120) ? 'block' : 'none';
   $('peso-ideal-box').style.display = pesoIdealVisible() ? 'block' : 'none';
-  renderAutoCond(); renderCondList(); renderFaseCritica();
+  renderAutoCond(); renderCondList(); renderFaseCritica(); renderRefSugerida(); renderHct();
 }
 function renderCondList(){
   var m5 = mostrarMenor5(S), i = S.cond.indexOf('menor5');
@@ -1562,7 +1766,7 @@ function setSexo(v){
   var b = $('seg-sexo').querySelectorAll('button');
   for(var i=0;i<b.length;i++) b[i].classList.toggle('on', b[i].dataset.v === v);
   if(v === 'M'){ S.embarazo = false; $('f-embarazo').checked = false; $('f-embarazo').parentNode.classList.remove('on'); }
-  syncEdad(); syncPeso();
+  syncEdad(); syncPeso(); renderRefSugerida();
 }
 function syncDia(){ S.dia = $('f-dia').value; renderFaseCritica(); }
 
@@ -1595,15 +1799,86 @@ function setSinFecha(v){
   else syncFechas();
 }
 
+/* ================= Gráfica del curso de la enfermedad =================
+   Figura de referencia de la OMS: fases, curva térmica, hematocrito y plaquetas,
+   con un marcador en el día del paciente. Las curvas son esquemáticas — ilustran
+   el curso típico, no las mediciones de este paciente.
+   Paleta categórica validada para daltonismo: #C2410C, #0D9488, #7C3AED. */
+var SERIES_FASE = [
+  { k:'temp', nombre:'Temperatura', color:'#C2410C',
+    v:[0.92,0.95,0.88,0.45,0.18,0.15,0.15,0.15,0.15,0.15] },
+  { k:'hct',  nombre:'Hematocrito', color:'#0D9488',
+    v:[0.34,0.36,0.42,0.58,0.74,0.66,0.44,0.35,0.33,0.33] },
+  { k:'plq',  nombre:'Plaquetas',   color:'#7C3AED',
+    v:[0.76,0.70,0.54,0.34,0.17,0.16,0.30,0.52,0.70,0.80] }
+];
+
+function graficaFases(S){
+  var f = faseDeLaEnfermedad(S);
+  var X0 = 30, X1 = 306, Y0 = 38, ALTO = 78, BASE = Y0 + ALTO;
+  var px = function(d){ return X0 + (d-1)*((X1-X0)/9); };
+  var py = function(v){ return BASE - v*ALTO; };
+
+  var bandas = [
+    { ini:1, fin:f.inicioCritica, nombre:'Febril', fill:'#FDF6E7', borde:'#F0DFB8',
+      texto:'Deshidratación', detalle:'Deshidratación por fiebre y vómito', tinta:'#8A6100' },
+    { ini:f.inicioCritica, fin:f.finCritica, nombre:'Crítica', fill:'#FCEDED', borde:'#F1CFCF',
+      texto:'Choque · sangrado', detalle:'Choque, sangrado y daño de órganos', tinta:'#B71C1C' },
+    { ini:f.finCritica, fin:10, nombre:'Recuperación', fill:'#ECF6F0', borde:'#CDE6D8',
+      texto:'Reabsorción', detalle:'Reabsorción del plasma extravasado y riesgo de sobrecarga', tinta:'#1B5E20' }
+  ];
+
+  var o = ['<svg class="curva" viewBox="0 0 336 178" role="img" aria-label="Curso clínico del dengue por días de enfermedad con la posición del paciente">'];
+
+  bandas.forEach(function(b){
+    var x = px(b.ini), w = px(b.fin) - x;
+    o.push('<rect x="' + x + '" y="' + (Y0-16) + '" width="' + w + '" height="' + (ALTO+16) + '" rx="4" fill="' + b.fill + '" stroke="' + b.borde + '"/>');
+    o.push('<text x="' + (x + w/2) + '" y="' + (Y0-5) + '" class="c-banda" fill="' + b.tinta + '">' + b.nombre + '</text>');
+    o.push('<text x="' + (x + w/2) + '" y="' + (BASE+13) + '" class="c-evento" fill="' + b.tinta + '">' + b.texto + '</text>');
+    o.push('<title>Fase ' + b.nombre.toLowerCase() + ': días ' + b.ini + ' a ' + b.fin + '. ' + (b.detalle || b.texto) + '.</title>');
+  });
+
+  SERIES_FASE.forEach(function(se){
+    var pts = se.v.map(function(v,i){ return [px(i+1), py(v)]; });
+    var dpath = 'M' + pts[0][0].toFixed(1) + ' ' + pts[0][1].toFixed(1);
+    for(var i=1;i<pts.length;i++){
+      var a = pts[i-1], b = pts[i], cx = (a[0]+b[0])/2;
+      dpath += ' C' + cx.toFixed(1) + ' ' + a[1].toFixed(1) + ' ' + cx.toFixed(1) + ' ' + b[1].toFixed(1) +
+               ' ' + b[0].toFixed(1) + ' ' + b[1].toFixed(1);
+    }
+    o.push('<path d="' + dpath + '" fill="none" stroke="' + se.color + '" stroke-width="2" stroke-linecap="round"/>');
+  });
+
+  for(var d=1; d<=10; d++)
+    o.push('<text x="' + px(d) + '" y="' + (BASE+30) + '" class="c-dia">' + d + '</text>');
+  o.push('<text x="168" y="' + (BASE+44) + '" class="c-eje">Día de enfermedad</text>');
+
+  if(f.dia){
+    var dm = Math.min(Math.max(f.dia,1),10), xm = px(dm);
+    o.push('<line x1="' + xm + '" y1="' + (Y0-16) + '" x2="' + xm + '" y2="' + (BASE+3) + '" class="c-marca"/>');
+    o.push('<circle cx="' + xm + '" cy="' + (BASE+3) + '" r="5" fill="#2B2B33" stroke="#fff" stroke-width="2"/>');
+    var lx = Math.min(Math.max(xm, 26), 310);
+    o.push('<g><rect x="' + (lx-24) + '" y="4" width="48" height="17" rx="8" fill="#2B2B33"/>' +
+      '<text x="' + lx + '" y="16" class="c-chip">Día ' + f.dia + '</text>' +
+      '<title>El paciente está en el día ' + f.dia + ' de enfermedad, en fase ' + f.fase + '.</title></g>');
+  }
+  o.push('</svg>');
+
+  o.push('<div class="c-leyenda">' + SERIES_FASE.map(function(se){
+    return '<span><i style="background:' + se.color + '"></i>' + se.nombre + '</span>'; }).join('') + '</div>');
+
+  return o.join('');
+}
+
 function renderFaseCritica(){
-  var d = parseInt(S.dia,10), box = $('fase-critica-alert'), ped = esPediatrico(S), ini = ped ? 3 : 4;
-  if(!isNaN(d) && d >= ini && d <= 6){
-    box.innerHTML = '<div class="note danger" style="margin:0"><b>Ventana de fase crítica.</b> En ' +
-      (ped ? 'niños es entre el 3.º y 6.º día' : 'adultos es entre el 4.º y 6.º día') +
-      '. La caída de la fiebre no significa mejoría: es el momento de mayor riesgo de extravasación de plasma y choque.</div>';
-  } else if(!isNaN(d) && d > 0 && d < ini){
-    box.innerHTML = '<div class="note info" style="margin:0">Fase febril. Vigile la caída de la fiebre — la fase crítica inicia hacia el día ' + ini + '.</div>';
-  } else box.innerHTML = '';
+  var f = faseDeLaEnfermedad(S), box = $('fase-critica-alert');
+  if(!box) return;
+  if(f.fase === 'sin-dato'){
+    box.innerHTML = '<div class="note info" style="margin:0">' + f.mensaje + '</div>';
+    return;
+  }
+  box.innerHTML = graficaFases(S) +
+    '<div class="note ' + f.tono + '" style="margin:10px 0 0"><b>' + f.titulo + '.</b> ' + f.mensaje + '</div>';
 }
 
 function renderAutoCond(){
@@ -1706,6 +1981,12 @@ function evaluar(){
     '<div class="lbl">Clasificación para notificación · SIVIGILA</div>' +
     '<div class="val">' + m.def.clasificacion + '</div>' +
     '<div class="det">' + m.def.detalle + '</div></div>');
+
+  if(m.fase.fase !== 'sin-dato'){
+    o.push('<div class="card"><div class="sec-title">Fase del curso de la enfermedad</div>' +
+      graficaFases(S) +
+      '<div class="note ' + m.fase.tono + '" style="margin:10px 0 0"><b>' + m.fase.titulo + '.</b> ' + m.fase.mensaje + '</div></div>');
+  }
 
   o.push('<div class="card"><div class="sec-title">Paciente</div><table class="t">' +
     m.paciente.map(function(f){ return '<tr><td class="k">' + f[0] + '</td><td class="v">' + f[1] + '</td></tr>'; }).join('') +
@@ -1961,8 +2242,14 @@ function documentoXml(m){
     ['Sustento', m.def.detalle],
     ['Categoría de intervención (OPS)', m.cat + ' — ' + m.meta.nombre],
     ['Conducta', m.meta.conducta],
+    ['Fase del curso clínico', m.fase.fase === 'sin-dato' ? 'Sin día de enfermedad registrado' : m.fase.titulo],
     ['Nivel de atención', m.meta.donde]
   ], [3000, 6200]));
+
+  if(m.fase.fase !== 'sin-dato'){
+    b.push(wP(wR(m.fase.titulo, { b:true, sz:20, color: m.fase.fase === 'critica' ? 'B71C1C' : '1B6B5A' }), { before:120, after:30 }));
+    b.push(wP(wR(m.fase.mensaje, { sz:18, color:'4A4A55' }), { after:80 }));
+  }
 
   b.push(wH1('Paciente'));
   b.push(wTabla([['Dato','Valor']].concat(m.paciente.map(function(f){ return [f[0], String(f[1])]; })), [3000, 6200]));

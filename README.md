@@ -73,9 +73,19 @@ En signos de alarma y en manifestaciones graves hay una casilla **"Ninguno — l
 - **Signos vitales**: TA, FC, FR, temperatura, SatO₂, llenado capilar y estado de conciencia, con **PAM y presión de pulso calculadas**.
 - **Ecografía abdominal y radiografía de tórax** sugeridas ante hallazgos de fuga vascular, que son las que documentan ascitis y derrame pleural.
 
-### 8. Hemoconcentración
+### 8. Curva del curso clínico
 
-Se registran hematocrito basal y actual, hemoglobina y plaquetas. El basal es el de la fase febril temprana del propio paciente, como indica la OMS. La app calcula el delta porcentual y lo interpreta **cruzado con el estado hemodinámico**, que es lo que cambia su significado:
+La pantalla de paciente dibuja la **figura de referencia de la OMS** —fases febril, crítica y de recuperación, con las curvas esquemáticas de temperatura, hematocrito y plaquetas— y marca con una línea y un punto **el día en que está el paciente**, calculado desde la fecha de inicio de síntomas. La banda de fase crítica se desplaza según la edad: día 3 en niños, día 4 en adultos.
+
+Es SVG puro, sin librerías. La paleta categórica (#C2410C, #0D9488, #7C3AED) está validada para daltonismo con el validador del sistema de diseño; la leyenda nombra cada serie, de modo que la identidad nunca depende solo del color, y cada banda lleva su propio texto descriptivo accesible.
+
+### 9. Hemoconcentración
+
+Se registran hematocrito, hemoglobina, plaquetas y leucocitos. **Con un solo hemograma basta**, que es la condición real de trabajo: los laboratorios se toman antes de hidratar, como indica la OMS — *«Obtain reference HCT before fluid therapy»*. La app trabaja en dos modos:
+
+**Con un solo hemograma**, lo compara con la referencia para edad y sexo (editable, porque cada laboratorio tiene la suya) y aplica los umbrales absolutos de la OMS: en choque, hematocrito **< 40 % en niños y mujeres adultas o < 45 % en hombres adultos indica sangrado**; **> 50 % o en ascenso tras el primer bolo indica fuga persistente**. Ese valor queda además como basal para los controles siguientes.
+
+**Con un hemograma previo**, calcula el delta contra el basal del propio paciente —el modo que la OMS prefiere— y lo interpreta **cruzado con el estado hemodinámico**, que es lo que cambia su significado:
 
 | Hematocrito | Hemodinamia | Lectura |
 |---|---|---|
@@ -86,7 +96,7 @@ Se registran hematocrito basal y actual, hemoglobina y plaquetas. El basal es el
 
 Incluye una comprobación de coherencia entre hematocrito y hemoglobina (regla de tres) que avisa de posibles errores de laboratorio antes de que una cifra equivocada mueva una decisión.
 
-### 9. Módulo de seguridad de la infusión
+### 10. Módulo de seguridad de la infusión
 
 Cuatro válvulas de escape para usar **durante** la administración de líquidos, cada una con su disparador y su conducta:
 
@@ -95,7 +105,7 @@ Cuatro válvulas de escape para usar **durante** la administración de líquidos
 - **Discriminador de sangrado** — el cruce hematocrito/hemodinamia, con los volúmenes de transfusión calculados por peso.
 - **Cierre de líquidos en la fase de reabsorción** — se activa desde el día 6, pero deja claro que la señal para suspender es fisiológica y no del calendario.
 
-### 10. Salida en Word y copiado de conducta
+### 11. Salida en Word y copiado de conducta
 
 - **Exportar a Word** genera un `.docx` real con tablas: clasificación, ficha del paciente, hallazgos, plan de líquidos fase por fase, manejo sintomático, laboratorio, monitoreo y criterios de alta o de referencia. El médico lo abre, copia y pega en la historia clínica.
 - **Copiar conducta** deja en el portapapeles la misma información como texto plano, para pegar directamente sin abrir Word.
@@ -142,7 +152,7 @@ ceroaedes/
 ├── sw.js                   # Service worker (uso sin conexión)
 ├── assets/                 # Iconos
 ├── tests/
-│   ├── engine.test.js      # 233 pruebas del motor clínico
+│   ├── engine.test.js      # 275 pruebas del motor clínico
 │   └── ui.test.js          # Recorridos en navegador real + validación del .docx
 ├── LICENSE
 └── README.md
@@ -166,7 +176,7 @@ El motor verifica la definición operativa de caso, la clasificación en los cua
 Después de editar `index.html`, suba el número de versión en `sw.js`:
 
 ```js
-const VERSION = 'ceroaedes-v2.6.1';
+const VERSION = 'ceroaedes-v2.8.1';
 ```
 
 Sin ese cambio, los celulares que ya la tengan instalada seguirán mostrando la versión cacheada.
@@ -185,7 +195,7 @@ Sin ese cambio, los celulares que ya la tengan instalada seguirán mostrando la 
 - Centers for Disease Control and Prevention. *Clinical Testing Guidance for Dengue*. Atlanta: CDC.
 - Centers for Disease Control and Prevention. *Dengue Clinical Case Management — Pocket Guide*. Atlanta: CDC; 2024. (Umbrales de hipotensión por edad.)
 - Organización Panamericana de la Salud. *Algoritmos para el manejo clínico del dengue*. CDE; 2020. (Esquema reducido del Grupo B2 y criterios de hospitalización.)
-- Organización Mundial de la Salud. *Dengue: guidelines for diagnosis, treatment, prevention and control*. Ginebra: OMS; 2009. (Sobrecarga de líquidos, furosemida e interpretación del hematocrito.)
+- Organización Mundial de la Salud. *Dengue: guidelines for diagnosis, treatment, prevention and control*. Ginebra: OMS; 2009. (Sobrecarga de líquidos, furosemida, interpretación del hematocrito, umbrales absolutos en choque y figura del curso de la enfermedad, capítulo 2.)
 - Organización Mundial de la Salud. *Laboratory testing for dengue virus: interim guidance*. Abril de 2025.
 
 ## Autor

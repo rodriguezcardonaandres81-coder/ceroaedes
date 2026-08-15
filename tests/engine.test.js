@@ -30,7 +30,7 @@ const base = {
   peso: 0, talla: 0, usarPesoIdeal: false, embarazo: false, dia: '4',
   endemica: true, fiebre: true, manif: ['cefalea', 'mialgias'],
   alarma: [], grave: [], cond: [], social: [], toleraVO: true, diuresisOk: true,
-  hctBasal: '', hctActual: '', hb: '', plaquetas: ''
+  hctBasal: '', hctActual: '', hctRef: '', hb: '', plaquetas: '', leucocitos: ''
 };
 const P = o => Object.assign({}, base, o);
 const fase = (S, n) => ctx.planLiquidos(S).fases[n];
@@ -396,6 +396,108 @@ t('Hematocrito incoherente con la hemoglobina se marca',
 t('Hematocrito coherente con la hemoglobina no genera ruido',
   ctx.interpretarHematocrito(P({ edad: '34', peso: 70, hctActual: '45', hb: '15' })).notas
     .some(x => /Comprobación de coherencia/.test(x)), 'false');
+
+console.log('\n── Un solo hemograma (sin basal) ──────────────────');
+
+t('Referencia de hombre adulto: punto medio 47 %',
+  ctx.referenciaHematocrito(P({ edad: '34', sexo: 'M' })).medio, 47);
+t('Referencia de mujer adulta: punto medio 41 %',
+  ctx.referenciaHematocrito(P({ edad: '34', sexo: 'F' })).medio, 41);
+t('Referencia de lactante de 3 meses: punto medio 36 %',
+  ctx.referenciaHematocrito(P({ edad: '3', edadU: 'm' })).medio, 36);
+t('Referencia de escolar de 8 años: punto medio 40 %',
+  ctx.referenciaHematocrito(P({ edad: '8' })).medio, 40);
+t('Sin edad no se sugiere referencia', ctx.referenciaHematocrito(P({ edad: '' })), null);
+
+const solo = ctx.interpretarHematocrito(P({ edad: '34', sexo: 'M', peso: 70, hctActual: '55' }));
+t('Con un solo hemograma trabaja en modo referencia', solo.modo, 'referencia');
+t('Hematocrito 55 % en hombre adulto sugiere hemoconcentración', solo.nivel, 'fuga');
+t('Dice que supera el umbral de 50 % de la OMS',
+  /Supera el 50 % que la OMS usa como umbral/.test(solo.mensaje), 'true');
+t('Un valor sobre la referencia pero bajo 50 % cita el límite de referencia',
+  /Supera el límite superior de referencia/.test(
+    ctx.interpretarHematocrito(P({ edad: '34', sexo: 'F', peso: 70, hctActual: '48' })).mensaje), 'true');
+t('Umbral de sangrado de la OMS: 45 % en hombre adulto',
+  ctx.umbralHctBajo(P({ edad: '34', sexo: 'M' })), 45);
+t('Umbral de sangrado de la OMS: 40 % en mujer adulta',
+  ctx.umbralHctBajo(P({ edad: '34', sexo: 'F' })), 40);
+t('Umbral de sangrado de la OMS: 40 % en niños',
+  ctx.umbralHctBajo(P({ edad: '8', sexo: 'M' })), 40);
+t('Hombre en choque con hematocrito 38 % → sangrado por umbral absoluto',
+  ctx.interpretarHematocrito(P({ edad: '34', sexo: 'M', peso: 70, hctActual: '38',
+    pas: '80', pad: '40' })).nivel, 'sangrado');
+t('Y lo justifica sin necesidad de basal',
+  /sin necesidad de basal/.test(ctx.interpretarHematocrito(P({ edad: '34', sexo: 'M', peso: 70,
+    hctActual: '38', pas: '80', pad: '40' })).mensaje), 'true');
+t('Hematocrito > 50 % con inestabilidad → fuga persistente',
+  ctx.interpretarHematocrito(P({ edad: '34', sexo: 'M', peso: 70, hctActual: '56',
+    pas: '80', pad: '40' })).nivel, 'fuga');
+t('Advierte que es un sustituto del basal propio',
+  /es un sustituto/.test(solo.mensaje), 'true');
+t('Sugiere guardar el valor como basal para los controles',
+  /Guarde este valor como basal/.test(solo.mensaje), 'true');
+t('Indica repetir para confirmar la tendencia',
+  solo.acciones.some(x => /confirmar la tendencia/.test(x)), 'true');
+
+const normal = ctx.interpretarHematocrito(P({ edad: '34', sexo: 'M', peso: 70, hctActual: '45' }));
+t('Hematocrito 45 % en hombre adulto queda dentro de la referencia', normal.nivel, 'estable');
+t('Un valor normal no se presenta como que descarta la fase crítica',
+  /no descarta la fase crítica/.test(normal.mensaje), 'true');
+
+const bajo = ctx.interpretarHematocrito(P({ edad: '34', sexo: 'M', peso: 70, hctActual: '33' }));
+t('Hematocrito bajo sin inestabilidad se marca como descenso', bajo.nivel, 'descenso');
+t('Advierte que un hematocrito bajo no descarta la extravasación',
+  /NO descarta la extravasación/.test(bajo.mensaje), 'true');
+t('Hematocrito bajo CON inestabilidad obliga a descartar hemorragia',
+  ctx.interpretarHematocrito(P({ edad: '34', sexo: 'M', peso: 70, hctActual: '33',
+    pas: '80', pad: '40' })).nivel, 'sangrado');
+
+t('La misma cifra se lee distinto en mujer que en hombre',
+  ctx.interpretarHematocrito(P({ edad: '34', sexo: 'F', peso: 70, hctActual: '48' })).nivel, 'fuga');
+t('Y en hombre esa cifra queda dentro de referencia',
+  ctx.interpretarHematocrito(P({ edad: '34', sexo: 'M', peso: 70, hctActual: '48' })).nivel, 'estable');
+
+t('El basal propio tiene prioridad sobre la referencia',
+  ctx.interpretarHematocrito(P({ edad: '34', sexo: 'M', peso: 70, hctActual: '48', hctBasal: '40' })).modo, 'basal');
+
+t('La referencia ingresada a mano manda sobre la poblacional',
+  ctx.refEfectiva(P({ edad: '34', sexo: 'M', hctRef: '44' })).medio, 44);
+t('Y queda marcada como referencia del usuario',
+  ctx.refEfectiva(P({ edad: '34', sexo: 'M', hctRef: '44' })).manual, 'true');
+
+t('Leucopenia se señala como manifestación de la definición de caso',
+  ctx.interpretarHematocrito(P({ edad: '34', peso: 70, hctActual: '45', leucocitos: '3200' })).notas
+    .some(x => /leucopenia/i.test(x)), 'true');
+t('Triada hemoconcentración, trombocitopenia y leucopenia se reconoce',
+  ctx.interpretarHematocrito(P({ edad: '34', sexo: 'M', peso: 70, hctActual: '55',
+    plaquetas: '80000', leucocitos: '3000' })).notas.some(x => /Patrón hematológico compatible/.test(x)), 'true');
+t('Sin hematocrito pide registrarlo',
+  ctx.interpretarHematocrito(P({ edad: '34', peso: 70 })).nivel, 'sin-datos');
+
+console.log('\n── Fase del curso de la enfermedad ────────────────');
+
+t('Adulto en día 2 está en fase febril',
+  ctx.faseDeLaEnfermedad(P({ edad: '34', dia: '2' })).fase, 'febril');
+t('Adulto en día 5 está en fase crítica',
+  ctx.faseDeLaEnfermedad(P({ edad: '34', dia: '5' })).fase, 'critica');
+t('Adulto en día 9 está en recuperación',
+  ctx.faseDeLaEnfermedad(P({ edad: '34', dia: '9' })).fase, 'recuperacion');
+t('En el niño la fase crítica arranca el día 3',
+  ctx.faseDeLaEnfermedad(P({ edad: '6', dia: '3' })).fase, 'critica');
+t('En el adulto el día 3 todavía es febril',
+  ctx.faseDeLaEnfermedad(P({ edad: '34', dia: '3' })).fase, 'febril');
+t('El inicio de la fase crítica del niño es el día 3',
+  ctx.faseDeLaEnfermedad(P({ edad: '6', dia: '2' })).inicioCritica, 3);
+t('El inicio de la fase crítica del adulto es el día 4',
+  ctx.faseDeLaEnfermedad(P({ edad: '34', dia: '2' })).inicioCritica, 4);
+t('Sin día no inventa la fase',
+  ctx.faseDeLaEnfermedad(P({ edad: '34', dia: '' })).fase, 'sin-dato');
+t('En fase crítica advierte que la caída de la fiebre no es mejoría',
+  /no es mejoría/.test(ctx.faseDeLaEnfermedad(P({ edad: '34', dia: '5' })).mensaje), 'true');
+t('En recuperación advierte del riesgo de sobrecarga',
+  /sobrecarga/.test(ctx.faseDeLaEnfermedad(P({ edad: '34', dia: '9' })).mensaje), 'true');
+t('El reporte incorpora la fase',
+  ctx.construirReporte(P({ edad: '34', peso: 70, dia: '5' })).fase.fase, 'critica');
 
 console.log('\n── Seguridad de la infusión ───────────────────────');
 

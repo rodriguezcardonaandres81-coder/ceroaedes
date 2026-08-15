@@ -50,7 +50,11 @@ fs.mkdirSync(TMP, { recursive: true });
       if (campo === 'llenado' || campo === 'conciencia') await page.selectOption('#f-' + campo, valor);
       else await page.fill('#f-' + campo, valor);
     }
-    if (lab) for (const [campo, valor] of Object.entries(lab)) await page.fill('#f-' + campo, valor);
+    if (lab) {
+      if (lab['hct-basal'] !== undefined || lab['hct-ref'] !== undefined)
+        await page.locator('details:has-text("Ajustes: hemograma previo")').first().evaluate(e => e.open = true);
+      for (const [campo, valor] of Object.entries(lab)) await page.fill('#f-' + campo, valor);
+    }
   }
 
   // ================= Caso 0: bienvenida =================
@@ -90,6 +94,12 @@ fs.mkdirSync(TMP, { recursive: true });
   if (!/Día 4 de enfermedad/.test(diaTxt)) throw new Error('Día mal calculado: ' + diaTxt);
   if (!(await page.locator('#fase-critica-alert .note.danger').count()))
     throw new Error('No se mostró la alerta de fase crítica en día 4 (adulto)');
+  if (!(await page.locator('#fase-critica-alert svg.curva').count()))
+    throw new Error('No se dibujó la curva del curso de la enfermedad');
+  const curva = await page.locator('#fase-critica-alert').innerText();
+  for (const e of ['FEBRIL', 'CRÍTICA', 'RECUPERACIÓN', 'Día 4', 'Temperatura', 'Hematocrito', 'Plaquetas'])
+    if (!curva.includes(e)) throw new Error('Falta en la curva: ' + e);
+  if (!/Fase crítica — día 4/.test(curva)) throw new Error('No ubicó al paciente en la fase');
   const pptxt = await page.locator('#pp-out').innerText();
   if (!/17 mmHg/.test(pptxt)) throw new Error('Presión de pulso mal calculada');
   if (!/PAM 84 mmHg/.test(pptxt)) throw new Error('PAM mal calculada: ' + pptxt);
@@ -357,7 +367,7 @@ fs.mkdirSync(TMP, { recursive: true });
   await llenarPaciente({
     peso: '70', inicio: '2026-08-10', consulta: '2026-08-13',
     vitales: { pas: '110', pad: '75', fc: '95', llenado: '< 2 segundos', conciencia: 'Alerta' },
-    lab: { 'hct-basal': '38', hct: '48', hb: '16', plaquetas: '85000' }
+    lab: { hct: '48', 'hct-basal': '38', hb: '16', plaquetas: '85000' }
   });
   const hctTxt = await page.locator('#hct-out').innerText();
   for (const e of ['+26.3 %', 'extravasación de plasma', 'categoría B2', '85.000'])
@@ -384,7 +394,7 @@ fs.mkdirSync(TMP, { recursive: true });
   await definicionCaso();
   await llenarPaciente({
     peso: '70', vitales: { pas: '80', pad: '40', llenado: '> 2 segundos' },
-    lab: { 'hct-basal': '48', hct: '36' }
+    lab: { hct: '36', 'hct-basal': '48' }
   });
   const sangra = await page.locator('#hct-out').innerText();
   if (!/sospeche sangrado/i.test(sangra)) throw new Error('Caída con inestabilidad debe leerse como sangrado');
@@ -428,6 +438,67 @@ fs.mkdirSync(TMP, { recursive: true });
     throw new Error('En día 9 la furosemida debería ser admisible');
   if (!/admisible/.test(out9d)) throw new Error('No marcó la furosemida como admisible');
   console.log('  OK   │ Pasada la fase crítica la furosemida deja de estar bloqueada');
+
+  // ================= Caso 10: un solo hemograma, sin basal =================
+  await definicionCaso();
+  await llenarPaciente({
+    edad: '34', peso: '70',
+    lab: { hct: '55', hb: '18', plaquetas: '82000', leucocitos: '3100' }
+  });
+  await page.click('#seg-sexo button[data-v="M"]');
+  await page.waitForTimeout(150);
+  const solo = await page.locator('#hct-out').innerText();
+  for (const e of ['Lectura con un solo hemograma', 'hombre adulto', '41 – 53 %',
+                   'sugiere hemoconcentración', 'Supera el 50 % que la OMS usa como umbral',
+                   'Guarde este valor como basal', 'Patrón hematológico compatible'])
+    if (!solo.toLowerCase().includes(e.toLowerCase()))
+      throw new Error('Falta en la lectura de un solo hemograma: ' + e);
+  if (!(await page.locator('#hct-out.danger').count())) throw new Error('No quedó marcada la hemoconcentración');
+  await shot('18-un-hemograma');
+
+  // La misma cifra en mujer se lee distinto
+  await page.click('#seg-sexo button[data-v="F"]');
+  await page.waitForTimeout(150);
+  const mujer = await page.locator('#hct-out').innerText();
+  if (!mujer.includes('mujer adulta')) throw new Error('No cambió la referencia al cambiar el sexo');
+
+  // Un hematocrito normal no debe tranquilizar de más
+  await page.click('#seg-sexo button[data-v="M"]');
+  await page.fill('#f-hct', '45');
+  await page.waitForTimeout(150);
+  const normalTxt = await page.locator('#hct-out').innerText();
+  if (!/dentro de la referencia/.test(normalTxt)) throw new Error('45 % en hombre adulto debe quedar dentro de referencia');
+  if (!/no descarta la fase crítica/.test(normalTxt)) throw new Error('Un valor normal no debe presentarse como tranquilizador');
+
+  // Al agregar el basal, la app cambia de modo
+  await page.locator('details:has-text("Ajustes: hemograma previo")').first().evaluate(e => e.open = true);
+  await page.fill('#f-hct-basal', '36');
+  await page.waitForTimeout(150);
+  const conBasal = await page.locator('#hct-out').innerText();
+  if (!/comparado con el basal del paciente/i.test(conBasal))
+    throw new Error('Con basal debe pasar al modo de comparación');
+  if (!/\+25 %/.test(conBasal)) throw new Error('Delta contra el basal mal calculado: ' + conBasal);
+
+  // La referencia manual manda sobre la poblacional
+  await page.fill('#f-hct-basal', '');
+  await page.fill('#f-hct-ref', '42');
+  await page.waitForTimeout(150);
+  if (!/referencia ingresada/.test(await page.locator('#hct-out').innerText()))
+    throw new Error('La referencia escrita a mano debe tener prioridad');
+  console.log('  OK   │ Caso 10: un solo hemograma se interpreta por edad y sexo; el basal y la referencia manual tienen prioridad');
+
+  // ---- La curva mueve el inicio de la fase crítica según la edad ----
+  await definicionCaso();
+  await llenarPaciente({ edad: '6', peso: '20', inicio: '2026-08-11', consulta: '2026-08-13' });
+  const curvaNino = await page.locator('#fase-critica-alert').innerText();
+  if (!/Fase crítica — día 3/.test(curvaNino))
+    throw new Error('En el niño el día 3 ya debe ser fase crítica: ' + curvaNino);
+  await page.fill('#f-edad', '34');
+  await page.waitForTimeout(200);
+  if (!/Fase febril — día 3/.test(await page.locator('#fase-critica-alert').innerText()))
+    throw new Error('En el adulto el día 3 todavía es fase febril');
+  await shot('19-curva-fases');
+  console.log('  OK   │ La curva del curso clínico marca el día del paciente y ajusta la fase crítica por edad');
 
   // ================= Comprobaciones de marca y consola =================
   const htmlCrudo = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
