@@ -320,7 +320,7 @@ fs.mkdirSync(TMP, { recursive: true });
   const out7 = await page.locator('#out').textContent();
   for (const e of ['torniquete: positiva', 'Registro para historia clínica', 'PAM',
                    'Ninguna — buscadas dirigidamente y ausentes', 'Ecografía abdominal y radiografía de tórax',
-                   'NEGATIVA no descarta el dengue', 'técnica distinta, molecular',
+                   'NEGATIVA no descarta el dengue', 'técnicas distintas, molecular y virológica', 'aislamiento viral',
                    'solo si es necesario y en DOSIS ÚNICA', 'Restricciones y contraindicaciones']) {
     if (!out7.includes(e)) throw new Error('Falta en el resultado: ' + e);
   }
@@ -526,6 +526,95 @@ fs.mkdirSync(TMP, { recursive: true });
     throw new Error('Hubo errores de consola');
   }
   console.log('  OK   │ Sin referencias al nombre anterior y sin errores de consola');
+
+
+  // ============ Caso 11: entrada numérica colombiana y rangos plausibles ============
+  await definicionCaso();
+  await avanzar(1);
+  await page.fill('#f-edad', '34');
+  await page.fill('#f-peso', '70,5');
+  await page.fill('#f-temp', '38,5');
+  await page.fill('#f-plaquetas', '85.000');
+  await page.fill('#f-leucocitos', '3.200');
+  await page.waitForTimeout(120);
+  const leido = await page.evaluate(() => ({ peso: S.peso, temp: S.temp, plq: S.plaquetas, leu: S.leucocitos }));
+  if (leido.peso !== 70.5) throw new Error('La coma decimal del peso se perdió: ' + leido.peso);
+  if (leido.temp !== 38.5) throw new Error('La coma decimal de la temperatura se perdió: ' + leido.temp);
+  if (leido.plq !== 85000) throw new Error('El punto de miles de plaquetas se perdió: ' + leido.plq);
+  if (leido.leu !== 3200) throw new Error('El punto de miles de leucocitos se perdió: ' + leido.leu);
+  if (await page.locator('#aviso-peso').isVisible()) throw new Error('70,5 kg no debería disparar aviso');
+  console.log('  OK   │ Caso 11: la coma decimal y el punto de miles se leen como en Colombia');
+
+  await page.fill('#f-peso', '705');
+  await page.waitForTimeout(120);
+  if (!(await page.locator('#aviso-peso').isVisible()))
+    throw new Error('705 kg debería mostrar aviso de rango');
+  if (!/fuera del rango plausible/.test(await page.locator('#aviso-peso').innerText()))
+    throw new Error('El aviso de rango no explica el problema');
+  dialogos.length = 0;
+  await avanzar(2);
+  await page.waitForTimeout(200);
+  if (await page.locator('#s3.active').count())
+    throw new Error('Un peso de 705 kg no debería dejar avanzar');
+  if (!dialogos.some(d => /rango plausible/.test(d)))
+    throw new Error('No se avisó al intentar avanzar con un peso absurdo');
+
+  await page.fill('#f-peso', '70,5');
+  await page.fill('#f-edad', '-3');
+  await page.waitForTimeout(120);
+  dialogos.length = 0;
+  await avanzar(2);
+  await page.waitForTimeout(200);
+  if (await page.locator('#s3.active').count()) throw new Error('Una edad negativa no debería dejar avanzar');
+  await page.fill('#f-edad', '34');
+  await page.waitForTimeout(120);
+  await avanzar(2);
+  await page.waitForSelector('#s3.active');
+  console.log('  OK   │ Un peso o una edad inverosímiles avisan y bloquean el avance');
+
+  // ============ Caso 12: los criterios son operables con teclado ============
+  await definicionCaso({ manifs: [] });
+  const primerChk = page.locator('#list-manif .chk').first();
+  if (await primerChk.getAttribute('role') !== 'checkbox') throw new Error('Los criterios no exponen role=checkbox');
+  if (await primerChk.getAttribute('aria-checked') !== 'false') throw new Error('Falta aria-checked inicial');
+  await primerChk.focus();
+  await page.keyboard.press(' ');
+  await page.waitForTimeout(80);
+  if (await primerChk.getAttribute('aria-checked') !== 'true')
+    throw new Error('La barra espaciadora no marca el criterio');
+  if ((await page.evaluate(() => S.manif.length)) !== 1)
+    throw new Error('El teclado no actualizó el estado');
+  await page.keyboard.press('Enter');
+  await page.waitForTimeout(80);
+  if ((await page.evaluate(() => S.manif.length)) !== 0)
+    throw new Error('Enter no desmarca el criterio');
+  console.log('  OK   │ Caso 12: los criterios se marcan con teclado y exponen su estado');
+
+  // ============ Caso 13: desmarcar "menor de 5 años" no se revierte solo ============
+  await definicionCaso();
+  await llenarPaciente({ edad: '3', peso: '14' });
+  await avanzar(2); await avanzar(3);
+  await ninguno('alarma'); await avanzar(4);
+  await ninguno('grave'); await avanzar(5);
+  const menor5 = page.locator('#list-cond .chk', { hasText: 'Menor de 5 años' }).first();
+  if ((await page.evaluate(() => S.cond.includes('menor5'))) !== true)
+    throw new Error('No se preseleccionó "Menor de 5 años"');
+  await menor5.click();
+  await page.waitForTimeout(80);
+  if (await page.evaluate(() => S.cond.includes('menor5')))
+    throw new Error('No se pudo desmarcar "Menor de 5 años"');
+  await page.click('#s6 button:has-text("Atrás")');
+  await page.waitForSelector('#s5.active');
+  await page.click('#s5 button:has-text("Atrás")');
+  await page.waitForSelector('#s4.active');
+  await page.click('#s4 button:has-text("Atrás")');
+  await page.click('#s3 button:has-text("Atrás")');
+  await page.waitForSelector('#s2.active');
+  await page.click('#seg-sexo button[data-v="M"]');
+  await page.waitForTimeout(120);
+  if (await page.evaluate(() => S.cond.includes('menor5')))
+    throw new Error('Cambiar el sexo volvió a marcar "Menor de 5 años" tras desmarcarlo');
+  console.log('  OK   │ Caso 13: desmarcar "Menor de 5 años" es una decisión que la app respeta');
 
   await browser.close();
   console.log('\n  Todos los recorridos de interfaz pasaron. Capturas en shots/\n');

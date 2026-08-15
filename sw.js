@@ -2,7 +2,7 @@
    Cachea la aplicación completa para uso sin conexión.
    Sube el número de versión para forzar la actualización en los dispositivos. */
 
-const VERSION = 'ceroaedes-v3.0.0';
+const VERSION = 'ceroaedes-v3.1.0';
 const ASSETS = [
   './',
   './index.html',
@@ -37,8 +37,14 @@ self.addEventListener('fetch', event => {
   const esDocumento = req.mode === 'navigate' || (req.headers.get('accept') || '').includes('text/html');
 
   if (esDocumento) {
+    /* Red primero, pero con techo de 3 s: en zona rural o tras un portal cautivo
+       el usuario esperaba el timeout del navegador antes de ver la copia offline. */
+    const conTecho = Promise.race([
+      fetch(req),
+      new Promise((_, rechazar) => setTimeout(() => rechazar(new Error('lenta')), 3000))
+    ]);
     event.respondWith(
-      fetch(req)
+      conTecho
         .then(res => {
           const copia = res.clone();
           caches.open(VERSION).then(c => c.put(req, copia));
@@ -54,6 +60,6 @@ self.addEventListener('fetch', event => {
       const copia = res.clone();
       caches.open(VERSION).then(c => c.put(req, copia));
       return res;
-    }).catch(() => cached))
+    }).catch(() => cached || Response.error()))
   );
 });

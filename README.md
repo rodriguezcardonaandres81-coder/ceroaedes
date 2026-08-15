@@ -152,8 +152,9 @@ ceroaedes/
 ├── sw.js                   # Service worker (uso sin conexión)
 ├── assets/                 # Iconos
 ├── tests/
-│   ├── engine.test.js      # 303 pruebas del motor clínico
-│   └── ui.test.js          # Recorridos en navegador real + validación del .docx
+│   ├── engine.test.js      # 355 pruebas del motor clínico
+│   ├── ui.test.js          # 23 recorridos en navegador real
+│   └── docx.test.js        # 43 comprobaciones del documento Word generado
 ├── LICENSE
 └── README.md
 ```
@@ -165,18 +166,25 @@ La función `construirReporte()` produce un único modelo de datos del que se de
 ## Pruebas
 
 ```bash
-node tests/engine.test.js    # motor clínico
-npm i -D playwright && node tests/ui.test.js   # interfaz y exportación
+npm test                                  # 355 pruebas del motor clínico (sin navegador)
+npm i -D playwright
+npm run test:ui                           # 23 recorridos de interfaz en Chromium real
+npm run test:docx                         # 43 comprobaciones del .docx exportado
+npm run test:all                          # las tres suites
 ```
 
-El motor verifica la definición operativa de caso, la clasificación en los cuatro grupos, los volúmenes de cada fase para adulto y pediátrico, las dosis reducidas en gestación y adulto mayor, el ajuste por peso ideal, las conversiones a goteo y la selección de laboratorios por día de enfermedad. El recorrido de interfaz además descarga el `.docx` generado y comprueba que abra correctamente.
+**Motor clínico** — definición operativa de caso, clasificación en los cuatro grupos, volúmenes de cada fase para adulto y pediátrico, dosis reducidas en gestación y adulto mayor, ajuste por peso ideal, conversiones a goteo, selección de laboratorios por día de enfermedad, lectura del hematocrito y válvulas de seguridad de la infusión.
+
+**Interfaz** — los trece recorridos completos, incluidos los casos que antes fallaban: notación decimal colombiana, rangos de plausibilidad, operación con teclado y persistencia de las decisiones del médico.
+
+**Documento Word** — descarga el `.docx` real desde el navegador, comprueba la integridad del ZIP y del CRC de cada miembro, valida cada parte XML contra el esquema **ISO/IEC 29500-4**, verifica el escapado del texto de origen humano, la justificación y la negrita del cuerpo, la ausencia de grises ilegibles, y lo abre con LibreOffice para confirmar que no pide reparación.
 
 ## Actualizar la aplicación en los dispositivos
 
 Después de editar `index.html`, suba el número de versión en `sw.js`:
 
 ```js
-const VERSION = 'ceroaedes-v3.0.1';
+const VERSION = 'ceroaedes-v3.1.1';
 ```
 
 Sin ese cambio, los celulares que ya la tengan instalada seguirán mostrando la versión cacheada.

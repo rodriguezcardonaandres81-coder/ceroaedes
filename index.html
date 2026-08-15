@@ -308,11 +308,11 @@ footer b{color:var(--text)}
   <p class="step-sub">Paciente procedente de área endémica con enfermedad febril aguda de 2 a 7 días en la que se observan <b>fiebre y dos o más</b> de las manifestaciones del listado.</p>
 
   <div class="card tight">
-    <div class="chk" onclick="toggleChk(this,'endemica')">
+    <div class="chk" role="checkbox" tabindex="0" aria-checked="false" onclick="toggleChk(this,'endemica',event)" onkeydown="if(event.key===' '||event.key==='Enter'){event.preventDefault();this.click();}">
       <input type="checkbox" id="f-endemica" onclick="event.stopPropagation();toggleChk(this.parentNode,'endemica')">
       <div class="t">Procedente de área endémica<span class="d">Reside o estuvo en municipio con transmisión de dengue. Es el criterio de entrada de la definición operativa de caso.</span></div>
     </div>
-    <div class="chk warn" onclick="toggleChk(this,'fiebre')">
+    <div class="chk warn" role="checkbox" tabindex="0" aria-checked="false" onclick="toggleChk(this,'fiebre',event)" onkeydown="if(event.key===' '||event.key==='Enter'){event.preventDefault();this.click();}">
       <input type="checkbox" id="f-fiebre" onclick="event.stopPropagation();toggleChk(this.parentNode,'fiebre')">
       <div class="t">Fiebre<span class="d">Criterio obligatorio. Sin fiebre no se cumple ninguna de las tres definiciones de caso.</span></div>
     </div>
@@ -339,16 +339,18 @@ footer b{color:var(--text)}
     <input type="text" id="f-nombre" placeholder="Nombre completo o documento">
 
     <div class="row g2">
-      <div><label>Edad</label><input type="number" id="f-edad" min="0" step="1" placeholder="Ej: 34" oninput="syncEdad()"></div>
+      <div><label>Edad</label><input type="text" inputmode="numeric" id="f-edad" placeholder="Ej: 34" oninput="syncEdad()"></div>
       <div><label>Unidad</label>
         <select id="f-edad-u" onchange="syncEdad()"><option value="a">Años</option><option value="m">Meses</option></select>
       </div>
     </div>
+    <div id="aviso-edad" role="alert" aria-live="polite" style="display:none"></div>
 
     <div class="row g2">
-      <div><label>Peso (kg)</label><input type="number" id="f-peso" min="0" step="0.1" placeholder="Ej: 68" oninput="syncPeso()"></div>
-      <div><label>Talla (cm) <span style="text-transform:none;font-weight:400">· opc.</span></label><input type="number" id="f-talla" min="0" step="1" placeholder="Ej: 165" oninput="syncPeso()"></div>
+      <div><label>Peso (kg)</label><input type="text" inputmode="decimal" id="f-peso" placeholder="Ej: 68" oninput="syncPeso()"></div>
+      <div><label>Talla (cm) <span style="text-transform:none;font-weight:400">· opc.</span></label><input type="text" inputmode="decimal" id="f-talla" placeholder="Ej: 165" oninput="syncPeso()"></div>
     </div>
+    <div id="aviso-peso" role="alert" aria-live="polite" style="display:none"></div>
 
     <label>Sexo</label>
     <div class="seg" id="seg-sexo">
@@ -357,7 +359,7 @@ footer b{color:var(--text)}
     </div>
 
     <div id="wrap-embarazo" style="display:none">
-      <div class="chk" onclick="toggleChk(this,'embarazo')">
+      <div class="chk" role="checkbox" tabindex="0" aria-checked="false" onclick="toggleChk(this,'embarazo',event)" onkeydown="if(event.key===' '||event.key==='Enter'){event.preventDefault();this.click();}">
         <input type="checkbox" id="f-embarazo" onclick="event.stopPropagation();toggleChk(this.parentNode,'embarazo')">
         <div class="t">Gestante<span class="d">Condición asociada → mínimo categoría B1. Cambia el bolo de choque a 10 ml/kg.</span></div>
       </div>
@@ -401,16 +403,16 @@ footer b{color:var(--text)}
   <div class="card">
     <div class="sec-title">Signos vitales y estado hemodinámico</div>
     <div class="row g2">
-      <div><label>PAS (mmHg)</label><input type="number" id="f-pas" min="0" placeholder="Ej: 90" oninput="syncVitales()"></div>
-      <div><label>PAD (mmHg)</label><input type="number" id="f-pad" min="0" placeholder="Ej: 75" oninput="syncVitales()"></div>
+      <div><label>PAS (mmHg)</label><input type="text" inputmode="numeric" id="f-pas" placeholder="Ej: 90" oninput="syncVitales()"></div>
+      <div><label>PAD (mmHg)</label><input type="text" inputmode="numeric" id="f-pad" placeholder="Ej: 75" oninput="syncVitales()"></div>
     </div>
     <div class="row g2">
-      <div><label>Frec. cardiaca</label><input type="number" id="f-fc" min="0" placeholder="lpm" oninput="syncVitales()"></div>
-      <div><label>Frec. resp.</label><input type="number" id="f-fr" min="0" placeholder="rpm" oninput="syncVitales()"></div>
+      <div><label>Frec. cardiaca</label><input type="text" inputmode="numeric" id="f-fc" placeholder="lpm" oninput="syncVitales()"></div>
+      <div><label>Frec. resp.</label><input type="text" inputmode="numeric" id="f-fr" placeholder="rpm" oninput="syncVitales()"></div>
     </div>
     <div class="row g2">
-      <div><label>Temperatura (°C)</label><input type="number" id="f-temp" step="0.1" placeholder="Ej: 38.5" oninput="syncVitales()"></div>
-      <div><label>SatO₂ (%)</label><input type="number" id="f-sato2" min="0" max="100" placeholder="Ej: 96" oninput="syncVitales()"></div>
+      <div><label>Temperatura (°C)</label><input type="text" inputmode="decimal" id="f-temp" placeholder="Ej: 38,5" oninput="syncVitales()"></div>
+      <div><label>SatO₂ (%)</label><input type="text" inputmode="numeric" id="f-sato2" placeholder="Ej: 96" oninput="syncVitales()"></div>
     </div>
     <label>Llenado capilar</label>
     <select id="f-llenado" onchange="syncVitales()">
@@ -418,6 +420,25 @@ footer b{color:var(--text)}
       <option value="&lt; 2 segundos">Menor de 2 segundos</option>
       <option value="&gt; 2 segundos">Mayor de 2 segundos</option>
     </select>
+    <div class="row g2">
+      <div>
+        <label>Calidad del pulso</label>
+        <select id="f-pulso" onchange="syncVitales()">
+          <option value="">Sin registrar</option>
+          <option value="Lleno y fuerte">Lleno y fuerte</option>
+          <option value="Débil o filiforme">Débil o filiforme</option>
+          <option value="No palpable">No palpable</option>
+        </select>
+      </div>
+      <div>
+        <label>Estado de la piel</label>
+        <select id="f-piel" onchange="syncVitales()">
+          <option value="">Sin registrar</option>
+          <option value="Tibia y rosada">Tibia y rosada</option>
+          <option value="Fría o moteada">Fría o moteada</option>
+        </select>
+      </div>
+    </div>
     <label>Estado de conciencia</label>
     <select id="f-conciencia" onchange="syncVitales()">
       <option value="">Sin registrar</option>
@@ -426,6 +447,7 @@ footer b{color:var(--text)}
       <option value="Estuporoso">Estuporoso</option>
       <option value="Inconsciente">Inconsciente</option>
     </select>
+    <div id="aviso-vitales" role="alert" aria-live="polite" style="display:none"></div>
     <div id="pp-out" class="note info" style="margin-bottom:0">Presión de pulso = PAS − PAD. Un valor <b>≤ 20 mmHg</b> indica choque. La PAM se calcula sola.</div>
   </div>
 
@@ -437,13 +459,15 @@ footer b{color:var(--text)}
     </div>
 
     <div class="row g2">
-      <div><label>Hematocrito (%)</label><input type="number" id="f-hct" step="0.1" min="0" placeholder="Ej: 52" oninput="syncLab()"></div>
-      <div><label>Hemoglobina (g/dL)</label><input type="number" id="f-hb" step="0.1" min="0" placeholder="Ej: 17.2" oninput="syncLab()"></div>
+      <div><label>Hematocrito (%)</label><input type="text" inputmode="decimal" id="f-hct" placeholder="Ej: 52" oninput="syncLab()"></div>
+      <div><label>Hemoglobina (g/dL)</label><input type="text" inputmode="decimal" id="f-hb" placeholder="Ej: 17,2" oninput="syncLab()"></div>
     </div>
     <div class="row g2">
-      <div><label>Plaquetas (/mm³)</label><input type="number" id="f-plaquetas" step="1000" min="0" placeholder="Ej: 85000" oninput="syncLab()"></div>
-      <div><label>Leucocitos (/mm³)</label><input type="number" id="f-leucocitos" step="100" min="0" placeholder="Ej: 3200" oninput="syncLab()"></div>
+      <div><label>Plaquetas (/mm³)</label><input type="text" inputmode="numeric" id="f-plaquetas" placeholder="Ej: 85.000" oninput="syncLab()"></div>
+      <div><label>Leucocitos (/mm³)</label><input type="text" inputmode="numeric" id="f-leucocitos" placeholder="Ej: 3.200" oninput="syncLab()"></div>
     </div>
+
+    <div id="aviso-lab" role="alert" aria-live="polite" style="display:none"></div>
 
     <div id="veredicto-box"></div>
 
@@ -455,14 +479,14 @@ footer b{color:var(--text)}
       <summary>Ajustes: hemograma previo y referencia</summary>
       <div class="acc-body">
         <label>Hematocrito previo o basal (%) <span style="text-transform:none;font-weight:400">· opcional</span></label>
-        <input type="number" id="f-hct-basal" step="0.1" min="0" placeholder="De la fase febril temprana" oninput="syncLab()">
+        <input type="text" inputmode="decimal" id="f-hct-basal" placeholder="De la fase febril temprana" oninput="syncLab()">
         <div class="note info" style="font-size:.76rem">
           Es el valor que la OMS prefiere: el hematocrito del propio paciente en la fase febril temprana.
           Si lo registra, la app calcula el delta contra él en vez de contra la referencia poblacional.
         </div>
 
         <label>Referencia de hematocrito para este paciente (%) <span style="text-transform:none;font-weight:400">· opcional</span></label>
-        <input type="number" id="f-hct-ref" step="0.1" min="0" placeholder="Punto medio de su laboratorio" oninput="syncLab()">
+        <input type="text" inputmode="decimal" id="f-hct-ref" placeholder="Punto medio de su laboratorio" oninput="syncLab()">
         <div id="ref-sugerida" class="note warn" style="font-size:.76rem;margin-bottom:0"></div>
       </div>
     </details>
@@ -588,7 +612,7 @@ footer b{color:var(--text)}
 
 /* === ENGINE START === */
 
-var APP_VERSION = '3.0.0';   /* fuente única: pie de página, Word y service worker */
+var APP_VERSION = '3.1.0';   /* fuente única: pie de página, Word y service worker */
 
 /* Origen de cada criterio: 'ficha' = casilla de la sección 6 de la ficha;
    'prot' = está en la definición del protocolo pero no como casilla. */
@@ -642,6 +666,72 @@ var SOCIAL = [
   ['pobreza','Pobreza extrema','']
 ];
 
+/* ---------- Entrada numérica con notación colombiana ----------
+   En Colombia la coma es el separador decimal y el punto el de miles. Un
+   <input type="number"> descarta la coma en silencio — "70,5" quedaba en "705" y
+   producía una carga de 7.050 ml — así que los campos clínicos son de texto y
+   toda cifra entra por aquí. */
+function numDec(v){
+  var s = String(v == null ? '' : v).trim().replace(/\s/g,'');
+  if(s === '') return '';
+  if(s.indexOf(',') >= 0) s = s.replace(/\./g,'').replace(',','.');   /* 1.234,5 → 1234.5 */
+  if(!/^-?\d*\.?\d*$/.test(s)) return '';
+  var n = parseFloat(s);
+  return isNaN(n) ? '' : n;
+}
+/* Conteos celulares: "85.000", "85,000" y "85000" son todos ochenta y cinco mil. */
+function numCount(v){
+  var s = String(v == null ? '' : v).trim().replace(/\s/g,'');
+  if(s === '') return '';
+  if(/^-?\d{1,3}([.,]\d{3})+$/.test(s)) return parseFloat(s.replace(/[.,]/g,''));
+  return numDec(s);
+}
+
+/* Rangos de plausibilidad. Fuera de estos límites la cifra es casi con certeza un
+   error de digitación, y un error de digitación en el peso o en el hematocrito se
+   convierte en una orden de líquidos equivocada. */
+var RANGO = {
+  peso:  { min:0.5, max:300,     u:'kg',    nombre:'El peso' },
+  talla: { min:30,  max:250,     u:'cm',    nombre:'La talla' },
+  edadA: { min:0,   max:120,     u:'años',  nombre:'La edad' },
+  edadM: { min:0,   max:1440,    u:'meses', nombre:'La edad' },
+  pas:   { min:30,  max:300,     u:'mmHg',  nombre:'La presión sistólica' },
+  pad:   { min:10,  max:200,     u:'mmHg',  nombre:'La presión diastólica' },
+  fc:    { min:20,  max:260,     u:'lpm',   nombre:'La frecuencia cardiaca' },
+  fr:    { min:5,   max:90,      u:'rpm',   nombre:'La frecuencia respiratoria' },
+  temp:  { min:30,  max:45,      u:'°C',    nombre:'La temperatura' },
+  sato2: { min:40,  max:100,     u:'%',     nombre:'La saturación de oxígeno' },
+  hct:   { min:10,  max:75,      u:'%',     nombre:'El hematocrito' },
+  hb:    { min:2,   max:25,      u:'g/dL',  nombre:'La hemoglobina' },
+  plaq:  { min:1000, max:2000000, u:'/mm³', nombre:'El recuento de plaquetas' },
+  leuco: { min:100,  max:200000,  u:'/mm³', nombre:'El recuento de leucocitos' }
+};
+/* Filtro de entrada: un valor inverosímil NO entra al modelo clínico. El texto
+   sigue visible en el campo y el aviso explica por qué, pero el algoritmo no
+   calcula sobre él — antes, un hematocrito de 455 % producía un veredicto
+   completo de "hay hemoconcentración" sobre una cifra imposible. */
+function soloPlausible(campo, v){ return fueraDeRango(campo, v) ? '' : v; }
+
+/* Devuelve null si el valor es plausible o está vacío; si no, el mensaje de aviso. */
+function fueraDeRango(campo, valor){
+  var r = RANGO[campo];
+  if(!r || valor === '' || valor === null || valor === undefined) return null;
+  var n = parseFloat(valor);
+  if(isNaN(n)) return 'Escriba solo números. Use la coma para los decimales: 38,5';
+  if(n < r.min || n > r.max)
+    return r.nombre + ' de ' + n + ' ' + r.u + ' está fuera del rango plausible (' +
+           r.min + ' – ' + r.max + ' ' + r.u + '). Revise la cifra antes de continuar.';
+  return null;
+}
+
+/* Escape para todo texto de origen humano que se inserta con innerHTML.
+   El nombre del paciente llega crudo desde un input y puede traer < > &. */
+function esc(s){
+  return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
 function edadMeses(v,u){ v = parseFloat(v)||0; return u === 'm' ? v : v*12; }
 function esPediatrico(S){ return edadMeses(S.edad, S.edadU) < 216; }
 
@@ -650,8 +740,16 @@ function pesoIdeal(tallaCm, sexo){
   var pulg = tallaCm/2.54, base = (sexo === 'M') ? 50 : 45.5;
   return Math.round((base + 2.3*Math.max(0, pulg-60))*10)/10;
 }
+/* El peso ideal solo sustituye al real cuando es MENOR: la recomendación de la OMS
+   existe para no sobrecargar de líquidos al paciente obeso, nunca para aumentar el
+   volumen de quien pesa menos de lo que su talla predice (p. ej. un error de digitación
+   corregido después con el interruptor todavía activo). Aplica también al adolescente
+   con obesidad, que antes quedaba excluido por la puerta de edad. */
 function pesoCalculo(S){
-  if(S.usarPesoIdeal && !esPediatrico(S)){ var pi = pesoIdeal(S.talla, S.sexo); if(pi) return pi; }
+  if(S.usarPesoIdeal){
+    var pi = pesoIdeal(S.talla, S.sexo);
+    if(pi && pi < S.peso) return pi;
+  }
   return S.peso;
 }
 
@@ -766,7 +864,8 @@ function planLiquidos(S){
       ? { titulo: conDeficit ? 'Hidratación oral supervisada' : 'Hidratación oral',
           principal: meta + ' ml en 24 h',
           detalle: conDeficit
-            ? 'Holliday-Segar ' + r0(mant) + ' ml/día + 5 % de déficit, por pertenecer a grupo de riesgo.'
+            ? 'Holliday-Segar ' + r0(mant) + ' ml/día más un 5 % adicional sobre ese volumen, por pertenecer a grupo de riesgo. ' +
+              'No lo confunda con el esquema hospitalario M+5 %D de la OMS, que suma un déficit de 50 ml/kg y da un volumen mucho mayor: ese se reserva para la rehidratación intravenosa supervisada, no para la vía oral en casa.'
             : 'Holliday-Segar: 100 ml/kg los primeros 10 kg, 50 ml/kg los siguientes 10 kg y 20 ml/kg por cada kilo adicional.',
           horaria: Math.round(meta/24) + ' ml/hora aprox.',
           vasos: (p >= 30 ? Math.round(meta/250) + ' vasos de 250 ml' : Math.round(meta/120) + ' porciones de 120 ml'),
@@ -869,11 +968,18 @@ function planLiquidos(S){
 function antipiretico(S){
   var p = S.peso;
   if(esPediatrico(S)){
-    var dmin = r0(10*p), dmax = r0(15*p);
+    /* El cálculo por kilo no puede superar el techo del adulto: un adolescente de
+       70 kg dosificado solo por peso llegaría a 1.050 mg por toma y 4.200 mg/día.
+       Se topa en 1 g por dosis y 4 g al día, y además en 60 mg/kg/día. */
+    var dmin = Math.min(r0(10*p), 1000), dmax = Math.min(r0(15*p), 1000);
+    var diario = Math.min(dmax*4, 4000, r0(60*p));
+    var topado = (15*p > 1000);
     return { titulo:'Acetaminofén (paciente pediátrico)', dosis: dmin + ' – ' + dmax + ' mg por dosis, cada 6 horas',
-      base:'10 – 15 mg/kg/dosis',
-      jarabe:'Jarabe 150 mg/5 ml → ' + (Math.round(dmin/30*10)/10) + ' – ' + (Math.round(dmax/30*10)/10) + ' ml por dosis',
-      max:'Máximo 4 dosis en 24 horas (' + r0(dmax*4) + ' mg/día). No exceder 60 mg/kg/día.' };
+      base: topado ? '10 – 15 mg/kg/dosis, topado en 1 g por dosis (techo del adulto)' : '10 – 15 mg/kg/dosis',
+      /* El jarabe deja de ser práctico por encima de unos 25 ml por toma. */
+      jarabe: (dmax <= 750 ? 'Jarabe 150 mg/5 ml → ' + (Math.round(dmin/30*10)/10) + ' – ' + (Math.round(dmax/30*10)/10) + ' ml por dosis'
+                           : 'Por el peso, use tableta de 500 mg: el jarabe exigiría más de 25 ml por toma.'),
+      max:'Máximo 4 dosis en 24 horas (' + r0(diario) + ' mg/día). No exceder 60 mg/kg/día ni 4 g al día.' };
   }
   return { titulo:'Acetaminofén (adulto)', dosis:'500 mg cada 6 horas', base:'Vía oral', jarabe:'', max:'Nunca más de 4 g al día.' };
 }
@@ -883,19 +989,19 @@ function antipiretico(S){
    ubica la ventana óptima de RT-PCR/NS1 en los días 1 a 4. */
 function pruebaConfirmatoria(dia){
   var d = parseInt(dia,10);
-  if(isNaN(d) || d === 0) return 'Prueba confirmatoria según el tiempo de evolución de la fiebre: hasta el día 5, NS1 por ELISA o prueba rápida y RT-PCR; desde el día 6, IgM dengue por ELISA.';
-  if(d <= 5) return 'Día ' + d + ' de evolución (≤ 5 días): NS1 por ELISA o prueba rápida, y RT-PCR. La detección molecular solo es útil sobre sueros de los primeros cinco días.';
+  if(isNaN(d) || d === 0) return 'Prueba confirmatoria según el tiempo de evolución de la fiebre: hasta el día 5, NS1 por ELISA, RT-PCR o aislamiento viral; desde el día 6, IgM dengue por ELISA.';
+  if(d <= 5) return 'Día ' + d + ' de evolución (≤ 5 días): NS1 por ELISA, RT-PCR o aislamiento viral. Las tres se toman sobre suero de los primeros cinco días — la detección molecular y el aislamiento viral solo son útiles en esa ventana.';
   return 'Día ' + (d >= 8 ? '8 o más' : d) + ' de evolución (> 5 días): IgM dengue por ELISA. Si es negativa, repetir sobre suero convaleciente de 10 a 14 días después.';
 }
 
 /* Regla del resultado negativo — CDC, OMS e INS coinciden: no descarta el evento */
 var NS1_NEGATIVO = 'Un NS1 o una prueba rápida NEGATIVA no descarta el dengue. Si sale positiva, el caso queda confirmado; ' +
-  'si sale negativa, continúe el estudio: hasta el día 5 solicite RT-PCR — es una técnica distinta, molecular, no de detección de antígeno — ' +
+  'si sale negativa, continúe el estudio: hasta el día 5 solicite RT-PCR o aislamiento viral — son técnicas distintas, molecular y virológica, no de detección de antígeno — ' +
   'y desde el día 6 solicite IgM dengue. Considere además el diagnóstico diferencial con las arbovirosis que cocirculan (chikungunya y Zika).';
 
 function siguientePaso(dia){
   var d = parseInt(dia,10);
-  if(!isNaN(d) && d >= 1 && d <= 5) return 'Si el NS1 o la prueba rápida sale negativa: solicitar RT-PCR (aún está dentro de los primeros 5 días) y, si pasa del día 5 sin diagnóstico, IgM dengue.';
+  if(!isNaN(d) && d >= 1 && d <= 5) return 'Si el NS1 o la prueba rápida sale negativa: solicitar RT-PCR o aislamiento viral (aún está dentro de los primeros 5 días) y, si pasa del día 5 sin diagnóstico, IgM dengue.';
   if(!isNaN(d) && d > 5) return 'Si la IgM sale negativa: no descarta el evento. Repetir sobre suero convaleciente de 10 a 14 días después y evaluar el diagnóstico diferencial.';
   return 'Si la primera prueba sale negativa: no descarta el evento. Escalar a la prueba que corresponda al día de evolución.';
 }
@@ -924,6 +1030,13 @@ function laboratorio(S){
     L.push('IgM dengue o aislamiento viral: OBLIGATORIO. Si RT-PCR o NS1 son negativos, repetir IgM e IgG 14 a 21 días después.');
   }
   return L;
+}
+
+/* Redacción del goteo sin bomba. Vive dentro del ENGINE porque conductaTexto()
+   —el texto que el médico pega en la historia clínica— también lo necesita. */
+function drip(a,b){
+  if(a.macro === b.macro) return a.macro + ' gotas/min (macrogotero) · ' + a.micro + ' µgotas/min (microgotero)';
+  return a.macro + ' – ' + b.macro + ' gotas/min (macrogotero) · ' + a.micro + ' – ' + b.micro + ' µgotas/min (microgotero)';
 }
 
 /* ---------- Signos vitales derivados ---------- */
@@ -973,17 +1086,40 @@ function evaluacionHemodinamica(S){
     H.push('Hipotensión: PAS ' + pas + ' mmHg, por debajo de ' + uh + ' mmHg para la edad');
   }
   if(pp !== null && pp <= 20){
-    compensado = true;
-    H.push('Presión de pulso ' + pp + ' mmHg (≤ 20): choque compensado');
+    if(pp < 0) H.push('Revise las cifras de tensión arterial: la sistólica quedó por debajo de la diastólica (¿se transpusieron?).');
+    else { compensado = true; H.push('Presión de pulso ' + pp + ' mmHg (≤ 20): choque compensado'); }
   }
   if(S.llenado === '> 2 segundos'){ compensado = true; H.push('Llenado capilar > 2 segundos'); }
-  if(!isNaN(fc) && fc > ut){ compensado = true; H.push('Taquicardia: FC ' + fc + ' lpm, por encima de ' + ut + ' para la edad'); }
+  /* La taquicardia aislada NO es choque compensado: en un paciente febril es la
+     regla, no la excepción. La OMS exige taquicardia MÁS otro signo de mala
+     perfusión (presión de pulso estrecha, llenado capilar lento, extremidades
+     frías, pulso débil). Aquí se registra como hallazgo, pero solo eleva a
+     compensado si ya hay otro criterio de perfusión. */
+  if(!isNaN(fc) && fc > ut){
+    H.push('Taquicardia: FC ' + fc + ' lpm, por encima de ' + ut + ' para la edad' +
+      (compensado ? '' : ' (aislada, sin otro signo de mala perfusión: no basta para hablar de choque)'));
+    if(compensado || S.pulso === 'Débil o filiforme' || S.piel === 'Fría o moteada') compensado = true;
+  }
   if(pm !== null && !esPediatrico(S) && pm < 65) H.push('PAM ' + pm + ' mmHg, por debajo de 65 mmHg');
   if(['Somnoliento o irritable','Estuporoso','Inconsciente'].indexOf(S.conciencia) >= 0)
     H.push('Alteración del estado de conciencia: ' + S.conciencia.toLowerCase());
   if(!isNaN(sat) && sat < 92) H.push('Saturación de oxígeno ' + sat + ' %: evalúe dificultad respiratoria');
 
-  var r = { hallazgos: H, hipotenso: hipotenso, nivel: 'estable', titulo: '', mensaje: '' };
+  /* Si el médico ya marcó "Shock por dengue" como manifestación grave, ninguna
+     cifra puede devolver al paciente a "estable": el criterio clínico manda. */
+  var shockMarcado = (S.grave || []).indexOf('shock') >= 0;
+  if(shockMarcado){
+    compensado = true;
+    H.push('"Shock por dengue" está marcado como manifestación grave.');
+  }
+
+  /* ¿Se midió realmente la hemodinamia? La ausencia de datos no es estabilidad. */
+  var registrada = (S.pas !== '' && S.pas !== undefined && S.pad !== '' && S.pad !== undefined) ||
+                   !!S.llenado || !!S.pulso || (S.fc !== '' && S.fc !== undefined);
+
+  var r = { hallazgos: H, hipotenso: hipotenso, registrada: registrada,
+            estable: (registrada && !hipotenso && !compensado && !shockMarcado),
+            nivel: 'estable', titulo: '', mensaje: '' };
 
   if(hipotenso){
     r.nivel = 'hipotenso';
@@ -1189,7 +1325,7 @@ function referenciaHematocrito(S){
    exactamente 100/CHCM. Un índice alto significa hipocromía, no fuga. */
 function indiceHtoHb(S){
   var hto = parseFloat(S.hctActual), hb = parseFloat(S.hb);
-  if(isNaN(hto) || isNaN(hb) || hb <= 0) return null;
+  if(isNaN(hto) || isNaN(hb) || hb <= 0 || hto <= 0) return null;
   var v = Math.round((hto/hb)*100)/100, chcm = Math.round((hb/hto)*1000)/10;
   if(v >= 2.8 && v <= 3.2)
     return { valor:v, chcm:chcm, tono:'ok', lectura:'Coherente con la regla de tres. CHCM ' + chcm + ' g/dL.' };
@@ -1215,13 +1351,16 @@ function veredictoHemograma(S){
       else { v.estado = 'no'; v.detalle = 'Hematocrito ' + act + ' %, +' + d + ' % sobre el basal. Sin hemoconcentración significativa.'; }
     } else if(ref){
       var dr = Math.round(((act - ref.medio)/ref.medio)*1000)/10;
-      if(act > HCT_ALTO_OMS || act > ref.alto){
+      /* El umbral OMS del 50 % nunca puede quedar por debajo del rango normal del
+         propio grupo etario: un recién nacido con 55 % está sano, no hemoconcentrado. */
+      if(act > Math.max(HCT_ALTO_OMS, ref.alto)){
         v.estado = 'si';
-        v.detalle = 'Hematocrito ' + act + ' %, por encima ' + (act > HCT_ALTO_OMS ? 'del umbral de 50 % de la OMS' : 'el límite superior de referencia (' + ref.alto + ' %)') +
-          ' para ' + ref.etiqueta + '.';
-      } else if(dr >= 10){
+        v.detalle = 'Hematocrito ' + act + ' %, por encima del límite superior de referencia (' + ref.alto + ' %) para ' + ref.etiqueta + '.' +
+          (act > HCT_ALTO_OMS ? ' Supera también el umbral de 50 % de la OMS.' : '');
+      } else if(dr >= 10 || (act > HCT_ALTO_OMS && ref.alto <= HCT_ALTO_OMS + 5)){
         v.estado = 'sugestivo';
-        v.detalle = 'Hematocrito ' + act + ' %, +' + dr + ' % sobre el punto medio de referencia para ' + ref.etiqueta + ' (' + ref.medio + ' %). Dentro del rango, pero en su parte alta.';
+        v.detalle = 'Hematocrito ' + act + ' %, +' + dr + ' % sobre el punto medio de referencia para ' + ref.etiqueta + ' (' + ref.medio + ' %). Dentro del rango, pero en su parte alta.' +
+          (act > HCT_ALTO_OMS ? ' Supera además el umbral de 50 % de la OMS, que en un contexto de dengue obliga a repetir el control y a buscar el basal del propio paciente.' : '');
       } else {
         v.estado = 'no';
         v.detalle = 'Hematocrito ' + act + ' % frente a la referencia para ' + ref.etiqueta + ' (' + ref.bajo + ' – ' + ref.alto + ' %).';
@@ -1233,7 +1372,7 @@ function veredictoHemograma(S){
 
   /* --- fichas de lectura rápida --- */
   if(!isNaN(act)){
-    var alto = (act > HCT_ALTO_OMS) || (ref && act > ref.alto), bajo = (ref && act < ref.bajo);
+    var alto = ref ? (act > Math.max(HCT_ALTO_OMS, ref.alto)) : (act > HCT_ALTO_OMS), bajo = (ref && act < ref.bajo);
     v.tiles.push({ k:'hto', etiqueta:'Hematocrito', valor: act + ' %',
       estado: alto ? 'Alto' : (bajo ? 'Bajo' : 'Normal'),
       tono: alto ? 'danger' : (bajo ? 'warn' : 'ok') });
@@ -1283,6 +1422,10 @@ function interpretarHematocrito(S){
   var ref = refEfectiva(S);
   var h = evaluacionHemodinamica(S);
   var inestable = (h.nivel === 'hipotenso' || h.nivel === 'compensado');
+  /* Decir "mejoría, suspenda los líquidos" exige evidencia POSITIVA de estabilidad.
+     Sin signos vitales registrados no se sabe nada: antes, un paciente sin tensión
+     tomada y con el hematocrito en caída recibía la orden de suspender la infusión. */
+  var estable = h.estable;
   var r = { delta:dBasal, deltaRef:null, modo:'sin-datos', nivel:'sin-datos',
             titulo:'', mensaje:'', acciones:[], notas:[], referencia:ref };
 
@@ -1324,7 +1467,7 @@ function interpretarHematocrito(S){
       r.mensaje = 'La OMS es explícita: hematocrito que cae con signos vitales inestables señala hemorragia importante y necesidad de transfusión urgente. No lo interprete como mejoría.';
       r.acciones.push('Buscar el foco de sangrado: digestivo, ginecológico, retroperitoneal o del sistema nervioso central.');
       r.acciones.push('Reponer volumen y reevaluar. La transfusión se reserva para el sangrado grave con compromiso hemodinámico, no para una cifra de hematocrito.');
-    } else if(dBasal < 0 && !inestable){
+    } else if(dBasal <= -3 && estable){
       r.nivel = 'mejoria';
       r.titulo = 'Hematocrito en descenso con hemodinamia estable: mejoría';
       r.mensaje = 'La caída del hematocrito con buen volumen de pulso y diuresis conservada indica reabsorción del plasma extravasado. ' +
@@ -1334,7 +1477,9 @@ function interpretarHematocrito(S){
     } else if(dBasal < 0){
       r.nivel = 'descenso';
       r.titulo = 'Hematocrito en descenso: ' + dBasal + ' %';
-      r.mensaje = 'Interprete siempre junto con la hemodinamia: con buen volumen de pulso indica reabsorción y es momento de reducir líquidos; con inestabilidad indica sangrado.';
+      r.mensaje = 'Interprete siempre junto con la hemodinamia: con buen volumen de pulso indica reabsorción y es momento de reducir líquidos; con inestabilidad indica sangrado.' +
+        (h.registrada ? '' : ' NO hay signos vitales registrados: no puede concluirse reabsorción ni suspender la infusión sin tomar la tensión arterial, el volumen del pulso y el llenado capilar.');
+      if(!h.registrada) r.acciones.push('Tomar signos vitales antes de modificar los líquidos: tensión arterial, presión de pulso, llenado capilar y diuresis.');
     } else {
       r.nivel = 'estable';
       r.titulo = 'Hematocrito sin cambio respecto al basal';
@@ -1429,10 +1574,12 @@ function furosemida(S){
   };
 }
 
-/* ¿Terminó la fase crítica? Solo entonces es admisible un diurético. */
+/* ¿Terminó la fase crítica? Solo entonces es admisible un diurético.
+   El corte es d > 7 para no contradecir a faseDeLaEnfermedad(), que todavía
+   rotula el día 7 como fase crítica. */
 function faseCriticaTerminada(S){
   var d = parseInt(S.dia,10);
-  return !isNaN(d) && d >= 7;
+  return !isNaN(d) && d > 7;
 }
 
 var SOBRECARGA_PRECOZ = [
@@ -1541,7 +1688,9 @@ function moduloSeguridad(S){
     activo: (!isNaN(d) && d >= 6)
   });
 
-  return { modulos: M, hct: hct, faseCriticaTerminada: fin, aplica: (cat === 'B2' || cat === 'C') };
+  /* B1 también entra: si no tolera la vía oral recibe cristaloide a 2 – 4 ml/kg/h,
+     y una infusión sin válvulas de escape es justamente lo que causa la sobrecarga. */
+  return { modulos: M, hct: hct, faseCriticaTerminada: fin, aplica: (cat !== 'A') };
 }
 
 /* Fase del curso clínico según el día de enfermedad.
@@ -1650,7 +1799,10 @@ function construirReporte(S){
   L.push('REPOSICIÓN HÍDRICA (peso de cálculo ' + plan.peso + ' kg) — ' + (plan.via === 'oral' ? 'vía oral' : 'vía intravenosa'));
   if(plan.oral) L.push('· ' + plan.oral.titulo + ': ' + plan.oral.principal + ' (' + plan.oral.horaria + '; ' + plan.oral.vasos + '). ' + plan.oral.que);
   plan.fases.forEach(function(f){
-    L.push('· ' + f.n + ': ' + f.rate + ' (' + f.mlkg + ', ' + f.dur + ')' + (f.hora !== 'condicional' ? ' — inicio estimado ' + f.hora : '') + '.' + (f.nota ? ' ' + f.nota : ''));
+    L.push('· ' + f.n + ': ' + f.rate + ' (' + f.mlkg + ', ' + f.dur + ')' +
+      (f.hora !== 'condicional' ? ' — inicio estimado ' + f.hora : '') +
+      (f.bomba ? ' — bomba: ' + f.bomba : '') +
+      ' — sin bomba: ' + drip(f.goteoMin, f.goteoMax) + '.' + (f.nota ? ' ' + f.nota : ''));
   });
   if(m.veredicto.estado !== 'sin-dato'){
     L.push('HEMOGRAMA: ' + m.veredicto.titulo + '. ' + m.veredicto.detalle);
@@ -1673,6 +1825,8 @@ function construirReporte(S){
     L.push('· Suspender líquidos cuando el hematocrito baje del basal en paciente estable, con buena diuresis y tolerancia oral.');
     L.push('');
   }
+  m.avisos.forEach(function(a){ L.push('· ' + a.texto); });
+  if(m.avisos.length) L.push('');
   L.push('MANEJO SINTOMÁTICO');
   L.push('· ' + anti.titulo + ': ' + anti.dosis + '. ' + anti.max);
   m.noHacer.forEach(function(x){ L.push('· ' + x); });
@@ -1701,7 +1855,7 @@ var S = {
   endemica:false, fiebre:false, manif:[], torniquete:'nr',
   alarma:[], sinAlarma:false, grave:[], sinGrave:false,
   cond:[], social:[], toleraVO:true, diuresisOk:true,
-  pas:'', pad:'', fc:'', fr:'', temp:'', sato2:'', llenado:'', conciencia:'',
+  pas:'', pad:'', fc:'', fr:'', temp:'', sato2:'', llenado:'', conciencia:'', pulso:'', piel:'',
   hctBasal:'', hctActual:'', hctRef:'', hb:'', plaquetas:'', leucocitos:''
 };
 var MODELO = null;
@@ -1744,10 +1898,25 @@ function apagarNinguno(bucket){
 var TONO_HCT = { fuga:'danger', sangrado:'danger', ascenso:'warn', descenso:'warn',
                  mejoria:'ok', estable:'info', 'sin-datos':'info' };
 
+/* Pinta el aviso de plausibilidad debajo del bloque al que pertenece el campo.
+   Un dato absurdo no bloquea la escritura — se avisa y se vuelve a evaluar en
+   cuanto el usuario corrige — pero sí bloquea el avance en next(). */
+function avisoRango(cajaId, pares){
+  var box = $(cajaId); if(!box) return;
+  var msgs = [];
+  pares.forEach(function(par){ var m = fueraDeRango(par[0], par[1]); if(m) msgs.push(m); });
+  box.innerHTML = msgs.length ? '<div class="note danger">' + msgs.map(esc).join('<br>') + '</div>' : '';
+  box.style.display = msgs.length ? 'block' : 'none';
+}
+
 function syncLab(){
-  S.hctActual = $('f-hct').value; S.hctBasal = $('f-hct-basal').value;
-  S.hctRef = $('f-hct-ref').value;
-  S.hb = $('f-hb').value; S.plaquetas = $('f-plaquetas').value; S.leucocitos = $('f-leucocitos').value;
+  var hct = numDec($('f-hct').value), hctB = numDec($('f-hct-basal').value),
+      hctR = numDec($('f-hct-ref').value), hb = numDec($('f-hb').value),
+      plq = numCount($('f-plaquetas').value), leu = numCount($('f-leucocitos').value);
+  avisoRango('aviso-lab', [['hct',hct],['hct',hctB],['hct',hctR],['hb',hb],['plaq',plq],['leuco',leu]]);
+  S.hctActual = soloPlausible('hct', hct); S.hctBasal = soloPlausible('hct', hctB);
+  S.hctRef = soloPlausible('hct', hctR); S.hb = soloPlausible('hb', hb);
+  S.plaquetas = soloPlausible('plaq', plq); S.leucocitos = soloPlausible('leuco', leu);
   renderHct();
 }
 
@@ -1810,10 +1979,15 @@ function renderHct(){
 }
 
 function syncVitales(){
-  S.pas = $('f-pas').value; S.pad = $('f-pad').value;
-  S.fc = $('f-fc').value; S.fr = $('f-fr').value;
-  S.temp = $('f-temp').value; S.sato2 = $('f-sato2').value;
+  var pas = numDec($('f-pas').value), pad = numDec($('f-pad').value),
+      fc = numDec($('f-fc').value), fr = numDec($('f-fr').value),
+      temp = numDec($('f-temp').value), sat = numDec($('f-sato2').value);
+  avisoRango('aviso-vitales', [['pas',pas],['pad',pad],['fc',fc],['fr',fr],['temp',temp],['sato2',sat]]);
+  S.pas = soloPlausible('pas', pas); S.pad = soloPlausible('pad', pad);
+  S.fc = soloPlausible('fc', fc); S.fr = soloPlausible('fr', fr);
+  S.temp = soloPlausible('temp', temp); S.sato2 = soloPlausible('sato2', sat);
   S.llenado = $('f-llenado').value; S.conciencia = $('f-conciencia').value;
+  S.pulso = $('f-pulso').value; S.piel = $('f-piel').value;
   calcPP();
   renderHct();   /* la lectura del hematocrito depende de la hemodinamia */
 }
@@ -1827,24 +2001,35 @@ function buildList(containerId, items, bucket, cls){
     div.className = 'chk' + (cls ? ' ' + cls : '') + (marcado ? ' on' : '');
     div.innerHTML = '<input type="checkbox"' + (marcado ? ' checked' : '') + '><div class="t">' + it[1] + src +
       (it[2] ? '<span class="d">' + it[2] + '</span>' : '') + '</div>';
+    div.setAttribute('role','checkbox');
+    div.setAttribute('tabindex','0');
+    div.setAttribute('aria-checked', marcado ? 'true' : 'false');
     div.onclick = function(e){
       var box = div.querySelector('input');
       if(e.target !== box) box.checked = !box.checked;
       div.classList.toggle('on', box.checked);
+      div.setAttribute('aria-checked', box.checked ? 'true' : 'false');
       var i = S[bucket].indexOf(it[0]);
       if(box.checked && i < 0) S[bucket].push(it[0]);
       if(!box.checked && i >= 0) S[bucket].splice(i,1);
       if(box.checked && NINGUNO[bucket]) apagarNinguno(bucket);
       if(bucket === 'manif') updateManifCount();
+      if(it[0] === 'menor5') S.menor5Tocado = true;
+    };
+    /* Operable con teclado: la lista es de <div>, no de <label>. */
+    div.onkeydown = function(e){
+      if(e.key === ' ' || e.key === 'Enter' || e.key === 'Spacebar'){ e.preventDefault(); div.click(); }
     };
     c.appendChild(div);
   });
 }
 
-function toggleChk(el, key){
+function toggleChk(el, key, ev){
   var box = el.querySelector('input');
-  if(event && event.target !== box) box.checked = !box.checked;
+  ev = ev || (typeof event !== 'undefined' ? event : null);
+  if(ev && ev.target !== box) box.checked = !box.checked;
   el.classList.toggle('on', box.checked);
+  el.setAttribute('aria-checked', box.checked ? 'true' : 'false');
   S[key] = box.checked;
   if(key === 'fiebre' || key === 'endemica') updateManifCount();
 }
@@ -1862,20 +2047,25 @@ function updateManifCount(){
 }
 
 function syncEdad(){
-  S.edad = $('f-edad').value; S.edadU = $('f-edad-u').value;
+  S.edad = numDec($('f-edad').value); S.edadU = $('f-edad-u').value;
+  avisoRango('aviso-edad', [[S.edadU === 'm' ? 'edadM' : 'edadA', S.edad]]);
   $('wrap-embarazo').style.display = (S.sexo === 'F' && edadMeses(S.edad,S.edadU) >= 120) ? 'block' : 'none';
   $('peso-ideal-box').style.display = pesoIdealVisible() ? 'block' : 'none';
   renderAutoCond(); renderCondList(); renderFaseCritica(); renderRefSugerida(); renderHct();
 }
+/* Una función de render no puede deshacer una decisión del usuario: antes, cualquier
+   cambio de edad o de sexo volvía a marcar "Menor de 5 años" después de que el médico
+   lo había desmarcado a propósito, y la categoría saltaba de A a B1 sin avisar. */
 function renderCondList(){
   var m5 = mostrarMenor5(S), i = S.cond.indexOf('menor5');
-  if(m5 && i < 0) S.cond.push('menor5');
+  if(m5 && i < 0 && !S.menor5Tocado) S.cond.push('menor5');
   if(!m5 && i >= 0) S.cond.splice(i,1);
   buildList('list-cond', COND.filter(function(it){ return it[4] !== 'ped5' || m5; }), 'cond');
 }
 function syncPeso(){
-  S.peso = parseFloat($('f-peso').value) || 0;
-  S.talla = parseFloat($('f-talla').value) || 0;
+  S.peso = numDec($('f-peso').value) || 0;
+  S.talla = numDec($('f-talla').value) || 0;
+  avisoRango('aviso-peso', [['peso', S.peso || ''], ['talla', S.talla || '']]);
   var pi = pesoIdeal(S.talla, S.sexo);
   if(pi) $('pi-val').textContent = pi;
   $('peso-ideal-box').style.display = pesoIdealVisible() ? 'block' : 'none';
@@ -2039,8 +2229,16 @@ function go(n){
 }
 function next(n){
   if(n === 2){
-    if(!(parseFloat($('f-peso').value) > 0)){ alert('Ingrese el peso del paciente: todos los cálculos de líquidos dependen de él.'); return; }
-    if($('f-edad').value === ''){ alert('Ingrese la edad del paciente.'); return; }
+    if(!(numDec($('f-peso').value) > 0)){ alert('Ingrese el peso del paciente: todos los cálculos de líquidos dependen de él.\n\nUse la coma para los decimales: 70,5'); return; }
+    if($('f-edad').value === '' || S.edad === ''){ alert('Ingrese la edad del paciente.'); return; }
+    /* Ningún dato inverosímil pasa de esta pantalla: un peso o una edad mal
+       digitados se convierten aguas abajo en una orden de líquidos equivocada. */
+    var bloqueo = [['peso',S.peso],[S.edadU === 'm' ? 'edadM' : 'edadA', S.edad],['talla',S.talla || ''],
+      ['pas',S.pas],['pad',S.pad],['fc',S.fc],['fr',S.fr],['temp',S.temp],['sato2',S.sato2],
+      ['hct',S.hctActual],['hct',S.hctBasal],['hct',S.hctRef],['hb',S.hb],
+      ['plaq',S.plaquetas],['leuco',S.leucocitos]]
+      .map(function(par){ return fueraDeRango(par[0], par[1]); }).filter(Boolean);
+    if(bloqueo.length){ alert('Revise estos datos antes de continuar:\n\n· ' + bloqueo.join('\n\n· ')); return; }
     S.nombre = $('f-nombre').value; S.hora = $('f-hora').value;
   }
   if(n === 4 && !S.sinAlarma && S.alarma.length === 0){
@@ -2106,7 +2304,7 @@ function evaluar(){
   }
 
   o.push('<div class="card"><div class="sec-title">Paciente</div><table class="t">' +
-    m.paciente.map(function(f){ return '<tr><td class="k">' + f[0] + '</td><td class="v">' + f[1] + '</td></tr>'; }).join('') +
+    m.paciente.map(function(f){ return '<tr><td class="k">' + esc(f[0]) + '</td><td class="v">' + esc(f[1]) + '</td></tr>'; }).join('') +
     '</table></div>');
 
   if(m.hallazgos.length){
@@ -2249,10 +2447,6 @@ function acc(titulo, items, abierto, nota){
     '<ul class="clean">' + items.map(function(x){ return '<li>' + x + '</li>'; }).join('') + '</ul>' +
     (nota ? '<div class="note info" style="margin:10px 0 0">' + nota + '</div>' : '') + '</div></details>';
 }
-function drip(a,b){
-  if(a.macro === b.macro) return a.macro + ' gotas/min (macrogotero) · ' + a.micro + ' µgotas/min (microgotero)';
-  return a.macro + ' – ' + b.macro + ' gotas/min (macrogotero) · ' + a.micro + ' – ' + b.micro + ' µgotas/min (microgotero)';
-}
 
 /* ================= Copiar conducta ================= */
 function copiarConducta(){
@@ -2266,7 +2460,7 @@ function copiaManual(txt){
   var ta = document.createElement('textarea');
   ta.value = txt; ta.style.position = 'fixed'; ta.style.opacity = '0';
   document.body.appendChild(ta); ta.select();
-  try { document.execCommand('copy'); toast('Conducta copiada'); } catch(e){ toast('No se pudo copiar'); }
+  try { if(!document.execCommand('copy')) throw new Error('copy'); toast('Conducta copiada'); } catch(e){ toast('No se pudo copiar'); }
   document.body.removeChild(ta);
 }
 
@@ -2314,14 +2508,32 @@ function zipStore(files){
   return new Blob(partes.concat(central, [eo]), { type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
 }
 
-function xe(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function xe(s){ return String(s).replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+/* Tinta del documento. Los grises tenues del diseño original se desvanecían al
+   imprimir en consultorio y en pantallas de bajo contraste: aquí se remapean, en
+   un solo punto, a tonos legibles. Cualquier color que se agregue después pasa
+   por este filtro, así que no puede volver a colarse un gris ilegible. */
+var TINTA = { '3A3A45':'1A1A22', '4A4A55':'1A1A22', '6B6B78':'33333D', '8A8A97':'44444F', '2B2B33':'15151C' };
+function tinta(c){ return TINTA[String(c).toUpperCase()] || c; }
+
+/* El cuerpo del documento va en negrita por decisión de legibilidad: la jerarquía
+   la marcan el tamaño y el color, no el peso. Pase b:false para exceptuar un run. */
 function wR(t, o){
   o = o || {};
-  var rPr = '<w:rPr>' + (o.b ? '<w:b/>' : '') + (o.i ? '<w:i/>' : '') +
-    (o.color ? '<w:color w:val="' + o.color + '"/>' : '') +
+  var negrita = (o.b === false) ? false : true;
+  var rPr = '<w:rPr>' + (negrita ? '<w:b/>' : '') + (o.i ? '<w:i/>' : '') +
+    (o.color ? '<w:color w:val="' + tinta(o.color) + '"/>' : '') +
     (o.sz ? '<w:sz w:val="' + o.sz + '"/><w:szCs w:val="' + o.sz + '"/>' : '') + '</w:rPr>';
-  return '<w:r>' + rPr + '<w:t xml:space="preserve">' + xe(t) + '</w:t></w:r>';
+  /* Un salto de línea dentro de un run se emite como <w:br/>, no como texto. */
+  var cuerpo = String(t).split('\n').map(function(linea){
+    return '<w:t xml:space="preserve">' + xe(linea) + '</w:t>';
+  }).join('<w:br/>');
+  return '<w:r>' + rPr + cuerpo + '</w:r>';
 }
+/* Texto justificado por defecto. Word solo estira las líneas que hacen salto,
+   así que títulos y etiquetas de una línea no se ven afectados; las celdas de
+   tabla piden alineación izquierda de forma explícita para no abrir huecos. */
 function wP(runs, o){
   o = o || {};
   var pPr = '<w:pPr>' +
@@ -2331,13 +2543,13 @@ function wP(runs, o){
     (o.shd ? '<w:shd w:val="clear" w:color="auto" w:fill="' + o.shd + '"/>' : '') +
     '<w:spacing w:before="' + (o.before || 0) + '" w:after="' + (o.after === undefined ? 60 : o.after) + '"/>' +
     (o.ind ? '<w:ind w:left="' + o.ind + '" w:hanging="' + (o.hang || 0) + '"/>' : '') +
-    (o.align ? '<w:jc w:val="' + o.align + '"/>' : '') + '</w:pPr>';
+    '<w:jc w:val="' + (o.align || 'both') + '"/></w:pPr>';
   return '<w:p>' + pPr + runs + '</w:p>';
 }
 
 /* Viñeta real de Word, no un carácter escrito a mano */
 function wBullet(t, color){
-  return wP(wR(t, { sz:19, color: color || '3A3A45' }), { num:true, after:40 });
+  return wP(wR(t, { sz:19, color: color || '1A1A22' }), { num:true, after:40 });
 }
 
 /* Encabezado de sección: número en círculo de color + título con filete inferior */
@@ -2353,7 +2565,7 @@ function wH2(t, color){
 /* Recuadro de una sola celda: banners, avisos y llamados */
 function wCaja(contenido, fill, borde){
   return '<w:tbl><w:tblPr><w:tblW w:w="5000" w:type="pct"/>' +
-    '<w:tblBorders>' + ['top','left','bottom','right'].map(function(x){
+    '<w:tblBorders>' + ['top','left','bottom','right'].map(function(x){   /* orden del esquema CT_TblBorders */
       return '<w:' + x + ' w:val="single" w:sz="' + (borde ? 12 : 2) + '" w:space="0" w:color="' + (borde || fill) + '"/>'; }).join('') +
     '<w:insideH w:val="none" w:sz="0" w:space="0" w:color="auto"/><w:insideV w:val="none" w:sz="0" w:space="0" w:color="auto"/></w:tblBorders>' +
     '<w:tblLayout w:type="fixed"/><w:tblCellMar><w:top w:w="140" w:type="dxa"/><w:left w:w="180" w:type="dxa"/>' +
@@ -2368,8 +2580,8 @@ function wTabla(filas, anchos){
   var xml = '<w:tbl><w:tblPr><w:tblW w:w="5000" w:type="pct"/>' +
     '<w:tblBorders>' +
     '<w:top w:val="single" w:sz="4" w:space="0" w:color="CFE6DE"/>' +
-    '<w:bottom w:val="single" w:sz="4" w:space="0" w:color="CFE6DE"/>' +
     '<w:left w:val="none" w:sz="0" w:space="0" w:color="auto"/>' +
+    '<w:bottom w:val="single" w:sz="4" w:space="0" w:color="CFE6DE"/>' +
     '<w:right w:val="none" w:sz="0" w:space="0" w:color="auto"/>' +
     '<w:insideH w:val="single" w:sz="2" w:space="0" w:color="E4EFEA"/>' +
     '<w:insideV w:val="none" w:sz="0" w:space="0" w:color="auto"/></w:tblBorders>' +
@@ -2385,8 +2597,8 @@ function wTabla(filas, anchos){
         (enc ? '<w:shd w:val="clear" w:color="auto" w:fill="1B6B5A"/>' :
               (zebra ? '<w:shd w:val="clear" w:color="auto" w:fill="F4F9F7"/>' : '')) +
         '<w:vAlign w:val="center"/></w:tcPr>' +
-        wP(wR(celda, { sz: enc ? 17 : 19, b: enc, color: enc ? 'FFFFFF' : '2B2B33' }),
-           { after:20, before: enc ? 20 : 10 }) + '</w:tc>';
+        wP(wR(celda, { sz: enc ? 17 : 19, color: enc ? 'FFFFFF' : '2B2B33' }),
+           { after:20, before: enc ? 20 : 10, align:'left' }) + '</w:tc>';
     });
     xml += '</w:tr>';
   });
@@ -2472,6 +2684,14 @@ function documentoXml(m){
         b.push(wP(wR('Índice hematocrito/hemoglobina ' + m.veredicto.indice.valor + '. ', { b:true, sz:18 }) +
           wR(m.veredicto.indice.lectura, { sz:18, color:'4A4A55' }), { after:80 }));
     }
+    /* La lectura del hematocrito (título y mensaje) estaba en pantalla y en el
+       portapapeles pero se perdía en el Word: es el razonamiento que sostiene las
+       acciones que vienen enseguida. */
+    if(m.hct.nivel !== 'sin-datos'){
+      b.push(wH2('Lectura del hematocrito'));
+      b.push(wP(wR(m.hct.titulo, { sz:19, color:'124A3E' }), { after:25 }));
+      if(m.hct.mensaje) b.push(wP(wR(m.hct.mensaje, { sz:18 }), { after:60 }));
+    }
     if(m.hct.acciones.length){
       b.push(wH2('Qué hacer'));
       m.hct.acciones.forEach(function(x){ b.push(wBullet(x)); });
@@ -2498,9 +2718,10 @@ function documentoXml(m){
     var filas = [['Fase','Velocidad','ml/kg · duración','Hora','Sin bomba']];
     m.plan.fases.forEach(function(f){
       filas.push([f.n, f.rate, f.mlkg + ' · ' + f.dur + ' · vol. ' + f.vol,
-        (f.hora === 'condicional' ? 'Condicional' : f.hora), drip(f.goteoMin, f.goteoMax)]);
+        (f.hora === 'condicional' ? 'Condicional' : f.hora),
+        drip(f.goteoMin, f.goteoMax) + (f.bomba ? '\n' + 'Con bomba: ' + String(f.bomba).replace(/ en bomba$/,'') : '')]);
     });
-    b.push(wTabla(filas, [1900, 1500, 2200, 1200, 2838]));
+    b.push(wTabla(filas, [1650, 1400, 1900, 1300, 3388]));
     m.plan.fases.forEach(function(f){
       if(f.nota) b.push(wP(wR(f.n + ': ', { b:true, sz:17 }) + wR(f.nota, { sz:17, color:'4A4A55' }), { after:40 }));
     });
@@ -2583,9 +2804,9 @@ function documentoXml(m){
   });
 
   b.push(wCaja(
-    wP(wR('Generado con Cero_Aedes by AR v' + APP_VERSION + ' — Andrés Rodríguez Cardona, Epidemiólogo.', { b:true, sz:16, color:'4A4A55' }), { after:20 }) +
-    wP(wR('Herramienta de apoyo a la decisión clínica: los cálculos son orientativos y no reemplazan la valoración clínica ni la reestratificación continua del paciente. Verifique siempre los volúmenes antes de administrarlos.',
-      { sz:16, i:true, color:'6B6B78' }), { after:0 }),
+    wP(wR('Documento generado con Cero_Aedes by AR v' + APP_VERSION + '.', { sz:16, color:'4A4A55' }), { after:20 }) +
+    wP(wR('Esta es una guía de apoyo a la decisión clínica: NO reemplaza el criterio médico. Los cálculos son orientativos y no sustituyen la valoración ni la reestratificación continua del paciente. Verifique siempre los volúmenes antes de administrarlos.',
+      { sz:16, color:'6B6B78' }), { after:0 }),
     'FAFAFC', 'DCDCE4'));
 
   return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
@@ -2612,11 +2833,11 @@ function footerXml(){
     '<w:p><w:pPr><w:pBdr><w:top w:val="single" w:sz="6" w:space="5" w:color="CFE6DE"/></w:pBdr>' +
     '<w:tabs><w:tab w:val="right" w:pos="9638"/></w:tabs>' +
     '<w:spacing w:before="60" w:after="0"/></w:pPr>' +
-    '<w:r><w:rPr><w:sz w:val="15"/><w:color w:val="8A8A97"/></w:rPr>' +
-    '<w:t xml:space="preserve">Cero_Aedes by AR v' + APP_VERSION + '   ·   Andrés Rodríguez Cardona, Epidemiólogo   ·   Herramienta de apoyo</w:t></w:r>' +
+    '<w:r><w:rPr><w:b/><w:sz w:val="15"/><w:color w:val="44444F"/></w:rPr>' +
+    '<w:t xml:space="preserve">Cero_Aedes by AR v' + APP_VERSION + '   ·   Guía de apoyo: no reemplaza el criterio médico</w:t></w:r>' +
     '<w:r><w:tab/></w:r>' +
-    '<w:r><w:rPr><w:sz w:val="15"/><w:color w:val="8A8A97"/></w:rPr><w:t xml:space="preserve">Pág. </w:t></w:r>' +
-    '<w:fldSimple w:instr=" PAGE "><w:r><w:rPr><w:sz w:val="15"/><w:color w:val="8A8A97"/></w:rPr><w:t>1</w:t></w:r></w:fldSimple>' +
+    '<w:r><w:rPr><w:b/><w:sz w:val="15"/><w:color w:val="44444F"/></w:rPr><w:t xml:space="preserve">Pág. </w:t></w:r>' +
+    '<w:fldSimple w:instr=" PAGE "><w:r><w:rPr><w:b/><w:sz w:val="15"/><w:color w:val="44444F"/></w:rPr><w:t>1</w:t></w:r></w:fldSimple>' +
     '</w:p></w:ftr>';
 }
 
@@ -2624,7 +2845,7 @@ var STYLES_XML = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
   '<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' +
   '<w:docDefaults><w:rPrDefault><w:rPr>' +
   '<w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/>' +
-  '<w:color w:val="2B2B33"/><w:sz w:val="19"/><w:szCs w:val="19"/>' +
+  '<w:color w:val="15151C"/><w:sz w:val="19"/><w:szCs w:val="19"/>' +
   '</w:rPr></w:rPrDefault><w:pPrDefault><w:pPr>' +
   '<w:spacing w:after="60" w:line="252" w:lineRule="auto"/>' +
   '</w:pPr></w:pPrDefault></w:docDefaults>' +
@@ -2659,7 +2880,13 @@ function exportarWord(){
     { name:'word/document.xml', str: documentoXml(MODELO) }
   ];
   var blob = zipStore(archivos);
-  var limpio = (S.nombre || 'paciente').replace(/[^\wáéíóúñÁÉÍÓÚÑ ]/g,'').trim().replace(/\s+/g,'_') || 'paciente';
+  /* El nombre del archivo se pliega a ASCII a propósito. Abierta desde file://,
+     Chromium descarta el atributo download completo si el valor trae un acento o
+     una eñe: el médico terminaba con un archivo llamado "download", sin extensión,
+     que Word no abre. Y en Colombia casi todo nombre lleva tilde o ñ. */
+  var limpio = (S.nombre || 'paciente')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')      /* José → Jose, Muñoz → Munoz */
+    .replace(/[^A-Za-z0-9]+/g,'_').replace(/^_+|_+$/g,'').slice(0,60) || 'paciente';
   var nombre = 'Cero_Aedes_' + limpio + '_' + (S.fecha || '') + '.docx';
   var url = URL.createObjectURL(blob), a = document.createElement('a');
   a.href = url; a.download = nombre; document.body.appendChild(a); a.click();
@@ -2680,7 +2907,10 @@ function bindInv(id, cb){
 
 (function init(){
   var now = new Date();
-  $('f-fecha').valueAsDate = now;
+  /* valueAsDate serializa en UTC: en Colombia (UTC-5) después de las 7 p. m.
+     escribía la fecha de mañana y corría un día el día de enfermedad. */
+  $('f-fecha').value = now.getFullYear() + '-' +
+    String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
   S.fecha = $('f-fecha').value;
   $('f-hora').value = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
   S.hora = $('f-hora').value;

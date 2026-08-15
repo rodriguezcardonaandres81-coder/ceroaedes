@@ -216,8 +216,16 @@ t('23:30 + 60 min = 00:30 (cruza medianoche)', ctx.addMin('23:30', 60), '00:30')
 
 console.log('\n── Laboratorio y monitoreo ────────────────────────');
 
-t('Día 2 → NS1 o prueba rápida y RT-PCR',
-  /NS1 por ELISA o prueba rápida, y RT-PCR/.test(ctx.pruebaConfirmatoria('2')), 'true');
+t('Día 2 → NS1 por ELISA, RT-PCR o aislamiento viral',
+  /NS1 por ELISA, RT-PCR o aislamiento viral/.test(ctx.pruebaConfirmatoria('2')), 'true');
+t('Las tres pruebas virológicas aparecen dentro de los primeros 5 días',
+  [1,2,3,4,5].every(d => { const s = ctx.pruebaConfirmatoria(String(d));
+    return /NS1/.test(s) && /RT-PCR/.test(s) && /aislamiento viral/.test(s); }), 'true');
+t('Desde el día 6 ya no se ofrece aislamiento viral, solo IgM',
+  [6,7,8,12].every(d => !/aislamiento viral/.test(ctx.pruebaConfirmatoria(String(d)))), 'true');
+t('Sin día de evolución la línea nombra las tres pruebas y la IgM',
+  /NS1 por ELISA, RT-PCR o aislamiento viral/.test(ctx.pruebaConfirmatoria('')) &&
+  /IgM dengue por ELISA/.test(ctx.pruebaConfirmatoria('')), 'true');
 t('Día 5 sigue dentro de la ventana molecular',
   /≤ 5 días/.test(ctx.pruebaConfirmatoria('5')), 'true');
 t('Día 6 → IgM por ELISA', /IgM dengue por ELISA/.test(ctx.pruebaConfirmatoria('6')), 'true');
@@ -228,8 +236,10 @@ t('El NS1 negativo NO descarta el evento',
   /NEGATIVA no descarta el dengue/.test(ctx.NS1_NEGATIVO), 'true');
 t('El NS1 positivo sí confirma el caso',
   /positiva, el caso queda confirmado/.test(ctx.NS1_NEGATIVO), 'true');
-t('Ante NS1 negativo indica RT-PCR como técnica distinta',
-  /RT-PCR — es una técnica distinta, molecular/.test(ctx.NS1_NEGATIVO), 'true');
+t('Ante NS1 negativo indica RT-PCR o aislamiento viral como técnicas distintas',
+  /RT-PCR o aislamiento viral — son técnicas distintas, molecular y virológica/.test(ctx.NS1_NEGATIVO), 'true');
+t('El siguiente paso dentro de los 5 días ofrece RT-PCR o aislamiento viral',
+  /RT-PCR o aislamiento viral/.test(ctx.siguientePaso('3')), 'true');
 t('Menciona el diagnóstico diferencial con chikungunya y Zika',
   /chikungunya y Zika/.test(ctx.NS1_NEGATIVO), 'true');
 t('Dentro de los 5 días, el siguiente paso tras un negativo es RT-PCR',
@@ -498,8 +508,17 @@ t('Y las tres fichas quedan normales',
 
 t('Zona intermedia se marca como sugestiva',
   ctx.veredictoHemograma(P({ edad: '34', sexo: 'F', hctActual: '45.5' })).estado, 'sugestivo');
-t('En hombre, 52 % ya supera el umbral de 50 % de la OMS',
-  ctx.veredictoHemograma(P({ edad: '34', sexo: 'M', hctActual: '52' })).estado, 'si');
+/* 52 % en un hombre adulto queda DENTRO del rango que la propia app declara normal
+   (41 – 53 %): rotularlo "hay hemoconcentración" contradecía la referencia impresa
+   dos líneas más abajo. Queda como sugestivo, y el mensaje sí nombra el 50 % de la OMS. */
+t('En hombre, 52 % queda sugestivo, no confirmado',
+  ctx.veredictoHemograma(P({ edad: '34', sexo: 'M', hctActual: '52' })).estado, 'sugestivo');
+t('...y el detalle invoca el umbral de 50 % de la OMS',
+  /umbral de 50 % de la OMS/.test(ctx.veredictoHemograma(P({ edad: '34', sexo: 'M', hctActual: '52' })).detalle), 'true');
+t('Por encima del límite del propio grupo sí se confirma',
+  ctx.veredictoHemograma(P({ edad: '34', sexo: 'M', hctActual: '56' })).estado, 'si');
+t('Recién nacido con 55 % no se marca hemoconcentrado (su rango normal llega a 65 %)',
+  ctx.veredictoHemograma(P({ edad: '0', edadU: 'm', hctActual: '55' })).estado, 'no');
 t('Con basal, +20 % da hemoconcentración',
   ctx.veredictoHemograma(P({ edad: '34', hctBasal: '40', hctActual: '48' })).estado, 'si');
 t('Con basal, +12 % queda sugestivo',
@@ -562,7 +581,10 @@ t('Infusión continua 0,1 mg/kg/hora',
 
 t('Día 4: la fase crítica NO ha terminado', ctx.faseCriticaTerminada(P({ dia: '4' })), 'false');
 t('Día 6: todavía no se da por terminada', ctx.faseCriticaTerminada(P({ dia: '6' })), 'false');
-t('Día 7: se considera terminada', ctx.faseCriticaTerminada(P({ dia: '7' })), 'true');
+/* El día 7 lo rotula faseDeLaEnfermedad() como fase crítica: darlo por terminado
+   aquí hacía que el mismo informe declarara admisible el diurético. */
+t('Día 7: la fase crítica NO se da por terminada', ctx.faseCriticaTerminada(P({ dia: '7' })), 'false');
+t('Día 8: se considera terminada', ctx.faseCriticaTerminada(P({ dia: '8' })), 'true');
 t('Sin día registrado no se asume terminada', ctx.faseCriticaTerminada(P({ dia: '' })), 'false');
 
 const segCritica = ctx.moduloSeguridad(P({ edad: '34', peso: 70, dia: '4', alarma: ['abdominal'] }));
@@ -709,6 +731,101 @@ t('Categoría A muestra criterios de referencia, no de alta',
   repA.criterios.titulo, 'Criterios de referencia al hospital');
 t('Categoría B2 muestra criterios de alta',
   rep.criterios.titulo, 'Criterios de alta (deben cumplirse todos)');
+
+
+console.log('\n── Regresiones de la auditoría crítica (v3.1) ─────');
+
+/* 1. Entrada numérica con notación colombiana */
+t('La coma decimal se lee como decimal: 70,5 → 70.5', ctx.numDec('70,5'), 70.5);
+t('El punto de miles con coma decimal: 1.234,5 → 1234.5', ctx.numDec('1.234,5'), 1234.5);
+t('El punto solo sigue siendo decimal: 38.5 → 38.5', ctx.numDec('38.5'), 38.5);
+t('Texto no numérico no se convierte en cifra', ctx.numDec('abc'), '');
+t('Campo vacío queda vacío, no cero', ctx.numDec(''), '');
+t('Conteo con punto de miles: 85.000 → 85000', ctx.numCount('85.000'), 85000);
+t('Conteo con coma de miles: 3,200 → 3200', ctx.numCount('3,200'), 3200);
+t('Conteo sin separador se respeta', ctx.numCount('85000'), 85000);
+
+/* 2. Rangos de plausibilidad */
+t('Peso de 705 kg se rechaza', /fuera del rango plausible/.test(ctx.fueraDeRango('peso', 705)), 'true');
+t('Peso de 70,5 kg se acepta', ctx.fueraDeRango('peso', 70.5), null);
+t('Edad negativa se rechaza', /fuera del rango plausible/.test(ctx.fueraDeRango('edadA', -3)), 'true');
+t('Hematocrito de 455 % se rechaza', /fuera del rango plausible/.test(ctx.fueraDeRango('hct', 455)), 'true');
+t('Temperatura de 385 °C se rechaza', /fuera del rango plausible/.test(ctx.fueraDeRango('temp', 385)), 'true');
+t('Campo vacío no dispara aviso', ctx.fueraDeRango('peso', ''), null);
+
+t('Un valor fuera de rango no entra al modelo', ctx.soloPlausible('hct', 455), '');
+t('Un valor plausible sí entra al modelo', ctx.soloPlausible('hct', 52), 52);
+t('El campo vacío pasa tal cual', ctx.soloPlausible('hct', ''), '');
+
+/* 3. Techo del acetaminofén en pediatría */
+const ado = ctx.antipiretico(P({ edad: '15', peso: 70 }));
+t('Adolescente de 70 kg no supera 1 g por dosis', /1000 mg por dosis/.test(ado.dosis), 'true');
+t('...ni 4 g al día', /4000 mg\/día/.test(ado.max), 'true');
+t('...y se le indica tableta, no jarabe', /tableta de 500 mg/.test(ado.jarabe), 'true');
+t('A 33 kg el jarabe sigue siendo practicable',
+  /11 – 16.5 ml por dosis/.test(ctx.antipiretico(P({ edad: '10', peso: 33 })).jarabe), 'true');
+const nino = ctx.antipiretico(P({ edad: '4', peso: 16 }));
+t('Niño de 16 kg conserva la dosis por kilo', nino.dosis, '160 – 240 mg por dosis, cada 6 horas');
+t('Niño de 16 kg conserva la indicación de jarabe', /Jarabe 150 mg/.test(nino.jarabe), 'true');
+
+/* 4. Peso ideal: solo cuando es MENOR que el real */
+t('Peso ideal más alto que el real no se usa',
+  ctx.pesoCalculo(P({ edad: '40', sexo: 'M', peso: 60, talla: 190, usarPesoIdeal: true })), 60);
+t('Peso ideal más bajo sí sustituye al real',
+  ctx.pesoCalculo(P({ edad: '40', sexo: 'M', peso: 120, talla: 170, usarPesoIdeal: true })) < 120, 'true');
+t('El adolescente con obesidad ya puede usar peso ideal',
+  ctx.pesoCalculo(P({ edad: '16', sexo: 'M', peso: 120, talla: 170, usarPesoIdeal: true })) < 120, 'true');
+
+/* 5. Taquicardia aislada no es choque compensado */
+t('Adulto febril con FC 101 no queda en choque compensado',
+  ctx.evaluacionHemodinamica(P({ edad: '34', fc: '101', temp: '39.5' })).nivel, 'alerta');
+t('...pero el hallazgo sí se registra',
+  /Taquicardia/.test(ctx.evaluacionHemodinamica(P({ edad: '34', fc: '101' })).hallazgos.join(' ')), 'true');
+t('Taquicardia + pulso filiforme sí es choque compensado',
+  ctx.evaluacionHemodinamica(P({ edad: '34', fc: '101', pulso: 'Débil o filiforme' })).nivel, 'compensado');
+t('Taquicardia + llenado capilar lento sí es choque compensado',
+  ctx.evaluacionHemodinamica(P({ edad: '34', fc: '101', llenado: '> 2 segundos' })).nivel, 'compensado');
+t('El choque marcado por el médico manda sobre las cifras',
+  ctx.evaluacionHemodinamica(P({ edad: '34', pas: '120', pad: '80', grave: ['shock'] })).nivel, 'compensado');
+t('TA transpuesta se señala en vez de leerse como choque',
+  /transpusieron/.test(ctx.evaluacionHemodinamica(P({ edad: '34', pas: '80', pad: '120' })).hallazgos.join(' ')), 'true');
+
+/* 6. "Mejoría / suspenda líquidos" exige estabilidad demostrada */
+const sinVitales = ctx.interpretarHematocrito(P({ edad: '34', peso: 70, dia: '5', hctBasal: '48', hctActual: '36' }));
+t('Sin signos vitales registrados NO se declara mejoría', sinVitales.nivel === 'mejoria', 'false');
+t('...y se pide tomar los signos vitales antes de tocar la infusión',
+  /Tomar signos vitales/.test(sinVitales.acciones.join(' ')), 'true');
+const conVitales = ctx.interpretarHematocrito(P({ edad: '34', peso: 70, dia: '5',
+  hctBasal: '48', hctActual: '36', pas: '110', pad: '75', fc: '80', llenado: '< 2 segundos' }));
+t('Con signos vitales estables sí se declara mejoría', conVitales.nivel, 'mejoria');
+t('Con choque marcado nunca se declara mejoría',
+  ctx.interpretarHematocrito(P({ edad: '34', peso: 70, dia: '5', hctBasal: '48', hctActual: '36',
+    pas: '110', pad: '75', grave: ['shock'] })).nivel === 'mejoria', 'false');
+t('Una variación mínima no cuenta como mejoría',
+  ctx.interpretarHematocrito(P({ edad: '34', peso: 70, hctBasal: '48', hctActual: '47.9',
+    pas: '110', pad: '75' })).nivel === 'mejoria', 'false');
+
+/* 7. Índice hematocrito/hemoglobina con hematocrito cero */
+t('Hematocrito 0 no produce Infinity', ctx.indiceHtoHb(P({ hctActual: '0', hb: '14' })), null);
+
+/* 8. El módulo de seguridad cubre a B1, que también recibe cristaloide */
+t('B1 con vía IV sí muestra las válvulas de seguridad',
+  ctx.moduloSeguridad(P({ edad: '34', peso: 70, cond: ['dm'], toleraVO: false })).aplica, 'true');
+t('A ambulatorio sigue sin mostrarlas',
+  ctx.moduloSeguridad(P({ edad: '34', peso: 70 })).aplica, 'false');
+
+/* 9. El texto para la historia clínica no pierde datos */
+const repC = ctx.construirReporte(P({ edad: '34', peso: 70, grave: ['shock'], dia: '5' }));
+t('El texto de conducta lleva la velocidad de bomba',
+  /bomba: /.test(repC.conductaTexto), 'true');
+t('El texto de conducta lleva el goteo sin bomba',
+  /sin bomba: .*gotas\/min/.test(repC.conductaTexto), 'true');
+t('El texto de conducta lleva los avisos de la categoría',
+  /sospeche sangrado/.test(repC.conductaTexto), 'true');
+
+/* 10. Laboratorio: las tres pruebas virológicas */
+t('El laboratorio del día 3 nombra el aislamiento viral',
+  /aislamiento viral/.test(ctx.laboratorio(P({ edad: '34', peso: 70, dia: '3' })).join(' ')), 'true');
 
 console.log('\n───────────────────────────────────────────────────');
 console.log(`  ${pass} pruebas correctas, ${fail} fallidas`);
