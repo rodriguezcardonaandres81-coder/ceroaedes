@@ -62,7 +62,7 @@ fs.mkdirSync(TMP, { recursive: true });
   if (!(await page.locator('#s0.active').count())) throw new Error('La app no abre en la bienvenida');
   if (!(await page.locator('#progress').isHidden())) throw new Error('La barra de pasos no debe verse en la bienvenida');
   const bienv = await page.locator('#s0').innerText();
-  for (const e of ['CeroAedes', 'Apoyo a la decisión clínica en dengue', 'No reemplaza el juicio clínico',
+  for (const e of ['Cero_Aedes', 'Apoyo a la decisión clínica en dengue', 'No reemplaza el juicio clínico',
                    'Clasifica', 'Calcula líquidos', 'Exporta a Word'])
     if (!bienv.includes(e)) throw new Error('Falta en la bienvenida: ' + e);
   if (!(await page.locator('#s0 .w-svg .mosco').count())) throw new Error('Falta el mosquito animado');
@@ -144,6 +144,13 @@ fs.mkdirSync(TMP, { recursive: true });
   if (!/categoría de intervención B2/i.test(salida)) throw new Error('Clasificación errónea');
   if (!/Dengue con signos de alarma/.test(await page.locator('.sivi .val').innerText()))
     throw new Error('Bloque SIVIGILA incorrecto');
+  const salidaMin = salida.toLowerCase();
+  if (!/conducta/.test(salidaMin)) throw new Error('Falta el encabezado de Conducta');
+  if (!/1 · reposición hídrica/.test(salidaMin)) throw new Error('Reposición hídrica debe ir numerada como 1');
+  if (!/2 · manejo sintomático/.test(salidaMin)) throw new Error('Manejo sintomático debe ir numerado como 2');
+  if (!/3 · laboratorios sugeridos/.test(salidaMin)) throw new Error('Laboratorios sugeridos debe ir numerado como 3');
+  if (salidaMin.indexOf('signos vitales y estado hemodinámico') > salidaMin.indexOf('1 · reposición'))
+    throw new Error('Los signos vitales deben ir antes de la Conducta');
   for (const e of ['700 ml en 1 hora', '350 – 490 ml/h', '210 – 350 ml/h', '140 – 280 ml/h',
                    '233 gotas/min', '500 mg cada 6 horas', 'Diarrea', 'torniquete: positiva']) {
     if (!salida.includes(e)) throw new Error('Falta en el resultado: ' + e);
@@ -158,7 +165,7 @@ fs.mkdirSync(TMP, { recursive: true });
   ]);
   const docxPath = path.join(TMP, 'reporte.docx');
   await descarga.saveAs(docxPath);
-  if (!/^CeroAedes_.*\.docx$/.test(descarga.suggestedFilename()))
+  if (!/^Cero_Aedes_.*\.docx$/.test(descarga.suggestedFilename()))
     throw new Error('Nombre de archivo inesperado: ' + descarga.suggestedFilename());
   if (fs.statSync(docxPath).size < 2000) throw new Error('El .docx generado es sospechosamente pequeño');
 
@@ -385,7 +392,8 @@ fs.mkdirSync(TMP, { recursive: true });
   for (const e of ['Módulo de seguridad de la infusión', 'Detención por sobrecarga de líquidos',
                    'Oliguria o anuria', 'Discriminador de sangrado', 'Cierre de líquidos',
                    'Furosemida', 'NO administrar ahora', 'Avoid diuretics during the plasma leakage phase',
-                   '7 – 35 mg por dosis'])
+                   '7 – 35 mg por dosis', 'Cuándo sí transfundir', 'NO son indicación',
+                   'No transfunda plaquetas de forma profiláctica'])
     if (!out9.includes(e)) throw new Error('Falta en el módulo de seguridad: ' + e);
   await shot('15-modulo-seguridad');
   console.log('  OK   │ Caso 9: hematocrito +26 % leído como fuga y furosemida bloqueada en fase crítica');
@@ -397,7 +405,12 @@ fs.mkdirSync(TMP, { recursive: true });
     lab: { hct: '36', 'hct-basal': '48' }
   });
   const sangra = await page.locator('#hct-out').innerText();
-  if (!/prueba cruzada/.test(sangra)) throw new Error('No indica prueba cruzada ante la caída con inestabilidad');
+  if (!/Buscar el foco de sangrado/.test(sangra))
+    throw new Error('Ante la caída con inestabilidad debe indicar buscar el foco');
+  if (!/no para una cifra de hematocrito/.test(sangra))
+    throw new Error('Debe condicionar la transfusión al sangrado grave');
+  if (/^Prueba cruzada urgente y transfusión/m.test(sangra))
+    throw new Error('No debe ordenar transfusión de entrada');
   if (!/No hay hemoconcentración/.test(await page.locator('#veredicto-box').innerText()))
     throw new Error('Con hematocrito por debajo del basal no debe declarar hemoconcentración');
 

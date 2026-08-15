@@ -380,8 +380,12 @@ t('Hematocrito que cae CON inestabilidad = sangrado',
   ctx.interpretarHematocrito(caidaInestable).nivel, 'sangrado');
 t('Advierte que no debe leerse como mejoría',
   /No lo interprete como mejoría/.test(ctx.interpretarHematocrito(caidaInestable).mensaje), 'true');
-t('Indica prueba cruzada y transfusión',
-  ctx.interpretarHematocrito(caidaInestable).acciones.some(x => /prueba cruzada/.test(x)), 'true');
+t('Indica buscar el foco de sangrado antes que transfundir',
+  ctx.interpretarHematocrito(caidaInestable).acciones.some(x => /Buscar el foco de sangrado/.test(x)), 'true');
+t('La transfusión se condiciona al sangrado grave con compromiso hemodinámico',
+  ctx.interpretarHematocrito(caidaInestable).acciones.some(x => /no para una cifra de hematocrito/.test(x)), 'true');
+t('Ninguna acción del hematocrito ordena transfundir de entrada',
+  ctx.interpretarHematocrito(caidaInestable).acciones.some(x => /^Prueba cruzada urgente y transfusión/.test(x)), 'false');
 t('La MISMA caída CON estabilidad = reabsorción y mejoría',
   ctx.interpretarHematocrito(caidaEstable).nivel, 'mejoria');
 t('Y en ese caso indica suspender los líquidos',
@@ -576,8 +580,15 @@ t('El módulo de oliguria advierte contra restringir líquidos al hipovolémico'
   /Restringir líquidos a un paciente anúrico/.test(segCritica.modulos[1].advertencia), 'true');
 t('Y reconoce que las guías no fijan una regla numérica',
   /no fijan una regla numérica/.test(segCritica.modulos[1].advertencia), 'true');
-t('El discriminador de sangrado calcula la transfusión por peso',
-  segCritica.modulos[2].conducta.some(x => /350 – 700 ml/.test(x)), 'true');
+t('La transfusión queda en un bloque aparte, condicionada',
+  /SANGRADO GRAVE con compromiso hemodinámico/.test(segCritica.modulos[2].transfusion.cuando), 'true');
+t('Y calcula la dosis por peso', /350 – 700 ml/.test(segCritica.modulos[2].transfusion.dosis), 'true');
+t('Dice que una cifra baja de hematocrito no es indicación',
+  /NO son indicación/.test(segCritica.modulos[2].transfusion.cuando), 'true');
+t('Desaconseja la transfusión profiláctica de plaquetas',
+  /No transfunda plaquetas de forma profiláctica/.test(segCritica.modulos[2].transfusion.plaquetas), 'true');
+t('El discriminador empieza por interpretar, no por transfundir',
+  /Hematocrito que SUBE/.test(segCritica.modulos[2].conducta[0]), 'true');
 t('El cierre de líquidos se activa desde el día 6',
   ctx.moduloSeguridad(P({ edad: '34', peso: 70, dia: '6', alarma: ['abdominal'] })).modulos[3].activo, 'true');
 t('El cierre aclara que la señal es fisiológica y no del calendario',

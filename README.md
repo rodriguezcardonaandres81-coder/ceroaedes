@@ -1,4 +1,4 @@
-# CeroAedes by AR
+# Cero_Aedes by AR
 
 Aplicación web de apoyo a la decisión clínica para la **clasificación y el manejo del dengue**, con cálculo de **reposición hídrica según el peso del paciente** y exportación de la conducta a **Word**.
 
@@ -107,7 +107,7 @@ Cuatro válvulas de escape para usar **durante** la administración de líquidos
 
 ### 11. Salida en Word y copiado de conducta
 
-- **Exportar a Word** genera un `.docx` real con tablas: clasificación, ficha del paciente, hallazgos, plan de líquidos fase por fase, manejo sintomático, laboratorio, monitoreo y criterios de alta o de referencia. El médico lo abre, copia y pega en la historia clínica.
+- **Exportar a Word** genera un `.docx` real con portada de marca, llamados de color para la clasificación y la fase, secciones numeradas con filete, tablas de encabezado verde y filas alternas, viñetas nativas de Word y pie de página con versión y número de página. El médico lo abre, copia y pega en la historia clínica.
 - **Copiar conducta** deja en el portapapeles la misma información como texto plano, para pegar directamente sin abrir Word.
 
 El documento Word cierra con una sección **«Registro para historia clínica»** que reproduce los ítems 1 a 17 del *Instrumento de seguimiento y evaluación de casos de dengue*: anamnesis, examen físico, laboratorio e imágenes diagnósticas. Lo que la app ya capturó aparece marcado y en negrilla; lo demás queda como campo con línea para completar. El objetivo es que la historia clínica quede lista para la auditoría.
@@ -152,7 +152,7 @@ ceroaedes/
 ├── sw.js                   # Service worker (uso sin conexión)
 ├── assets/                 # Iconos
 ├── tests/
-│   ├── engine.test.js      # 297 pruebas del motor clínico
+│   ├── engine.test.js      # 303 pruebas del motor clínico
 │   └── ui.test.js          # Recorridos en navegador real + validación del .docx
 ├── LICENSE
 └── README.md
@@ -176,7 +176,7 @@ El motor verifica la definición operativa de caso, la clasificación en los cua
 Después de editar `index.html`, suba el número de versión en `sw.js`:
 
 ```js
-const VERSION = 'ceroaedes-v2.9.1';
+const VERSION = 'ceroaedes-v3.0.1';
 ```
 
 Sin ese cambio, los celulares que ya la tengan instalada seguirán mostrando la versión cacheada.

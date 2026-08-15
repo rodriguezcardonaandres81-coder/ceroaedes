@@ -4,11 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#1B6B5A">
-<meta name="description" content="CeroAedes by AR — Clasificación y manejo de dengue según la ficha SIVIGILA 210/220/580 y el algoritmo OPS/OMS. Cálculo de reposición hídrica por peso y exportación a Word.">
+<meta name="description" content="Cero_Aedes by AR — Clasificación y manejo de dengue según la ficha SIVIGILA 210/220/580 y el algoritmo OPS/OMS. Cálculo de reposición hídrica por peso y exportación a Word.">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="assets/icon-192.png">
 <link rel="apple-touch-icon" href="assets/icon-192.png">
-<title>CeroAedes by AR — Clasificación y manejo de dengue</title>
+<title>Cero_Aedes by AR — Clasificación y manejo de dengue</title>
 <style>
 :root{
   --primary:#1B6B5A; --primary-dark:#124A3E; --accent:#2E8B6F;
@@ -135,6 +135,9 @@ footer b{color:var(--text)}
 
 
 
+.conducta-hdr{font-size:1.02rem;font-weight:800;color:#fff;background:linear-gradient(135deg,var(--primary),var(--primary-dark));
+  border-radius:10px;padding:11px 16px;margin:4px 0 12px;letter-spacing:1.5px;text-transform:uppercase;text-align:center}
+
 /* ===== Veredicto del hemograma ===== */
 .veredicto{border-radius:12px;padding:14px 16px;margin-bottom:10px;border:2px solid;text-align:center}
 .veredicto .vd-lbl{font-size:.64rem;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;opacity:.75}
@@ -246,7 +249,7 @@ footer b{color:var(--text)}
 
 <div id="app-container">
 <header>
-  <div class="brand">CeroAedes <em>by AR</em><small>Vigilancia y manejo clínico del dengue</small></div>
+  <div class="brand">Cero_Aedes <em>by AR</em><small>Vigilancia y manejo clínico del dengue</small></div>
   <div class="tagline">Ficha SIVIGILA 210 · 220 · 580 — Algoritmo OPS/OMS · MinSalud</div>
 </header>
 
@@ -283,7 +286,7 @@ footer b{color:var(--text)}
       </svg>
     </div>
 
-    <div class="w-title">CeroAedes <em>by AR</em></div>
+    <div class="w-title">Cero_Aedes <em>by AR</em></div>
     <div class="w-sub">Apoyo a la decisión clínica en dengue<br>Clasificación, reposición hídrica y registro para la historia clínica</div>
 
     <div class="w-chips">
@@ -563,7 +566,7 @@ footer b{color:var(--text)}
 </div><!-- /content -->
 
 <footer>
-  <b>CeroAedes by AR</b> · <span id="app-version">v—</span> &copy; 2026<br>
+  <b>Cero_Aedes by AR</b> · <span id="app-version">v—</span> &copy; 2026<br>
   Desarrollado por <b>Andrés Rodríguez Cardona</b> — Epidemiólogo<br>
   Ficha de notificación SIVIGILA 210/220/580 y Algoritmo de diagnóstico y tratamiento de dengue (OPS/OMS — MinSalud, Colombia)<br>
   <span style="font-size:.9em">Herramienta de apoyo. No reemplaza el juicio clínico.</span>
@@ -573,7 +576,7 @@ footer b{color:var(--text)}
 
 <script>
 /* ==================================================================
-   CeroAedes by AR — motor clínico
+   Cero_Aedes by AR — motor clínico
    Fuentes:
    · Ficha de notificación individual, evento 210/220/580 Dengue (2024),
      sección 6 "Datos para clasificación del dengue".
@@ -585,7 +588,7 @@ footer b{color:var(--text)}
 
 /* === ENGINE START === */
 
-var APP_VERSION = '2.9.0';   /* fuente única: pie de página, Word y service worker */
+var APP_VERSION = '3.0.0';   /* fuente única: pie de página, Word y service worker */
 
 /* Origen de cada criterio: 'ficha' = casilla de la sección 6 de la ficha;
    'prot' = está en la definición del protocolo pero no como casilla. */
@@ -1319,8 +1322,8 @@ function interpretarHematocrito(S){
       r.nivel = 'sangrado';
       r.titulo = 'Caída del hematocrito con inestabilidad hemodinámica: sospeche sangrado';
       r.mensaje = 'La OMS es explícita: hematocrito que cae con signos vitales inestables señala hemorragia importante y necesidad de transfusión urgente. No lo interprete como mejoría.';
-      r.acciones.push('Tomar prueba cruzada de inmediato y transfundir.');
-      r.acciones.push('Buscar sangrado oculto: digestivo, ginecológico, retroperitoneal o del sistema nervioso central.');
+      r.acciones.push('Buscar el foco de sangrado: digestivo, ginecológico, retroperitoneal o del sistema nervioso central.');
+      r.acciones.push('Reponer volumen y reevaluar. La transfusión se reserva para el sangrado grave con compromiso hemodinámico, no para una cifra de hematocrito.');
     } else if(dBasal < 0 && !inestable){
       r.nivel = 'mejoria';
       r.titulo = 'Hematocrito en descenso con hemodinamia estable: mejoría';
@@ -1359,8 +1362,8 @@ function interpretarHematocrito(S){
       r.titulo = 'Hematocrito ' + act + ' % con inestabilidad hemodinámica: indica sangrado';
       r.mensaje = 'La OMS lo fija sin necesidad de basal: en choque, un hematocrito por debajo de ' + uBajo + ' % ' +
         '(< 40 % en niños y mujeres adultas, < 45 % en hombres adultos) señala hemorragia. ' + aviso;
-      r.acciones.push('Prueba cruzada urgente y transfusión.');
-      r.acciones.push('Buscar sangrado oculto: digestivo, ginecológico, retroperitoneal o del sistema nervioso central.');
+      r.acciones.push('Buscar el foco de sangrado: digestivo, ginecológico, retroperitoneal o del sistema nervioso central.');
+      r.acciones.push('Solicitar hemoclasificación y prueba cruzada para tenerlas listas. Transfundir solo si hay sangrado grave con compromiso hemodinámico.');
       if(triada) r.notas.push('Patrón hematológico compatible con dengue: trombocitopenia y leucopenia en la misma muestra.');
       return r;
     }
@@ -1391,7 +1394,6 @@ function interpretarHematocrito(S){
       r.mensaje = base + (inestable
         ? 'Con signos vitales inestables, un hematocrito bajo obliga a descartar hemorragia antes que cualquier otra lectura. '
         : 'Puede corresponder a anemia previa, a hemodilución por hidratación ya administrada, o a sangrado. Un hematocrito bajo NO descarta la extravasación: si el paciente partía de una anemia, la fuga puede estar ocurriendo con cifras aparentemente normales. ') + aviso;
-      if(inestable) r.acciones.push('Tomar prueba cruzada y valorar transfusión.');
       r.acciones.push('Buscar anemia previa y sangrado activo antes de atribuirlo a hemodilución.');
     } else {
       r.nivel = 'estable';
@@ -1504,12 +1506,18 @@ function moduloSeguridad(S){
     titulo:'Discriminador de sangrado',
     disparo:'El hematocrito cae durante la infusión.',
     conducta: [
-      'Hematocrito que CAE con signos vitales INESTABLES o choque persistente → hemorragia importante. Prueba cruzada urgente y transfusión: glóbulos rojos ' + rango(p,5,10) + ' ml (5 – 10 ml/kg) o sangre fresca ' + rango(p,10,20) + ' ml (10 – 20 ml/kg).',
-      'Sin hematocrito basal, la OMS da el umbral absoluto: en choque, hematocrito por debajo de ' + umbralHctBajo(S) + ' % (< 40 % en niños y mujeres adultas, < 45 % en hombres adultos) indica sangrado.',
-      'Hematocrito por encima de 50 % o que sigue alto tras el primer bolo indica fuga persistente: repetir carga y reevaluar.',
+      'Hematocrito que SUBE con inestabilidad → fuga activa de plasma. Continúe la reposición según la categoría.',
       'Hematocrito que CAE con buen volumen de pulso, diuresis conservada y paciente estable → reabsorción y mejoría. Reduzca y suspenda los líquidos intravenosos.',
-      'Hematocrito que SUBE con inestabilidad → fuga activa de plasma. Continúe la reposición según la categoría.'
+      'Hematocrito que CAE con signos vitales INESTABLES o choque que persiste tras las cargas → sospeche hemorragia. Busque el foco, reponga volumen y solicite hemoclasificación y prueba cruzada.',
+      'Sin hematocrito basal, la OMS da el umbral absoluto: en choque, hematocrito por debajo de ' + umbralHctBajo(S) + ' % (< 40 % en niños y mujeres adultas, < 45 % en hombres adultos) orienta a sangrado.',
+      'Hematocrito por encima de 50 % o que sigue alto tras el primer bolo indica fuga persistente: repetir carga y reevaluar.'
     ],
+    transfusion: {
+      titulo:'Cuándo sí transfundir',
+      cuando:'Solo ante SANGRADO GRAVE con compromiso hemodinámico, o choque que no responde tras las cargas con hematocrito en descenso. Una cifra baja de hematocrito por sí sola, o una trombocitopenia por sí sola, NO son indicación.',
+      dosis:'Glóbulos rojos ' + rango(p,5,10) + ' ml (5 – 10 ml/kg) o sangre fresca ' + rango(p,10,20) + ' ml (10 – 20 ml/kg).',
+      plaquetas:'No transfunda plaquetas de forma profiláctica por un recuento bajo sin sangrado activo: la OMS lo desaconseja y en dengue no mejora los desenlaces. Resérvelas para la hemorragia activa o un procedimiento invasivo.'
+    },
     estado: hct.nivel === 'sangrado'
       ? { tono:'danger', texto:'Con los datos registrados, el patrón actual es de SANGRADO: ' + hct.titulo.toLowerCase() + '.' }
       : (hct.nivel === 'mejoria'
@@ -1678,7 +1686,7 @@ function construirReporte(S){
   L.push(m.criterios.titulo.toUpperCase());
   m.criterios.items.forEach(function(x){ L.push('· ' + x); });
   L.push('');
-  L.push('Generado con CeroAedes by AR v' + APP_VERSION + '. Herramienta de apoyo; no reemplaza el juicio clínico.');
+  L.push('Generado con Cero_Aedes by AR v' + APP_VERSION + '. Herramienta de apoyo; no reemplaza el juicio clínico.');
   m.conductaTexto = L.join('\n');
 
   return m;
@@ -2108,8 +2116,16 @@ function evaluar(){
           '<div class="flaglist">' + h.items.map(function(x){ return '<span>' + x + '</span>'; }).join('') + '</div></div>';
       }).join('') + '</div>');
   }
+  o.push('<div class="card"><div class="sec-title">Signos vitales y estado hemodinámico</div>' + '<details class="acc"' + (m.hemo.nivel === 'hipotenso' || m.hemo.nivel === 'compensado' ? ' open' : '') +
+      '><summary>Signos vitales y estado hemodinámico</summary><div class="acc-body"><table class="t">' +
+      m.vitales.map(function(f){ return '<tr><td class="k">' + f[0] + '</td><td class="v">' + f[1] + '</td></tr>'; }).join('') +
+      '</table><div class="note ' + TONO_HEMO[m.hemo.nivel] + '" style="margin:12px 0 0"><b>' + m.hemo.titulo + '.</b>' +
+      (m.hemo.hallazgos.length ? '<ul class="clean" style="margin:6px 0 0">' +
+        m.hemo.hallazgos.map(function(x){ return '<li>' + x + '</li>'; }).join('') + '</ul>' : '') +
+      '<div style="margin-top:6px">' + m.hemo.mensaje + '</div></div></div></details>' + '</div>');
 
-  o.push('<div class="card"><div class="sec-title">Reposición hídrica — ' + (plan.via === 'oral' ? 'vía oral' : 'vía intravenosa') + '</div>');
+  o.push('<div class="conducta-hdr">Conducta</div>');
+  o.push('<div class="card"><div class="sec-title">1 · Reposición hídrica — ' + (plan.via === 'oral' ? 'vía oral' : 'vía intravenosa') + '</div>');
   o.push('<div class="note info" style="margin-bottom:12px">Calculado para <b>' + plan.peso + ' kg</b>. Cristaloides: Lactato de Ringer o solución salina 0,9 %.</div>');
   if(plan.oral){
     o.push('<div class="phase"><div class="phase-head"><div class="phase-n">' + plan.oral.titulo + '</div></div>' +
@@ -2134,7 +2150,7 @@ function evaluar(){
   m.avisos.forEach(function(a){ o.push('<div class="note ' + a.tono + '" style="margin-top:10px">' + a.texto + '</div>'); });
   o.push('</div>');
 
-  o.push('<div class="card"><div class="sec-title">Manejo sintomático</div>' +
+  o.push('<div class="card"><div class="sec-title">2 · Manejo sintomático</div>' +
     '<div class="phase"><div class="phase-head"><div class="phase-n">' + m.anti.titulo + '</div></div>' +
     '<div class="phase-rate">' + m.anti.dosis + '</div>' +
     '<div class="phase-meta">' + m.anti.base + (m.anti.jarabe ? '<br>' + m.anti.jarabe : '') + '</div>' +
@@ -2142,13 +2158,9 @@ function evaluar(){
     '<div class="note danger" style="margin:10px 0 0"><b>Restricciones y contraindicaciones:</b><ul class="clean" style="margin-top:6px">' +
     m.noHacer.map(function(x){ return '<li>' + x + '</li>'; }).join('') + '</ul></div></div>');
 
-  o.push('<details class="acc"' + (m.hemo.nivel === 'hipotenso' || m.hemo.nivel === 'compensado' ? ' open' : '') +
-    '><summary>Signos vitales y estado hemodinámico</summary><div class="acc-body"><table class="t">' +
-    m.vitales.map(function(f){ return '<tr><td class="k">' + f[0] + '</td><td class="v">' + f[1] + '</td></tr>'; }).join('') +
-    '</table><div class="note ' + TONO_HEMO[m.hemo.nivel] + '" style="margin:12px 0 0"><b>' + m.hemo.titulo + '.</b>' +
-    (m.hemo.hallazgos.length ? '<ul class="clean" style="margin:6px 0 0">' +
-      m.hemo.hallazgos.map(function(x){ return '<li>' + x + '</li>'; }).join('') + '</ul>' : '') +
-    '<div style="margin-top:6px">' + m.hemo.mensaje + '</div></div></div></details>');
+  o.push('<div class="card"><div class="sec-title">3 · Laboratorios sugeridos</div>' +
+    '<ul class="clean">' + m.laboratorio.map(function(x){ return '<li>' + x + '</li>'; }).join('') + '</ul>' +
+    '<div class="note info" style="margin:10px 0 0">No contar con hematocrito antes de hidratar no debe retrasar la hidratación.</div></div>');
 
   o.push('<details class="acc"><summary>Registro para historia clínica — instrumento de auditoría</summary><div class="acc-body">' +
     '<div class="note info" style="margin:0 0 10px">Ítems 1 a 17 del <i>Instrumento de seguimiento y evaluación de casos de dengue</i>. ' +
@@ -2175,13 +2187,11 @@ function evaluar(){
   }
 
   if(m.seguridad.aplica) o.push(bloqueSeguridad(m));
-
-  o.push(acc('Laboratorio', m.laboratorio, true, 'No contar con hematocrito antes de hidratar no debe retrasar la hidratación.'));
   o.push(acc('Monitoreo y seguimiento', m.monitoreo, true));
   o.push(acc(m.criterios.titulo, m.criterios.items, false));
   o.push(acc('Notificación y control vectorial', m.notificacion, false));
 
-  o.push('<div class="dis"><b>Aviso.</b> CeroAedes by AR es una herramienta de apoyo a la decisión basada en la ficha de notificación SIVIGILA 210/220/580, el protocolo de vigilancia del INS y el Algoritmo de diagnóstico y tratamiento de dengue de la OPS/OMS adoptado por el Ministerio de Salud y Protección Social de Colombia. Los cálculos son orientativos y no reemplazan la valoración clínica ni la reestratificación continua del paciente. Verifique siempre los volúmenes antes de administrarlos.</div>');
+  o.push('<div class="dis"><b>Aviso.</b> Cero_Aedes by AR es una herramienta de apoyo a la decisión basada en la ficha de notificación SIVIGILA 210/220/580, el protocolo de vigilancia del INS y el Algoritmo de diagnóstico y tratamiento de dengue de la OPS/OMS adoptado por el Ministerio de Salud y Protección Social de Colombia. Los cálculos son orientativos y no reemplazan la valoración clínica ni la reestratificación continua del paciente. Verifique siempre los volúmenes antes de administrarlos.</div>');
 
   $('out').innerHTML = o.join('');
   go(7);
@@ -2218,6 +2228,11 @@ function bloqueSeguridad(m){
         '<div class="phase-note" style="background:' + (mod.permitido ? '#EAF6EC' : '#FDECEC') + '">' + mod.advertencia + '</div></div>');
     }
 
+    if(mod.transfusion){
+      o.push('<div class="note warn" style="margin:11px 0 0"><b>' + mod.transfusion.titulo + '.</b> ' + mod.transfusion.cuando +
+        '<div style="margin-top:6px"><b>Dosis:</b> ' + mod.transfusion.dosis + '</div>' +
+        '<div style="margin-top:6px">' + mod.transfusion.plaquetas + '</div></div>');
+    }
     if(mod.causas){
       o.push('<div style="font-size:.76rem;font-weight:700;color:var(--muted);margin:11px 0 4px">Por qué se llegó ahí</div>' +
         '<ul class="clean">' + mod.causas.map(function(x){ return '<li>' + x + '</li>'; }).join('') + '</ul>');
@@ -2309,77 +2324,167 @@ function wR(t, o){
 }
 function wP(runs, o){
   o = o || {};
-  var pPr = '<w:pPr>' + (o.shd ? '<w:shd w:val="clear" w:color="auto" w:fill="' + o.shd + '"/>' : '') +
+  var pPr = '<w:pPr>' +
+    (o.style ? '<w:pStyle w:val="' + o.style + '"/>' : '') +
+    (o.num ? '<w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr>' : '') +
+    (o.borde ? '<w:pBdr><w:bottom w:val="single" w:sz="' + (o.bordeSz || 8) + '" w:space="3" w:color="' + o.borde + '"/></w:pBdr>' : '') +
+    (o.shd ? '<w:shd w:val="clear" w:color="auto" w:fill="' + o.shd + '"/>' : '') +
     '<w:spacing w:before="' + (o.before || 0) + '" w:after="' + (o.after === undefined ? 60 : o.after) + '"/>' +
     (o.ind ? '<w:ind w:left="' + o.ind + '" w:hanging="' + (o.hang || 0) + '"/>' : '') +
     (o.align ? '<w:jc w:val="' + o.align + '"/>' : '') + '</w:pPr>';
   return '<w:p>' + pPr + runs + '</w:p>';
 }
-function wBullet(t){ return wP(wR('•  ' + t, { sz:19 }), { ind:283, hang:170, after:40 }); }
-function wH1(t){ return wP(wR(t, { b:true, sz:26, color:'1B6B5A' }), { before:220, after:90 }); }
+
+/* Viñeta real de Word, no un carácter escrito a mano */
+function wBullet(t, color){
+  return wP(wR(t, { sz:19, color: color || '3A3A45' }), { num:true, after:40 });
+}
+
+/* Encabezado de sección: número en círculo de color + título con filete inferior */
+function wH1(t, n){
+  return wP((n ? wR(n + '   ', { b:true, sz:26, color:'8FB8AC' }) : '') +
+    wR(t, { b:true, sz:26, color:'1B6B5A' }),
+    { before:260, after:110, borde:'CFE6DE', bordeSz:12 });
+}
+function wH2(t, color){
+  return wP(wR(t, { b:true, sz:21, color: color || '124A3E' }), { before:150, after:50 });
+}
+
+/* Recuadro de una sola celda: banners, avisos y llamados */
+function wCaja(contenido, fill, borde){
+  return '<w:tbl><w:tblPr><w:tblW w:w="5000" w:type="pct"/>' +
+    '<w:tblBorders>' + ['top','left','bottom','right'].map(function(x){
+      return '<w:' + x + ' w:val="single" w:sz="' + (borde ? 12 : 2) + '" w:space="0" w:color="' + (borde || fill) + '"/>'; }).join('') +
+    '<w:insideH w:val="none" w:sz="0" w:space="0" w:color="auto"/><w:insideV w:val="none" w:sz="0" w:space="0" w:color="auto"/></w:tblBorders>' +
+    '<w:tblLayout w:type="fixed"/><w:tblCellMar><w:top w:w="140" w:type="dxa"/><w:left w:w="180" w:type="dxa"/>' +
+    '<w:bottom w:w="140" w:type="dxa"/><w:right w:w="180" w:type="dxa"/></w:tblCellMar></w:tblPr>' +
+    '<w:tblGrid><w:gridCol w:w="9638"/></w:tblGrid><w:tr><w:tc><w:tcPr><w:tcW w:w="9638" w:type="dxa"/>' +
+    '<w:shd w:val="clear" w:color="auto" w:fill="' + fill + '"/></w:tcPr>' + contenido + '</w:tc></w:tr></w:tbl>' +
+    wP('', { after:80 });
+}
+
+/* Tabla técnica: encabezado en color de marca, filas alternas, filetes finos */
 function wTabla(filas, anchos){
-  var borde = '<w:tblBorders>' +
-    ['top','left','bottom','right','insideH','insideV'].map(function(x){
-      return '<w:' + x + ' w:val="single" w:sz="4" w:space="0" w:color="D9D9E0"/>'; }).join('') + '</w:tblBorders>';
-  var xml = '<w:tbl><w:tblPr><w:tblW w:w="5000" w:type="pct"/>' + borde +
-    '<w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid>' +
+  var xml = '<w:tbl><w:tblPr><w:tblW w:w="5000" w:type="pct"/>' +
+    '<w:tblBorders>' +
+    '<w:top w:val="single" w:sz="4" w:space="0" w:color="CFE6DE"/>' +
+    '<w:bottom w:val="single" w:sz="4" w:space="0" w:color="CFE6DE"/>' +
+    '<w:left w:val="none" w:sz="0" w:space="0" w:color="auto"/>' +
+    '<w:right w:val="none" w:sz="0" w:space="0" w:color="auto"/>' +
+    '<w:insideH w:val="single" w:sz="2" w:space="0" w:color="E4EFEA"/>' +
+    '<w:insideV w:val="none" w:sz="0" w:space="0" w:color="auto"/></w:tblBorders>' +
+    '<w:tblLayout w:type="fixed"/>' +
+    '<w:tblCellMar><w:top w:w="70" w:type="dxa"/><w:left w:w="110" w:type="dxa"/>' +
+    '<w:bottom w:w="70" w:type="dxa"/><w:right w:w="110" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid>' +
     anchos.map(function(a){ return '<w:gridCol w:w="' + a + '"/>'; }).join('') + '</w:tblGrid>';
   filas.forEach(function(fila, idx){
-    xml += '<w:tr>';
+    var enc = (idx === 0), zebra = (!enc && idx % 2 === 0);
+    xml += '<w:tr>' + (enc ? '<w:trPr><w:tblHeader/></w:trPr>' : '');
     fila.forEach(function(celda, j){
-      var enc = (idx === 0 && fila.encabezado !== false);
       xml += '<w:tc><w:tcPr><w:tcW w:w="' + anchos[j] + '" w:type="dxa"/>' +
-        (enc ? '<w:shd w:val="clear" w:color="auto" w:fill="E4F0EC"/>' : '') +
-        '<w:vAlign w:val="top"/></w:tcPr>' +
-        wP(wR(celda, { sz:19, b: enc }), { after:20 }) + '</w:tc>';
+        (enc ? '<w:shd w:val="clear" w:color="auto" w:fill="1B6B5A"/>' :
+              (zebra ? '<w:shd w:val="clear" w:color="auto" w:fill="F4F9F7"/>' : '')) +
+        '<w:vAlign w:val="center"/></w:tcPr>' +
+        wP(wR(celda, { sz: enc ? 17 : 19, b: enc, color: enc ? 'FFFFFF' : '2B2B33' }),
+           { after:20, before: enc ? 20 : 10 }) + '</w:tc>';
     });
     xml += '</w:tr>';
   });
-  return xml + '</w:tbl>' + wP('', { after:0 });
+  return xml + '</w:tbl>' + wP('', { after:100 });
 }
 
 function documentoXml(m){
   var b = [];
-  b.push(wP(wR('CeroAedes by AR', { b:true, sz:34, color:'1B6B5A' }), { after:0 }));
-  b.push(wP(wR('Reporte de clasificación y manejo de dengue', { sz:22, color:'6B6B78' }), { after:40 }));
-  b.push(wP(wR('Ficha SIVIGILA 210/220/580 · Algoritmo OPS/OMS — MinSalud Colombia', { sz:16, color:'8A8A97' }), { after:160 }));
+  var META_CAT = { A:'2E7D32', B1:'B08300', B2:'E65100', C:'B71C1C' };
+  var colorCat = META_CAT[m.cat] || '1B6B5A';
 
-  b.push(wH1('Clasificación'));
-  b.push(wTabla([
-    ['Concepto','Resultado'],
-    ['Definición operativa de caso (SIVIGILA)', m.def.clasificacion],
-    ['Sustento', m.def.detalle],
-    ['Categoría de intervención (OPS)', m.cat + ' — ' + m.meta.nombre],
-    ['Conducta', m.meta.conducta],
-    ['Fase del curso clínico', m.fase.fase === 'sin-dato' ? 'Sin día de enfermedad registrado' : m.fase.titulo],
-    ['Nivel de atención', m.meta.donde]
-  ], [3000, 6200]));
+  /* ===== Banner de portada ===== */
+  b.push(wCaja(
+    wP(wR('Cero_Aedes ', { b:true, sz:40, color:'FFFFFF' }) + wR('by AR', { sz:32, color:'BFE0D6' }), { after:20 }) +
+    wP(wR('Reporte de clasificación y manejo de dengue', { sz:22, color:'E7F3EF' }), { after:20 }) +
+    wP(wR('Ficha SIVIGILA 210 · 220 · 580   |   Algoritmo OPS/OMS — MinSalud Colombia', { sz:16, color:'A9CFC3' }), { after:0 }),
+    '1B6B5A'));
+
+  /* ===== Franja de identificación ===== */
+  var idLinea = [];
+  if(S.nombre) idLinea.push(S.nombre);
+  if(S.edad) idLinea.push(S.edad + (S.edadU === 'm' ? ' meses' : ' años'));
+  if(S.peso) idLinea.push(S.peso + ' kg');
+  if(S.fecha) idLinea.push(S.fecha.split('-').reverse().join('/'));
+  b.push(wP(wR(idLinea.join('   ·   ') || 'Sin datos de identificación', { sz:18, color:'6B6B78' }), { after:160 }));
+
+  /* ===== Llamado de clasificación ===== */
+  b.push(wCaja(
+    wP(wR('CATEGORÍA DE INTERVENCIÓN ' + m.cat, { b:true, sz:17, color:'FFFFFF' }), { after:30 }) +
+    wP(wR(m.meta.nombre, { b:true, sz:26, color:'FFFFFF' }), { after:40 }) +
+    wP(wR(m.meta.conducta + '. ' + m.meta.donde, { sz:18, color:'FFFFFF' }), { after:0 }),
+    colorCat));
+
+  b.push(wCaja(
+    wP(wR('CLASIFICACIÓN PARA NOTIFICACIÓN · SIVIGILA', { b:true, sz:15, color:'1B5E9E' }), { after:25 }) +
+    wP(wR(m.def.clasificacion, { b:true, sz:21, color:'0D3C6B' }), { after:25 }) +
+    wP(wR(m.def.detalle, { sz:17, color:'3A5A78' }), { after:0 }),
+    'F2F7FC', 'CBDDF0'));
 
   if(m.fase.fase !== 'sin-dato'){
-    b.push(wP(wR(m.fase.titulo, { b:true, sz:20, color: m.fase.fase === 'critica' ? 'B71C1C' : '1B6B5A' }), { before:120, after:30 }));
-    b.push(wP(wR(m.fase.mensaje, { sz:18, color:'4A4A55' }), { after:80 }));
+    b.push(wCaja(
+      wP(wR(m.fase.titulo, { b:true, sz:20, color: m.fase.fase === 'critica' ? 'B71C1C' : '1B5E20' }), { after:25 }) +
+      wP(wR(m.fase.mensaje, { sz:17, color:'4A4A55' }), { after:0 }),
+      m.fase.fase === 'critica' ? 'FDF3F3' : 'F2F9F4',
+      m.fase.fase === 'critica' ? 'EFCFCF' : 'CFE6D8'));
   }
 
-  b.push(wH1('Paciente'));
-  b.push(wTabla([['Dato','Valor']].concat(m.paciente.map(function(f){ return [f[0], String(f[1])]; })), [3000, 6200]));
+  /* ===== 1. Paciente ===== */
+  b.push(wH1('Paciente', '1'));
+  b.push(wTabla([['Dato','Valor']].concat(m.paciente.map(function(f){ return [f[0], String(f[1])]; })), [3200, 6438]));
 
+  /* ===== 2. Hallazgos ===== */
   if(m.hallazgos.length){
-    b.push(wH1('Hallazgos registrados'));
+    b.push(wH1('Hallazgos registrados', '2'));
     m.hallazgos.forEach(function(h){
-      b.push(wP(wR(h.titulo, { b:true, sz:20, color:h.color }), { before:80, after:30 }));
+      b.push(wH2(h.titulo, h.color));
       h.items.forEach(function(x){ b.push(wBullet(x)); });
     });
   }
 
-  b.push(wH1('Signos vitales y estado hemodinámico'));
-  b.push(wTabla([['Parámetro','Valor']].concat(m.vitales.map(function(f){ return [f[0], String(f[1])]; })), [3400, 5800]));
+  b.push(wH2('Signos vitales y estado hemodinámico'));
+  b.push(wTabla([['Parámetro','Valor']].concat(m.vitales.map(function(f){ return [f[0], String(f[1])]; })), [3200, 6438]));
   var alarmante = (m.hemo.nivel === 'hipotenso' || m.hemo.nivel === 'compensado');
-  b.push(wP(wR(m.hemo.titulo, { b:true, sz:20, color: alarmante ? 'B71C1C' : '1B6B5A' }), { before:120, after:40 }));
-  m.hemo.hallazgos.forEach(function(x){ b.push(wBullet(x)); });
-  b.push(wP(wR(m.hemo.mensaje, { sz:18, color:'4A4A55' }), { after:60 }));
+  b.push(wCaja(
+    wP(wR(m.hemo.titulo, { b:true, sz:19, color: alarmante ? 'B71C1C' : '1B5E20' }), { after:25 }) +
+    m.hemo.hallazgos.map(function(x){ return wBullet(x, alarmante ? '7F1414' : '2F4A36'); }).join('') +
+    wP(wR(m.hemo.mensaje, { sz:17, color:'4A4A55' }), { after:0 }),
+    alarmante ? 'FDF3F3' : 'F6FAF7', alarmante ? 'EFCFCF' : 'D6E8DC'));
 
-  b.push(wH1('Reposición hídrica — ' + (m.plan.via === 'oral' ? 'vía oral' : 'vía intravenosa')));
-  b.push(wP(wR('Peso de cálculo: ' + m.plan.peso + ' kg. Cristaloides: Lactato de Ringer o solución salina 0,9 %.', { sz:19, i:true, color:'6B6B78' }), { after:100 }));
+  /* ===== 3. Hemoconcentración ===== */
+  if(m.veredicto.estado !== 'sin-dato' || m.hct.notas.length){
+    b.push(wH1('Hemoconcentración', '3'));
+    if(m.veredicto.estado !== 'sin-dato'){
+      var cv = m.veredicto.estado === 'si' ? 'B71C1C' : (m.veredicto.estado === 'sugestivo' ? '8A6100' : '2E7D32');
+      var cf = m.veredicto.estado === 'si' ? 'FDF3F3' : (m.veredicto.estado === 'sugestivo' ? 'FFFBF0' : 'F2F9F4');
+      b.push(wCaja(
+        wP(wR(m.veredicto.titulo.toUpperCase(), { b:true, sz:24, color:cv }), { after:25 }) +
+        wP(wR(m.veredicto.detalle, { sz:18, color:'4A4A55' }), { after:0 }), cf, cv));
+      if(m.veredicto.tiles.length)
+        b.push(wTabla([['Parámetro','Valor','Lectura']].concat(
+          m.veredicto.tiles.map(function(t){ return [t.etiqueta, t.valor, t.estado]; })), [3000, 2600, 4038]));
+      if(m.veredicto.indice)
+        b.push(wP(wR('Índice hematocrito/hemoglobina ' + m.veredicto.indice.valor + '. ', { b:true, sz:18 }) +
+          wR(m.veredicto.indice.lectura, { sz:18, color:'4A4A55' }), { after:80 }));
+    }
+    if(m.hct.acciones.length){
+      b.push(wH2('Qué hacer'));
+      m.hct.acciones.forEach(function(x){ b.push(wBullet(x)); });
+    }
+    m.hct.notas.forEach(function(x){ b.push(wBullet(x, '6B6B78')); });
+  }
+
+  /* ===== 4. Conducta ===== */
+  b.push(wCaja(wP(wR('CONDUCTA', { b:true, sz:26, color:'FFFFFF' }), { align:'center', after:0 }), '1B6B5A'));
+
+  b.push(wH1('Reposición hídrica — ' + (m.plan.via === 'oral' ? 'vía oral' : 'vía intravenosa'), '4.1'));
+  b.push(wP(wR('Peso de cálculo: ' + m.plan.peso + ' kg. Cristaloides: Lactato de Ringer o solución salina 0,9 %.',
+    { sz:18, i:true, color:'6B6B78' }), { after:100 }));
   if(m.plan.oral){
     b.push(wTabla([
       ['Indicación','Detalle'],
@@ -2387,7 +2492,7 @@ function documentoXml(m){
       ['Equivalencia', m.plan.oral.horaria + ' · ' + m.plan.oral.vasos],
       ['Base del cálculo', m.plan.oral.detalle],
       ['Qué administrar', m.plan.oral.que]
-    ], [3000, 6200]));
+    ], [2800, 6838]));
   }
   if(m.plan.fases.length){
     var filas = [['Fase','Velocidad','ml/kg · duración','Hora','Sin bomba']];
@@ -2395,108 +2500,131 @@ function documentoXml(m){
       filas.push([f.n, f.rate, f.mlkg + ' · ' + f.dur + ' · vol. ' + f.vol,
         (f.hora === 'condicional' ? 'Condicional' : f.hora), drip(f.goteoMin, f.goteoMax)]);
     });
-    b.push(wTabla(filas, [1900, 1500, 2200, 1200, 2800]));
+    b.push(wTabla(filas, [1900, 1500, 2200, 1200, 2838]));
     m.plan.fases.forEach(function(f){
-      if(f.nota) b.push(wP(wR(f.n + ': ', { b:true, sz:18 }) + wR(f.nota, { sz:18, color:'4A4A55' }), { after:40 }));
+      if(f.nota) b.push(wP(wR(f.n + ': ', { b:true, sz:17 }) + wR(f.nota, { sz:17, color:'4A4A55' }), { after:40 }));
     });
   }
-  m.avisos.forEach(function(a){ b.push(wP(wR(a.texto, { sz:19, color:'7F1414' }), { before:80, after:60, shd:'FDECEC' })); });
+  m.avisos.forEach(function(a){
+    b.push(wCaja(wP(wR(a.texto, { sz:18, color:'7F1414' }), { after:0 }), 'FDF3F3', 'EFCFCF'));
+  });
 
-  if(m.hct.nivel !== 'sin-datos' || m.hct.notas.length){
-    b.push(wH1('Hemoconcentración'));
-    if(m.veredicto.estado !== 'sin-dato'){
-      b.push(wP(wR(m.veredicto.titulo, { b:true, sz:22,
-        color: m.veredicto.estado === 'si' ? 'B71C1C' : (m.veredicto.estado === 'sugestivo' ? '8A6100' : '2E7D32') }), { after:30 }));
-      b.push(wP(wR(m.veredicto.detalle, { sz:18, color:'4A4A55' }), { after:50 }));
-      if(m.veredicto.tiles.length)
-        b.push(wTabla([['Parámetro','Valor','Lectura']].concat(
-          m.veredicto.tiles.map(function(t){ return [t.etiqueta, t.valor, t.estado]; })), [3000, 2600, 3600]));
-      if(m.veredicto.indice)
-        b.push(wP(wR('Índice hematocrito/hemoglobina ' + m.veredicto.indice.valor + '. ' + m.veredicto.indice.lectura,
-          { sz:18, color:'4A4A55' }), { after:60 }));
-    }
-    b.push(wP(wR(m.hct.titulo, { b:true, sz:20, color: (m.hct.nivel === 'fuga' || m.hct.nivel === 'sangrado') ? 'B71C1C' : '1B6B5A' }), { after:40 }));
-    b.push(wP(wR(m.hct.mensaje, { sz:18, color:'4A4A55' }), { after:50 }));
-    m.hct.acciones.forEach(function(x){ b.push(wBullet(x)); });
-    m.hct.notas.forEach(function(x){ b.push(wBullet(x)); });
-  }
-
-  if(m.seguridad.aplica){
-    b.push(wH1('Módulo de seguridad de la infusión'));
-    m.seguridad.modulos.forEach(function(mod){
-      b.push(wP(wR(mod.titulo, { b:true, sz:20, color:'1B6B5A' }), { before:120, after:40 }));
-      b.push(wP(wR('Cuándo: ' + mod.disparo, { sz:18, i:true, color:'6B6B78' }), { after:40 }));
-      if(mod.precoz){
-        b.push(wP(wR('Signos precoces', { b:true, sz:18, color:'E65100' }), { after:20 }));
-        mod.precoz.forEach(function(x){ b.push(wBullet(x)); });
-        b.push(wP(wR('Signos tardíos', { b:true, sz:18, color:'B71C1C' }), { before:40, after:20 }));
-        mod.tardio.forEach(function(x){ b.push(wBullet(x)); });
-      }
-      b.push(wP(wR('Conducta', { b:true, sz:18 }), { before:40, after:20 }));
-      mod.conducta.forEach(function(x){ b.push(wBullet(x)); });
-      if(mod.diuretico){
-        b.push(wP(wR('Furosemida: ' + mod.diuretico.dosis + '. ' + mod.diuretico.base + '. ' + mod.diuretico.infusion,
-          { sz:18, b:true }), { before:40, after:20 }));
-        b.push(wP(wR((mod.permitido ? '' : 'NO ADMINISTRAR AHORA. ') + mod.advertencia,
-          { sz:18, color: mod.permitido ? '4A4A55' : 'B71C1C' }), { after:40 }));
-      } else if(mod.advertencia){
-        b.push(wP(wR(mod.advertencia, { sz:18, color:'7F1414' }), { before:40, after:40 }));
-      }
-      if(mod.causas){
-        b.push(wP(wR('Por qué se llegó ahí', { b:true, sz:18, color:'6B6B78' }), { before:40, after:20 }));
-        mod.causas.forEach(function(x){ b.push(wBullet(x)); });
-      }
-    });
-  }
-
-  b.push(wH1('Manejo sintomático'));
+  b.push(wH1('Manejo sintomático', '4.2'));
   b.push(wTabla([
     ['Medicamento','Indicación'],
     [m.anti.titulo, m.anti.dosis],
     ['Presentación', m.anti.jarabe || m.anti.base],
     ['Máximo', m.anti.max]
-  ], [3000, 6200]));
-  b.push(wP(wR('Restricciones y contraindicaciones', { b:true, sz:20, color:'B71C1C' }), { before:100, after:40 }));
-  m.noHacer.forEach(function(x){ b.push(wBullet(x)); });
+  ], [2800, 6838]));
+  b.push(wH2('Restricciones y contraindicaciones', 'B71C1C'));
+  m.noHacer.forEach(function(x){ b.push(wBullet(x, '7F1414')); });
 
-  b.push(wH1('Laboratorio'));
+  b.push(wH1('Laboratorios sugeridos', '4.3'));
   m.laboratorio.forEach(function(x){ b.push(wBullet(x)); });
-  b.push(wH1('Monitoreo y seguimiento'));
+
+  if(m.seguridad.aplica){
+    b.push(wH1('Seguridad de la infusión', '4.4'));
+    m.seguridad.modulos.forEach(function(mod){
+      b.push(wH2(mod.titulo));
+      b.push(wP(wR('Cuándo: ' + mod.disparo, { sz:17, i:true, color:'6B6B78' }), { after:50 }));
+      if(mod.precoz){
+        b.push(wP(wR('Signos precoces', { b:true, sz:17, color:'E65100' }), { after:25 }));
+        mod.precoz.forEach(function(x){ b.push(wBullet(x)); });
+        b.push(wP(wR('Signos tardíos', { b:true, sz:17, color:'B71C1C' }), { before:40, after:25 }));
+        mod.tardio.forEach(function(x){ b.push(wBullet(x)); });
+        b.push(wP(wR('Conducta', { b:true, sz:17 }), { before:40, after:25 }));
+      }
+      mod.conducta.forEach(function(x){ b.push(wBullet(x)); });
+      if(mod.diuretico){
+        b.push(wCaja(
+          wP(wR('Furosemida — ' + (mod.permitido ? 'admisible' : 'NO ADMINISTRAR AHORA'),
+            { b:true, sz:19, color: mod.permitido ? '1B5E20' : 'B71C1C' }), { after:25 }) +
+          wP(wR(mod.diuretico.dosis + '. ' + mod.diuretico.base + '. ' + mod.diuretico.infusion, { b:true, sz:18 }), { after:25 }) +
+          wP(wR(mod.advertencia, { sz:17, color:'4A4A55' }), { after:0 }),
+          mod.permitido ? 'F2F9F4' : 'FDF3F3', mod.permitido ? 'CFE6D8' : 'EFCFCF'));
+      }
+      if(mod.transfusion){
+        b.push(wCaja(
+          wP(wR(mod.transfusion.titulo, { b:true, sz:19, color:'8A6100' }), { after:25 }) +
+          wP(wR(mod.transfusion.cuando, { sz:17, color:'4A4A55' }), { after:25 }) +
+          wP(wR('Dosis: ' + mod.transfusion.dosis, { b:true, sz:17 }), { after:25 }) +
+          wP(wR(mod.transfusion.plaquetas, { sz:17, color:'4A4A55' }), { after:0 }),
+          'FFFBF0', 'F0DFB8'));
+      }
+      if(mod.advertencia && !mod.diuretico)
+        b.push(wCaja(wP(wR(mod.advertencia, { sz:17, color:'7F1414' }), { after:0 }), 'FDF3F3', 'EFCFCF'));
+      if(mod.causas){
+        b.push(wP(wR('Por qué se llegó ahí', { b:true, sz:17, color:'6B6B78' }), { before:50, after:25 }));
+        mod.causas.forEach(function(x){ b.push(wBullet(x, '6B6B78')); });
+      }
+    });
+  }
+
+  b.push(wH1('Monitoreo y seguimiento', '4.5'));
   m.monitoreo.forEach(function(x){ b.push(wBullet(x)); });
-  b.push(wH1(m.criterios.titulo));
+  b.push(wH1(m.criterios.titulo, '4.6'));
   m.criterios.items.forEach(function(x){ b.push(wBullet(x)); });
-  b.push(wH1('Notificación y control vectorial'));
+  b.push(wH1('Notificación y control vectorial', '4.7'));
   m.notificacion.forEach(function(x){ b.push(wBullet(x)); });
 
-  b.push(wH1('Registro para historia clínica'));
+  /* ===== 5. Registro para historia clínica ===== */
+  b.push(wH1('Registro para historia clínica', '5'));
   b.push(wP(wR('Ítems 1 a 17 del Instrumento de seguimiento y evaluación de casos de dengue. Lo registrado por la aplicación aparece en negrilla; los campos con línea deben completarse en la historia clínica.',
-    { sz:18, i:true, color:'6B6B78' }), { after:120 }));
+    { sz:17, i:true, color:'6B6B78' }), { after:120 }));
   m.auditoria.forEach(function(bl){
-    b.push(wP(wR(bl.bloque, { b:true, sz:20, color:'1B6B5A' }), { before:140, after:60 }));
+    b.push(wH2(bl.bloque));
     bl.items.forEach(function(it){
-      b.push(wP(wR((it.valor ? '☑  ' : '☐  ') + it.item, { sz:18 }), { ind:283, hang:170, after:20 }));
+      b.push(wP(wR((it.valor ? '☑  ' : '☐  ') + it.item, { sz:17 }), { ind:283, hang:170, after:20 }));
       b.push(wP(it.valor
-        ? wR(it.valor, { sz:18, b:true, color:'124A3E' })
-        : wR('Completar: ______________________________________________', { sz:18, color:'8A8A97' }),
+        ? wR(it.valor, { sz:17, b:true, color:'124A3E' })
+        : wR('Completar: ______________________________________________', { sz:17, color:'8A8A97' }),
         { ind:453, after:70 }));
     });
   });
 
-  b.push(wP(wR('Generado con CeroAedes by AR v' + APP_VERSION + ' — Andrés Rodríguez Cardona, Epidemiólogo. Herramienta de apoyo a la decisión clínica: los cálculos son orientativos y no reemplazan la valoración clínica ni la reestratificación continua del paciente. Verifique siempre los volúmenes antes de administrarlos.', { sz:16, i:true, color:'8A8A97' }), { before:240, after:0 }));
+  b.push(wCaja(
+    wP(wR('Generado con Cero_Aedes by AR v' + APP_VERSION + ' — Andrés Rodríguez Cardona, Epidemiólogo.', { b:true, sz:16, color:'4A4A55' }), { after:20 }) +
+    wP(wR('Herramienta de apoyo a la decisión clínica: los cálculos son orientativos y no reemplazan la valoración clínica ni la reestratificación continua del paciente. Verifique siempre los volúmenes antes de administrarlos.',
+      { sz:16, i:true, color:'6B6B78' }), { after:0 }),
+    'FAFAFC', 'DCDCE4'));
 
   return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
-    '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' +
+    '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" ' +
+    'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
     '<w:body>' + b.join('') +
-    '<w:sectPr><w:pgSz w:w="11906" w:h="16838"/>' +
-    '<w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134" w:header="708" w:footer="708" w:gutter="0"/>' +
+    '<w:sectPr><w:footerReference w:type="default" r:id="rId3"/>' +
+    '<w:pgSz w:w="11906" w:h="16838"/>' +
+    '<w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134" w:header="708" w:footer="567" w:gutter="0"/>' +
     '</w:sectPr></w:body></w:document>';
+}
+
+var NUMBERING_XML = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+  '<w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' +
+  '<w:abstractNum w:abstractNumId="0"><w:multiLevelType w:val="hybridMultilevel"/>' +
+  '<w:lvl w:ilvl="0"><w:start w:val="1"/><w:numFmt w:val="bullet"/><w:lvlText w:val="▪"/>' +
+  '<w:lvlJc w:val="left"/><w:pPr><w:ind w:left="360" w:hanging="230"/></w:pPr>' +
+  '<w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:hint="default"/><w:color w:val="2E8B6F"/></w:rPr></w:lvl>' +
+  '</w:abstractNum><w:num w:numId="1"><w:abstractNumId w:val="0"/></w:num></w:numbering>';
+
+function footerXml(){
+  return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+    '<w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' +
+    '<w:p><w:pPr><w:pBdr><w:top w:val="single" w:sz="6" w:space="5" w:color="CFE6DE"/></w:pBdr>' +
+    '<w:tabs><w:tab w:val="right" w:pos="9638"/></w:tabs>' +
+    '<w:spacing w:before="60" w:after="0"/></w:pPr>' +
+    '<w:r><w:rPr><w:sz w:val="15"/><w:color w:val="8A8A97"/></w:rPr>' +
+    '<w:t xml:space="preserve">Cero_Aedes by AR v' + APP_VERSION + '   ·   Andrés Rodríguez Cardona, Epidemiólogo   ·   Herramienta de apoyo</w:t></w:r>' +
+    '<w:r><w:tab/></w:r>' +
+    '<w:r><w:rPr><w:sz w:val="15"/><w:color w:val="8A8A97"/></w:rPr><w:t xml:space="preserve">Pág. </w:t></w:r>' +
+    '<w:fldSimple w:instr=" PAGE "><w:r><w:rPr><w:sz w:val="15"/><w:color w:val="8A8A97"/></w:rPr><w:t>1</w:t></w:r></w:fldSimple>' +
+    '</w:p></w:ftr>';
 }
 
 var STYLES_XML = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
   '<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' +
   '<w:docDefaults><w:rPrDefault><w:rPr>' +
   '<w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/>' +
-  '<w:color w:val="2B2B33"/><w:sz w:val="20"/><w:szCs w:val="20"/>' +
+  '<w:color w:val="2B2B33"/><w:sz w:val="19"/><w:szCs w:val="19"/>' +
   '</w:rPr></w:rPrDefault><w:pPrDefault><w:pPr>' +
   '<w:spacing w:after="60" w:line="252" w:lineRule="auto"/>' +
   '</w:pPr></w:pPrDefault></w:docDefaults>' +
@@ -2512,6 +2640,8 @@ function exportarWord(){
       '<Default Extension="xml" ContentType="application/xml"/>' +
       '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>' +
       '<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>' +
+      '<Override PartName="/word/numbering.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/>' +
+      '<Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/>' +
       '</Types>' },
     { name:'_rels/.rels', str:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
       '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
@@ -2520,13 +2650,17 @@ function exportarWord(){
     { name:'word/_rels/document.xml.rels', str:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
       '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
       '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>' +
+      '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering" Target="numbering.xml"/>' +
+      '<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/>' +
       '</Relationships>' },
     { name:'word/styles.xml', str: STYLES_XML },
+    { name:'word/numbering.xml', str: NUMBERING_XML },
+    { name:'word/footer1.xml', str: footerXml() },
     { name:'word/document.xml', str: documentoXml(MODELO) }
   ];
   var blob = zipStore(archivos);
   var limpio = (S.nombre || 'paciente').replace(/[^\wáéíóúñÁÉÍÓÚÑ ]/g,'').trim().replace(/\s+/g,'_') || 'paciente';
-  var nombre = 'CeroAedes_' + limpio + '_' + (S.fecha || '') + '.docx';
+  var nombre = 'Cero_Aedes_' + limpio + '_' + (S.fecha || '') + '.docx';
   var url = URL.createObjectURL(blob), a = document.createElement('a');
   a.href = url; a.download = nombre; document.body.appendChild(a); a.click();
   setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(url); }, 1500);
