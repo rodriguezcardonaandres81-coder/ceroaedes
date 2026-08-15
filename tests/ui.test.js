@@ -37,7 +37,7 @@ fs.mkdirSync(TMP, { recursive: true });
 
   /* Paso 2 — paciente, fechas y signos vitales */
   async function llenarPaciente({ edad = '34', unidad = 'a', peso = '70', inicio = '2026-08-10',
-                                  consulta = '2026-08-13', hora = '08:00', nombre = '', vitales = null } = {}) {
+                                  consulta = '2026-08-13', hora = '08:00', nombre = '', vitales = null, lab = null } = {}) {
     await avanzar(1);
     if (nombre) await page.fill('#f-nombre', nombre);
     await page.fill('#f-edad', edad);
@@ -50,6 +50,7 @@ fs.mkdirSync(TMP, { recursive: true });
       if (campo === 'llenado' || campo === 'conciencia') await page.selectOption('#f-' + campo, valor);
       else await page.fill('#f-' + campo, valor);
     }
+    if (lab) for (const [campo, valor] of Object.entries(lab)) await page.fill('#f-' + campo, valor);
   }
 
   // ================= Caso 0: bienvenida =================
@@ -350,6 +351,83 @@ fs.mkdirSync(TMP, { recursive: true });
   for (const e of ['Choque hipotenso', 'signo TARDÍO', 'categoría de intervención C'.toLowerCase()])
     if (!out8.toLowerCase().includes(e.toLowerCase())) throw new Error('Falta en el resultado: ' + e);
   console.log('  OK   │ Caso 8: TA 80/40 con presión de pulso amplia → choque hipotenso, ya no tranquiliza');
+
+  // ================= Caso 9: hemoconcentración y seguridad de la infusión =================
+  await definicionCaso();
+  await llenarPaciente({
+    peso: '70', inicio: '2026-08-10', consulta: '2026-08-13',
+    vitales: { pas: '110', pad: '75', fc: '95', llenado: '< 2 segundos', conciencia: 'Alerta' },
+    lab: { 'hct-basal': '38', hct: '48', hb: '16', plaquetas: '85000' }
+  });
+  const hctTxt = await page.locator('#hct-out').innerText();
+  for (const e of ['+26.3 %', 'extravasación de plasma', 'categoría B2', '85.000'])
+    if (!hctTxt.includes(e)) throw new Error('Falta en la lectura del hematocrito: ' + e);
+  if (!(await page.locator('#hct-out.danger').count())) throw new Error('La hemoconcentración no quedó marcada');
+  await shot('14-hemoconcentracion');
+
+  await avanzar(2); await avanzar(3);
+  await marcar('alarma', 8);                        // aumento del hematocrito
+  await avanzar(4);
+  await ninguno('grave'); await avanzar(5);
+  await page.click('button:has-text("Clasificar")');
+  await page.waitForSelector('#s7.active');
+  const out9 = await page.locator('#out').textContent();
+  for (const e of ['Módulo de seguridad de la infusión', 'Detención por sobrecarga de líquidos',
+                   'Oliguria o anuria', 'Discriminador de sangrado', 'Cierre de líquidos',
+                   'Furosemida', 'NO administrar ahora', 'Avoid diuretics during the plasma leakage phase',
+                   '7 – 35 mg por dosis'])
+    if (!out9.includes(e)) throw new Error('Falta en el módulo de seguridad: ' + e);
+  await shot('15-modulo-seguridad');
+  console.log('  OK   │ Caso 9: hematocrito +26 % leído como fuga y furosemida bloqueada en fase crítica');
+
+  // ---- La misma caída de hematocrito, dos lecturas opuestas ----
+  await definicionCaso();
+  await llenarPaciente({
+    peso: '70', vitales: { pas: '80', pad: '40', llenado: '> 2 segundos' },
+    lab: { 'hct-basal': '48', hct: '36' }
+  });
+  const sangra = await page.locator('#hct-out').innerText();
+  if (!/sospeche sangrado/i.test(sangra)) throw new Error('Caída con inestabilidad debe leerse como sangrado');
+  if (!/prueba cruzada/.test(sangra)) throw new Error('No indica prueba cruzada');
+
+  await page.fill('#f-pas', '120'); await page.fill('#f-pad', '80');
+  await page.selectOption('#f-llenado', '< 2 segundos');
+  await page.waitForTimeout(150);
+  const mejora = await page.locator('#hct-out').innerText();
+  if (!/reabsorción|mejoría/i.test(mejora)) throw new Error('Caída con estabilidad debe leerse como mejoría');
+  if (!/suspender los líquidos/.test(mejora)) throw new Error('No indica suspender líquidos');
+  console.log('  OK   │ La misma caída del hematocrito se lee como sangrado o como mejoría según la hemodinamia');
+
+  // ---- Grupo B2 reducido en adulto mayor ----
+  await definicionCaso();
+  await llenarPaciente({ edad: '70', peso: '70' });
+  await avanzar(2); await avanzar(3);
+  await marcar('alarma', 0);
+  await avanzar(4);
+  await ninguno('grave'); await avanzar(5);
+  await page.click('button:has-text("Clasificar")');
+  await page.waitForSelector('#s7.active');
+  const out9c = await page.locator('#out').innerText();
+  if (!out9c.includes('350 ml en 1 hora')) throw new Error('El adulto mayor debe recibir 5 ml/kg, no 10');
+  if (out9c.includes('700 ml en 1 hora')) throw new Error('No debe usar la carga completa en adulto mayor');
+  for (const e of ['Esquema reducido por', '280 ml/h', '210 ml/h', '140 ml/h'])
+    if (!out9c.includes(e)) throw new Error('Falta en el esquema reducido: ' + e);
+  await shot('16-b2-reducido');
+  console.log('  OK   │ Adulto mayor con signos de alarma → carga de 5 ml/kg (OPS/CDE 2020), no de 10');
+
+  // ---- Furosemida admisible pasada la fase crítica ----
+  await definicionCaso();
+  await llenarPaciente({ peso: '70', inicio: '2026-08-05', consulta: '2026-08-13' });
+  await avanzar(2); await avanzar(3);
+  await marcar('alarma', 0); await avanzar(4);
+  await ninguno('grave'); await avanzar(5);
+  await page.click('button:has-text("Clasificar")');
+  await page.waitForSelector('#s7.active');
+  const out9d = await page.locator('#out').textContent();
+  if (out9d.includes('NO administrar ahora'))
+    throw new Error('En día 9 la furosemida debería ser admisible');
+  if (!/admisible/.test(out9d)) throw new Error('No marcó la furosemida como admisible');
+  console.log('  OK   │ Pasada la fase crítica la furosemida deja de estar bloqueada');
 
   // ================= Comprobaciones de marca y consola =================
   const htmlCrudo = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');

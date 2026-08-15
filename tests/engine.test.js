@@ -29,7 +29,8 @@ const base = {
   nombre: '', fecha: '2026-08-12', fechaInicio: '', sinFecha: false, hora: '08:00', sexo: 'M', edad: '', edadU: 'a',
   peso: 0, talla: 0, usarPesoIdeal: false, embarazo: false, dia: '4',
   endemica: true, fiebre: true, manif: ['cefalea', 'mialgias'],
-  alarma: [], grave: [], cond: [], social: [], toleraVO: true, diuresisOk: true
+  alarma: [], grave: [], cond: [], social: [], toleraVO: true, diuresisOk: true,
+  hctBasal: '', hctActual: '', hb: '', plaquetas: ''
 };
 const P = o => Object.assign({}, base, o);
 const fase = (S, n) => ctx.planLiquidos(S).fases[n];
@@ -350,6 +351,119 @@ t('El reporte incorpora la evaluación hemodinámica',
   ctx.construirReporte(choqueReal).hemo.nivel, 'hipotenso');
 t('La conducta copiada consigna el choque hipotenso',
   /Choque hipotenso/.test(ctx.construirReporte(choqueReal).conductaTexto), 'true');
+
+console.log('\n── Hemoconcentración ──────────────────────────────');
+
+t('Delta de 38 % a 48 % = +26,3 %', ctx.deltaHematocrito(38, 48), 26.3);
+t('Delta de 45 % a 36 % = −20 %', ctx.deltaHematocrito(45, 36), -20);
+t('Sin basal no calcula delta', ctx.deltaHematocrito('', 48), null);
+t('Basal cero no divide por cero', ctx.deltaHematocrito(0, 48), null);
+
+const fuga = P({ edad: '34', peso: 70, hctBasal: '38', hctActual: '48' });
+t('Ascenso ≥ 20 % se lee como extravasación de plasma',
+  ctx.interpretarHematocrito(fuga).nivel, 'fuga');
+t('Indica marcar el signo de alarma que lleva a B2',
+  ctx.interpretarHematocrito(fuga).acciones.some(x => /categoría B2/.test(x)), 'true');
+
+const ascensoLeve = P({ edad: '34', peso: 70, hctBasal: '40', hctActual: '44' });
+t('Ascenso menor al 20 % se marca como aviso temprano',
+  ctx.interpretarHematocrito(ascensoLeve).nivel, 'ascenso');
+t('Explica que el ascenso precede a los cambios de tensión arterial',
+  /precede a los cambios de tensión arterial/.test(ctx.interpretarHematocrito(ascensoLeve).mensaje), 'true');
+
+/* El cruce que define el módulo: la misma caída significa lo contrario según la hemodinamia */
+const caidaInestable = P({ edad: '34', peso: 70, hctBasal: '48', hctActual: '36',
+                           pas: '80', pad: '40', llenado: '> 2 segundos' });
+const caidaEstable = P({ edad: '34', peso: 70, hctBasal: '48', hctActual: '36',
+                         pas: '120', pad: '80', fc: '80', llenado: '< 2 segundos', conciencia: 'Alerta' });
+t('Hematocrito que cae CON inestabilidad = sangrado',
+  ctx.interpretarHematocrito(caidaInestable).nivel, 'sangrado');
+t('Advierte que no debe leerse como mejoría',
+  /No lo interprete como mejoría/.test(ctx.interpretarHematocrito(caidaInestable).mensaje), 'true');
+t('Indica prueba cruzada y transfusión',
+  ctx.interpretarHematocrito(caidaInestable).acciones.some(x => /prueba cruzada/.test(x)), 'true');
+t('La MISMA caída CON estabilidad = reabsorción y mejoría',
+  ctx.interpretarHematocrito(caidaEstable).nivel, 'mejoria');
+t('Y en ese caso indica suspender los líquidos',
+  ctx.interpretarHematocrito(caidaEstable).acciones.some(x => /suspender los líquidos/.test(x)), 'true');
+
+t('Plaquetas < 100.000 generan la nota del signo de alarma',
+  ctx.interpretarHematocrito(P({ edad: '34', peso: 70, plaquetas: '85000' })).notas
+    .some(x => /signo de alarma/.test(x)), 'true');
+t('Hematocrito incoherente con la hemoglobina se marca',
+  ctx.interpretarHematocrito(P({ edad: '34', peso: 70, hctActual: '48', hb: '11' })).notas
+    .some(x => /Comprobación de coherencia/.test(x)), 'true');
+t('Hematocrito coherente con la hemoglobina no genera ruido',
+  ctx.interpretarHematocrito(P({ edad: '34', peso: 70, hctActual: '45', hb: '15' })).notas
+    .some(x => /Comprobación de coherencia/.test(x)), 'false');
+
+console.log('\n── Seguridad de la infusión ───────────────────────');
+
+t('Furosemida en 70 kg: 7 a 35 mg por dosis',
+  ctx.furosemida(P({ edad: '34', peso: 70 })).dosis, '7 – 35 mg por dosis, una o dos veces al día');
+t('Infusión continua 0,1 mg/kg/hora',
+  /7 mg\/hora/.test(ctx.furosemida(P({ edad: '34', peso: 70 })).infusion), 'true');
+
+t('Día 4: la fase crítica NO ha terminado', ctx.faseCriticaTerminada(P({ dia: '4' })), 'false');
+t('Día 6: todavía no se da por terminada', ctx.faseCriticaTerminada(P({ dia: '6' })), 'false');
+t('Día 7: se considera terminada', ctx.faseCriticaTerminada(P({ dia: '7' })), 'true');
+t('Sin día registrado no se asume terminada', ctx.faseCriticaTerminada(P({ dia: '' })), 'false');
+
+const segCritica = ctx.moduloSeguridad(P({ edad: '34', peso: 70, dia: '4', alarma: ['abdominal'] }));
+const modSobre = segCritica.modulos[0];
+t('En fase crítica la furosemida queda bloqueada', modSobre.permitido, 'false');
+t('Y lo dice con la cita de la OMS',
+  /Avoid diuretics during the plasma leakage phase/.test(modSobre.advertencia), 'true');
+t('Explica el mecanismo del daño',
+  /vacía el espacio intravascular/.test(modSobre.advertencia), 'true');
+
+const segTardia = ctx.moduloSeguridad(P({ edad: '34', peso: 70, dia: '8', alarma: ['abdominal'] }));
+t('Pasada la fase crítica la furosemida se admite', segTardia.modulos[0].permitido, 'true');
+
+t('El módulo de oliguria advierte contra restringir líquidos al hipovolémico',
+  /Restringir líquidos a un paciente anúrico/.test(segCritica.modulos[1].advertencia), 'true');
+t('Y reconoce que las guías no fijan una regla numérica',
+  /no fijan una regla numérica/.test(segCritica.modulos[1].advertencia), 'true');
+t('El discriminador de sangrado calcula la transfusión por peso',
+  segCritica.modulos[2].conducta.some(x => /350 – 700 ml/.test(x)), 'true');
+t('El cierre de líquidos se activa desde el día 6',
+  ctx.moduloSeguridad(P({ edad: '34', peso: 70, dia: '6', alarma: ['abdominal'] })).modulos[3].activo, 'true');
+t('El cierre aclara que la señal es fisiológica y no del calendario',
+  /no del calendario/.test(segCritica.modulos[3].conducta[0]), 'true');
+
+t('El módulo de seguridad aplica en B2',
+  ctx.moduloSeguridad(P({ edad: '34', peso: 70, alarma: ['abdominal'] })).aplica, 'true');
+t('El módulo de seguridad aplica en C',
+  ctx.moduloSeguridad(P({ edad: '34', peso: 70, grave: ['shock'] })).aplica, 'true');
+t('No aplica en manejo ambulatorio sin líquidos intravenosos',
+  ctx.moduloSeguridad(P({ edad: '34', peso: 70 })).aplica, 'false');
+
+console.log('\n── Grupo B2 reducido (OPS/CDE 2020) ───────────────');
+
+const b2Normal = P({ edad: '34', peso: 70, alarma: ['abdominal'] });
+const b2Mayor = P({ edad: '70', peso: 70, alarma: ['abdominal'] });
+const b2Comorb = P({ edad: '40', peso: 70, alarma: ['abdominal'], cond: ['dm'] });
+
+t('Adulto sano con alarma conserva la carga de 10 ml/kg', ctx.b2Reducido(b2Normal), 'false');
+t('Adulto mayor con alarma usa el esquema reducido', ctx.b2Reducido(b2Mayor), 'true');
+t('Comorbilidad con alarma usa el esquema reducido', ctx.b2Reducido(b2Comorb), 'true');
+t('Gestante con alarma usa el esquema reducido',
+  ctx.b2Reducido(P({ edad: '28', sexo: 'F', peso: 60, embarazo: true, alarma: ['abdominal'] })), 'true');
+t('"Menor de 5 años" no cuenta como comorbilidad',
+  ctx.tieneComorbilidad(P({ edad: '3', cond: ['menor5'] })), 'false');
+
+t('Reducido: carga de 5 ml/kg = 350 ml en 1 h', fase(b2Mayor, 0).rate, '350 ml en 1 hora');
+t('Reducido: fase 2 a 4 ml/kg/h = 280 ml/h', fase(b2Mayor, 2).rate, '280 ml/h');
+t('Reducido: fase 3 a 3 ml/kg/h = 210 ml/h', fase(b2Mayor, 3).rate, '210 ml/h');
+t('Reducido: mantenimiento a 2 ml/kg/h = 140 ml/h', fase(b2Mayor, 4).rate, '140 ml/h');
+t('Reducido: explica el motivo del esquema', /Esquema reducido por/.test(fase(b2Mayor, 0).nota), 'true');
+t('No reducido: la carga sigue en 700 ml', fase(b2Normal, 0).rate, '700 ml en 1 hora');
+t('El plan marca la bandera de esquema reducido', ctx.planLiquidos(b2Mayor).reducido, 'true');
+
+t('La conducta copiada incluye la seguridad de la infusión',
+  /SEGURIDAD DE LA INFUSIÓN/.test(ctx.construirReporte(b2Normal).conductaTexto), 'true');
+t('La conducta copiada condiciona la furosemida',
+  /SOLO con la fase crítica terminada/.test(ctx.construirReporte(b2Normal).conductaTexto), 'true');
 
 console.log('\n── Instrumento de auditoría (ítems 1–17) ──────────');
 

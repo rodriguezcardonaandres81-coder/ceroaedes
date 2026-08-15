@@ -396,6 +396,22 @@ footer b{color:var(--text)}
     <div id="pp-out" class="note info" style="margin-bottom:0">Presión de pulso = PAS − PAD. Un valor <b>≤ 20 mmHg</b> indica choque. La PAM se calcula sola.</div>
   </div>
 
+  <div class="card">
+    <div class="sec-title">Laboratorio y hemoconcentración</div>
+    <div class="row g2">
+      <div><label>Hematocrito basal (%)</label><input type="number" id="f-hct-basal" step="0.1" min="0" placeholder="Ej: 38" oninput="syncLab()"></div>
+      <div><label>Hematocrito actual (%)</label><input type="number" id="f-hct" step="0.1" min="0" placeholder="Ej: 48" oninput="syncLab()"></div>
+    </div>
+    <div class="row g2">
+      <div><label>Hemoglobina (g/dL)</label><input type="number" id="f-hb" step="0.1" min="0" placeholder="Ej: 15.8" oninput="syncLab()"></div>
+      <div><label>Plaquetas (/mm³)</label><input type="number" id="f-plaquetas" step="1000" min="0" placeholder="Ej: 85000" oninput="syncLab()"></div>
+    </div>
+    <div id="hct-out" class="note info" style="margin-bottom:0">
+      El <b>basal</b> es el hematocrito de la fase febril temprana del propio paciente. Si no lo tiene, use el valor de referencia
+      para edad y sexo: la comparación sirve, pero pierde confiabilidad. Un ascenso del <b>20 %</b> marca extravasación de plasma.
+    </div>
+  </div>
+
   <button class="btn btn-primary" onclick="next(2)">Siguiente</button>
   <button class="btn btn-back" onclick="go(1)">Atrás</button>
 </div>
@@ -516,7 +532,7 @@ footer b{color:var(--text)}
 
 /* === ENGINE START === */
 
-var APP_VERSION = '2.5.0';   /* fuente única: pie de página, Word y service worker */
+var APP_VERSION = '2.6.0';   /* fuente única: pie de página, Word y service worker */
 
 /* Origen de cada criterio: 'ficha' = casilla de la sección 6 de la ficha;
    'prot' = está en la definición del protocolo pero no como casilla. */
@@ -590,6 +606,18 @@ function autoCondiciones(S){
   if(S.embarazo) f.push('Gestante');
   return f;
 }
+/* Comorbilidad en sentido estricto, para el esquema reducido del Grupo B2 */
+var COMORBILIDADES = ['obesidad','hta','dm','renal','hemolitica','hepatopatia','anticoag','cronica'];
+function tieneComorbilidad(S){
+  for(var i=0;i<COMORBILIDADES.length;i++) if(S.cond.indexOf(COMORBILIDADES[i]) >= 0) return true;
+  return false;
+}
+/* OPS/CDE 2020 trae un algoritmo aparte para dengue con signos de alarma
+   en paciente con comorbilidad o adulto mayor: cargas de 5 ml/kg, no de 10. */
+function b2Reducido(S){
+  return clasificar(S) === 'B2' && (tieneComorbilidad(S) || edadMeses(S.edad,S.edadU) >= 780 || S.embarazo);
+}
+
 function mostrarMenor5(S){
   var m = edadMeses(S.edad, S.edadU);
   return S.edad !== '' && m >= 12 && m < 60;
@@ -699,6 +727,33 @@ function planLiquidos(S){
         dur:'Hasta tolerar vía oral', goteoMin: goteo(2*p), goteoMax: goteo(4*p), vol: rango(p,2,4) + ' ml por hora',
         nota:'Cristaloide (Lactato de Ringer o SSN 0,9 %). Reiniciar la vía oral lo más pronto posible.', hora:h, tipo:'iv' });
     }
+    return plan;
+  }
+
+  if(cat === 'B2' && b2Reducido(S)){
+    plan.via = 'iv';
+    plan.reducido = true;
+    var tr = h;
+    var motivo = tieneComorbilidad(S) ? 'comorbilidad' : (S.embarazo ? 'gestación' : 'edad ≥ 65 años');
+    plan.fases.push({ n:'Carga inicial', rate: r0(5*p) + ' ml en 1 hora', mlkg:'5 ml/kg', dur:'1 hora',
+      goteoMin: goteo(5*p), goteoMax: goteo(5*p), vol: r0(5*p) + ' ml',
+      nota:'Esquema reducido por ' + motivo + ' (OPS/CDE 2020): la carga es de 5 ml/kg, no de 10, para no precipitar sobrecarga. Tomar hematocrito ANTES de iniciar. Cristaloide: Lactato de Ringer o SSN 0,9 %.',
+      hora: tr, tipo:'carga' });
+    plan.fases.push({ n:'Repetir carga (hasta 2 veces más)', rate: r0(5*p) + ' ml en 1 hora', mlkg:'5 ml/kg', dur:'1 hora c/u',
+      goteoMin: goteo(5*p), goteoMax: goteo(5*p), vol: r0(5*p) + ' ml',
+      nota:'Solo si no hay mejoría clínica. Si tras la tercera carga persiste sin mejorar, clasificar como dengue grave y manejar como Grupo C.',
+      hora:'condicional', tipo:'cond' });
+    tr = addMin(tr,60);
+    plan.fases.push({ n:'Fase 2 — con mejoría', rate: r0(4*p) + ' ml/h', mlkg:'4 ml/kg/h', dur:'2 – 4 horas',
+      goteoMin: goteo(4*p), goteoMax: goteo(4*p), vol: r0(4*p*2) + ' – ' + r0(4*p*4) + ' ml',
+      nota:'Monitoreo horario al paciente.', hora: tr, tipo:'iv' });
+    tr = addMin(tr,120);
+    plan.fases.push({ n:'Fase 3', rate: r0(3*p) + ' ml/h', mlkg:'3 ml/kg/h', dur:'2 – 4 horas',
+      goteoMin: goteo(3*p), goteoMax: goteo(3*p), vol: r0(3*p*2) + ' – ' + r0(3*p*4) + ' ml', hora: tr, tipo:'iv' });
+    tr = addMin(tr,120);
+    plan.fases.push({ n:'Fase 4 — mantenimiento', rate: r0(2*p) + ' ml/h', mlkg:'2 ml/kg/h', dur:'2 – 4 horas',
+      goteoMin: goteo(2*p), goteoMax: goteo(2*p), vol: r0(2*p*2) + ' – ' + r0(2*p*4) + ' ml',
+      nota:'Reducir el goteo cuando disminuya la fuga de plasma o termine la fase crítica.', hora: tr, tipo:'iv' });
     return plan;
   }
 
@@ -1039,6 +1094,208 @@ var META = {
 
 function nombreDe(arr,k){ for(var i=0;i<arr.length;i++) if(arr[i][0] === k) return arr[i][1]; return k; }
 
+
+/* ================= Hemoconcentración y seguridad de la infusión =================
+   Fuentes: OMS, Dengue guidelines 2009 y Handbook for Clinical Management of Dengue;
+   OPS/CDE, Algoritmos para el manejo clínico del dengue, 2020. */
+
+/* Delta del hematocrito frente al basal del propio paciente.
+   La OMS toma como basal el hematocrito de la fase febril temprana; si no se tiene,
+   se usan valores de referencia por edad y sexo, con menor confiabilidad. */
+function deltaHematocrito(basal, actual){
+  var b = parseFloat(basal), a = parseFloat(actual);
+  if(isNaN(b) || isNaN(a) || b <= 0) return null;
+  return Math.round(((a - b)/b)*1000)/10;
+}
+
+/* Interpretación cruzada: el mismo cambio de hematocrito significa cosas opuestas
+   según el estado hemodinámico. Ese cruce es el corazón del módulo. */
+function interpretarHematocrito(S){
+  var d = deltaHematocrito(S.hctBasal, S.hctActual);
+  var hb = parseFloat(S.hb), plq = parseFloat(S.plaquetas);
+  var h = evaluacionHemodinamica(S);
+  var inestable = (h.nivel === 'hipotenso' || h.nivel === 'compensado');
+  var r = { delta: d, nivel:'sin-datos', titulo:'', mensaje:'', acciones:[], notas:[] };
+
+  if(!isNaN(plq) && plq < 100000)
+    r.notas.push('Plaquetas ' + plq.toLocaleString('es-CO') + ' /mm³: por debajo de 100.000 es signo de alarma de la ficha. Márquelo si no lo ha hecho.');
+  if(!isNaN(hb) && !isNaN(parseFloat(S.hctActual))){
+    var esperado = hb*3, act = parseFloat(S.hctActual);
+    if(Math.abs(act - esperado) > 6)
+      r.notas.push('Comprobación de coherencia: el hematocrito suele aproximarse a tres veces la hemoglobina (' +
+        Math.round(esperado) + ' % esperado frente a ' + act + ' % informado). Una diferencia grande sugiere error de laboratorio o una condición hematológica de base; confirme antes de decidir sobre esa cifra.');
+  }
+
+  if(d === null){
+    r.nivel = 'sin-datos';
+    r.titulo = 'Sin hematocrito basal y actual no se puede calcular la hemoconcentración';
+    r.mensaje = 'Registre el hematocrito de la fase febril temprana como basal del propio paciente. Si no lo tiene, use el valor de referencia para edad y sexo, sabiendo que la comparación pierde confiabilidad.';
+    return r;
+  }
+
+  if(d >= 20){
+    r.nivel = 'fuga';
+    r.titulo = 'Hemoconcentración significativa: hematocrito ' + (d > 0 ? '+' : '') + d + ' % sobre el basal';
+    r.mensaje = 'Un ascenso del 20 % o más es el marcador clásico de extravasación de plasma. ' +
+      (inestable
+        ? 'Con inestabilidad hemodinámica esto indica fuga activa: administre la carga de cristaloide que corresponda a la categoría y repita el hematocrito después.'
+        : 'Con signos vitales estables, indica fuga en curso: inicie o mantenga la reposición de la categoría B2 y vigile de forma estrecha.');
+    r.acciones.push('Marcar "Aumento del hematocrito" como signo de alarma: lleva al paciente a categoría B2 como mínimo.');
+    r.acciones.push('Repetir hematocrito después de cada carga y luego cada 12 a 24 horas.');
+    if(inestable) r.acciones.push('Si además hay choque o dificultad respiratoria, es extravasación grave de plasma: categoría C.');
+  } else if(d > 0){
+    r.nivel = 'ascenso';
+    r.titulo = 'Hematocrito en ascenso: ' + '+' + d + ' % sobre el basal';
+    r.mensaje = 'El ascenso del hematocrito precede a los cambios de tensión arterial y de volumen del pulso: es un aviso temprano. ' +
+      'Aún no alcanza el 20 % que marca extravasación significativa, pero un ascenso progresivo junto con caída rápida de plaquetas es signo de alarma.';
+    r.acciones.push('Repetir el control en 12 a 24 horas, o antes si aparecen signos de alarma.');
+  } else if(d <= -10 && inestable){
+    r.nivel = 'sangrado';
+    r.titulo = 'Caída del hematocrito con inestabilidad hemodinámica: sospeche sangrado';
+    r.mensaje = 'La OMS es explícita: hematocrito que cae con signos vitales inestables señala hemorragia importante y necesidad de transfusión urgente. ' +
+      'No lo interprete como mejoría.';
+    r.acciones.push('Tomar prueba cruzada de inmediato y transfundir.');
+    r.acciones.push('Buscar sangrado oculto: digestivo, ginecológico, retroperitoneal o del sistema nervioso central.');
+  } else if(d < 0 && !inestable){
+    r.nivel = 'mejoria';
+    r.titulo = 'Hematocrito en descenso con hemodinamia estable: mejoría';
+    r.mensaje = 'La caída del hematocrito con buen volumen de pulso y diuresis conservada indica reabsorción del plasma extravasado. ' +
+      'Es criterio para reducir y luego suspender los líquidos intravenosos: mantenerlos aquí es la causa más frecuente de sobrecarga.';
+    r.acciones.push('Reducir el goteo de forma progresiva y suspender los líquidos intravenosos.');
+    r.acciones.push('Vigilar signos de sobrecarga durante las siguientes 48 a 72 horas de reabsorción.');
+  } else if(d < 0){
+    r.nivel = 'descenso';
+    r.titulo = 'Hematocrito en descenso: ' + d + ' %';
+    r.mensaje = 'Interprete siempre junto con la hemodinamia: con buen volumen de pulso indica reabsorción y es momento de reducir líquidos; con inestabilidad indica sangrado.';
+  } else {
+    r.nivel = 'estable';
+    r.titulo = 'Hematocrito sin cambio respecto al basal';
+    r.mensaje = 'Continúe el control seriado según la categoría de intervención.';
+  }
+  return r;
+}
+
+/* Dosis de furosemida para sobrecarga — OMS 2009:
+   0,1 a 0,5 mg/kg/dosis una o dos veces al día, o infusión continua de 0,1 mg/kg/hora.
+   Contraindicada durante la fase de fuga de plasma. */
+function furosemida(S){
+  var p = pesoCalculo(S);
+  if(!p) return null;
+  var r1 = Math.round(0.1*p*10)/10, r2 = Math.round(0.5*p*10)/10;
+  return {
+    dosis: r1 + ' – ' + r2 + ' mg por dosis, una o dos veces al día',
+    base: '0,1 – 0,5 mg/kg/dosis, por vía oral o intravenosa',
+    infusion: 'Infusión continua: ' + r1 + ' mg/hora (0,1 mg/kg/hora)'
+  };
+}
+
+/* ¿Terminó la fase crítica? Solo entonces es admisible un diurético. */
+function faseCriticaTerminada(S){
+  var d = parseInt(S.dia,10);
+  return !isNaN(d) && d >= 7;
+}
+
+var SOBRECARGA_PRECOZ = [
+  'Dificultad respiratoria y taquipnea',
+  'Tiraje intercostal',
+  'Sibilancias, más que crepitantes',
+  'Derrames pleurales grandes',
+  'Ascitis a tensión',
+  'Ingurgitación yugular'
+];
+var SOBRECARGA_TARDIA = [
+  'Edema pulmonar: tos con esputo rosado o espumoso, crepitantes, cianosis',
+  'Choque irreversible: falla cardiaca, con frecuencia junto con hipovolemia persistente'
+];
+var SOBRECARGA_CAUSAS = [
+  'Líquidos intravenosos excesivos o demasiado rápidos',
+  'Uso de soluciones hipotónicas en lugar de isotónicas',
+  'Sangrado grave no reconocido',
+  'Transfusión de hemoderivados no indicados',
+  'Continuar los líquidos después de que cesó la extravasación de plasma',
+  'Comorbilidad cardiopulmonar o renal'
+];
+
+/* Módulo de seguridad de la infusión — las cuatro válvulas de escape */
+function moduloSeguridad(S){
+  var cat = clasificar(S), p = pesoCalculo(S), d = parseInt(S.dia,10);
+  var hct = interpretarHematocrito(S), h = evaluacionHemodinamica(S);
+  var inestable = (h.nivel === 'hipotenso' || h.nivel === 'compensado');
+  var fin = faseCriticaTerminada(S), M = [];
+
+  /* 1. Sobrecarga y edema pulmonar */
+  var f = furosemida(S);
+  M.push({
+    id:'sobrecarga',
+    titulo:'Detención por sobrecarga de líquidos',
+    disparo:'Aparecen signos de sobrecarga durante la infusión.',
+    precoz: SOBRECARGA_PRECOZ,
+    tardio: SOBRECARGA_TARDIA,
+    causas: SOBRECARGA_CAUSAS,
+    conducta: [
+      'Suspender o reducir de inmediato los líquidos intravenosos.',
+      'Oxígeno y posición semisentada.',
+      'Reevaluar el estado hemodinámico: la sobrecarga puede coexistir con hipovolemia por fuga activa.'
+    ],
+    diuretico: f,
+    permitido: fin,
+    advertencia: fin
+      ? 'El paciente está en día ' + d + ': la fase crítica habitualmente ya terminó, de modo que el diurético es admisible si hay sobrecarga con hemodinamia estable. Confirme igual que no persista la extravasación.'
+      : 'NO administre diuréticos ahora. ' + (isNaN(d) ? 'Sin día de enfermedad registrado no se puede afirmar que la fase crítica terminó.' : 'El paciente está en día ' + d + ', dentro o cerca de la fase crítica.') +
+        ' La OMS lo dice sin matices: «Avoid diuretics during the plasma leakage phase because they may lead to intravascular volume depletion». Durante la fuga, el diurético vacía el espacio intravascular y puede precipitar el choque. Primero suspenda o reduzca los líquidos y reevalúe.'
+  });
+
+  /* 2. Oliguria y anuria */
+  var metaMin = Math.round(0.5*p*10)/10, meta1 = Math.round(p*10)/10;
+  M.push({
+    id:'renal',
+    titulo:'Oliguria o anuria',
+    disparo:'Diuresis por debajo de ' + metaMin + ' ml/hora (0,5 ml/kg/h) o ausencia de micción.',
+    conducta: [
+      'En dengue, la causa más frecuente de oliguria es la hipovolemia por extravasación, no la falla renal intrínseca. Con signos de mala perfusión, la conducta es reponer volumen, no restringirlo.',
+      'Categoría B2: si persisten los signos de alarma y la diuresis es menor de ' + meta1 + ' ml/hora (1 ml/kg/h), repita la carga hasta dos veces más.',
+      'Si la diuresis no responde después de una reposición adecuada y la hemodinamia ya está corregida, sospeche lesión renal aguda: solicite creatinina, nitrógeno ureico, electrolitos y gases o lactato.',
+      'La insuficiencia renal aguda es criterio de hospitalización y obliga a individualizar el volumen: a partir de ahí, cada bolo adicional se decide por respuesta clínica y no por esquema fijo.'
+    ],
+    advertencia:'Las guías no fijan una regla numérica para reducir bolos en anuria. Restringir líquidos a un paciente anúrico que en realidad está hipovolémico es un error grave: primero descarte hipovolemia.'
+  });
+
+  /* 3. Discriminador de sangrado */
+  M.push({
+    id:'sangrado',
+    titulo:'Discriminador de sangrado',
+    disparo:'El hematocrito cae durante la infusión.',
+    conducta: [
+      'Hematocrito que CAE con signos vitales INESTABLES o choque persistente → hemorragia importante. Prueba cruzada urgente y transfusión: glóbulos rojos ' + rango(p,5,10) + ' ml (5 – 10 ml/kg) o sangre fresca ' + rango(p,10,20) + ' ml (10 – 20 ml/kg).',
+      'Hematocrito que CAE con buen volumen de pulso, diuresis conservada y paciente estable → reabsorción y mejoría. Reduzca y suspenda los líquidos intravenosos.',
+      'Hematocrito que SUBE con inestabilidad → fuga activa de plasma. Continúe la reposición según la categoría.'
+    ],
+    estado: hct.nivel === 'sangrado'
+      ? { tono:'danger', texto:'Con los datos registrados, el patrón actual es de SANGRADO: ' + hct.titulo.toLowerCase() + '.' }
+      : (hct.nivel === 'mejoria'
+        ? { tono:'ok', texto:'Con los datos registrados, el patrón actual es de REABSORCIÓN y mejoría.' }
+        : null)
+  });
+
+  /* 4. Cierre de líquidos en la fase de reabsorción */
+  M.push({
+    id:'cierre',
+    titulo:'Cierre de líquidos en la fase de reabsorción',
+    disparo: (!isNaN(d) && d >= 6)
+      ? 'El paciente está en día ' + d + ' de enfermedad: revise activamente si ya puede suspender los líquidos.'
+      : 'Se aplica al terminar la fase crítica, habitualmente hacia el día 6 o 7.',
+    conducta: [
+      'La señal para suspender es fisiológica, no del calendario. Suspenda cuando se cumpla el conjunto: hematocrito que desciende por debajo del basal en paciente estable, buen volumen de pulso, diuresis normal o aumentada, y buena tolerancia a la vía oral.',
+      'Reduzca el goteo de forma gradual a medida que disminuye la fuga; no lo corte de golpe si aún hay extravasación.',
+      'La reabsorción del líquido extravasado ocurre durante las 48 a 72 horas siguientes: es la ventana de mayor riesgo de sobrecarga.',
+      'Vigile especialmente a los pacientes con cardiopatía, nefropatía y a los adultos mayores durante esta fase.'
+    ],
+    activo: (!isNaN(d) && d >= 6)
+  });
+
+  return { modulos: M, hct: hct, faseCriticaTerminada: fin, aplica: (cat === 'B2' || cat === 'C') };
+}
+
 /* ---------- Modelo único del reporte (alimenta pantalla y Word) ---------- */
 function construirReporte(S){
   var cat = clasificar(S), meta = META[cat], plan = planLiquidos(S), anti = antipiretico(S), def = definicionCaso(S);
@@ -1076,6 +1333,8 @@ function construirReporte(S){
 
   m.vitales = vitalesTabla(S);
   m.hemo = evaluacionHemodinamica(S);
+  m.hct = interpretarHematocrito(S);
+  m.seguridad = moduloSeguridad(S);
   m.auditoria = auditoria(S);
   m.laboratorio = laboratorio(S);
   m.monitoreo = monitoreo(S);
@@ -1110,7 +1369,21 @@ function construirReporte(S){
   plan.fases.forEach(function(f){
     L.push('· ' + f.n + ': ' + f.rate + ' (' + f.mlkg + ', ' + f.dur + ')' + (f.hora !== 'condicional' ? ' — inicio estimado ' + f.hora : '') + '.' + (f.nota ? ' ' + f.nota : ''));
   });
-  L.push('');
+  if(m.hct.nivel !== 'sin-datos'){
+    L.push('HEMOCONCENTRACIÓN: ' + m.hct.titulo + '. ' + m.hct.mensaje);
+    m.hct.acciones.forEach(function(x){ L.push('· ' + x); });
+    L.push('');
+  }
+  if(m.seguridad.aplica){
+    L.push('SEGURIDAD DE LA INFUSIÓN');
+    L.push('· Sobrecarga: suspender o reducir líquidos, oxígeno y posición semisentada. Furosemida ' +
+      (m.seguridad.modulos[0].diuretico ? m.seguridad.modulos[0].diuretico.dosis : '0,1–0,5 mg/kg/dosis') +
+      ' SOLO con la fase crítica terminada; contraindicada durante la extravasación de plasma.');
+    L.push('· Oliguria: en dengue suele ser hipovolemia, no falla renal. Reponer volumen antes de restringir.');
+    L.push('· Hematocrito que cae con inestabilidad = sangrado, transfundir. Que cae con estabilidad = reabsorción, reducir líquidos.');
+    L.push('· Suspender líquidos cuando el hematocrito baje del basal en paciente estable, con buena diuresis y tolerancia oral.');
+    L.push('');
+  }
   L.push('MANEJO SINTOMÁTICO');
   L.push('· ' + anti.titulo + ': ' + anti.dosis + '. ' + anti.max);
   m.noHacer.forEach(function(x){ L.push('· ' + x); });
@@ -1139,7 +1412,8 @@ var S = {
   endemica:false, fiebre:false, manif:[], torniquete:'nr',
   alarma:[], sinAlarma:false, grave:[], sinGrave:false,
   cond:[], social:[], toleraVO:true, diuresisOk:true,
-  sinFecha:false, pas:'', pad:'', fc:'', fr:'', temp:'', sato2:'', llenado:'', conciencia:''
+  sinFecha:false, pas:'', pad:'', fc:'', fr:'', temp:'', sato2:'', llenado:'', conciencia:'',
+  hctBasal:'', hctActual:'', hb:'', plaquetas:''
 };
 var MODELO = null;
 var NINGUNO = { alarma:'sinAlarma', grave:'sinGrave' };
@@ -1178,12 +1452,39 @@ function apagarNinguno(bucket){
   atenuarLista(bucket);
 }
 
+var TONO_HCT = { fuga:'danger', sangrado:'danger', ascenso:'warn', descenso:'warn',
+                 mejoria:'ok', estable:'info', 'sin-datos':'info' };
+
+function syncLab(){
+  S.hctBasal = $('f-hct-basal').value; S.hctActual = $('f-hct').value;
+  S.hb = $('f-hb').value; S.plaquetas = $('f-plaquetas').value;
+  renderHct();
+}
+
+function renderHct(){
+  var r = interpretarHematocrito(S), o = $('hct-out');
+  o.style.marginBottom = '0';
+  if(r.nivel === 'sin-datos' && !r.notas.length){
+    o.className = 'note info';
+    o.innerHTML = 'El <b>basal</b> es el hematocrito de la fase febril temprana del propio paciente. Si no lo tiene, use el valor de referencia ' +
+      'para edad y sexo: la comparación sirve, pero pierde confiabilidad. Un ascenso del <b>20 %</b> marca extravasación de plasma.';
+    return;
+  }
+  o.className = 'note ' + TONO_HCT[r.nivel];
+  o.innerHTML = '<b>' + r.titulo + '.</b><div style="margin-top:5px">' + r.mensaje + '</div>' +
+    (r.acciones.length ? '<ul class="clean" style="margin:7px 0 0">' +
+      r.acciones.map(function(x){ return '<li>' + x + '</li>'; }).join('') + '</ul>' : '') +
+    (r.notas.length ? '<div style="margin-top:8px;font-size:.95em;opacity:.9">' +
+      r.notas.map(function(x){ return '· ' + x; }).join('<br>') + '</div>' : '');
+}
+
 function syncVitales(){
   S.pas = $('f-pas').value; S.pad = $('f-pad').value;
   S.fc = $('f-fc').value; S.fr = $('f-fr').value;
   S.temp = $('f-temp').value; S.sato2 = $('f-sato2').value;
   S.llenado = $('f-llenado').value; S.conciencia = $('f-conciencia').value;
   calcPP();
+  renderHct();   /* la lectura del hematocrito depende de la hemodinamia */
 }
 
 function buildList(containerId, items, bucket, cls){
@@ -1472,6 +1773,19 @@ function evaluar(){
         }).join('');
     }).join('') + '</div></details>');
 
+  if(m.hct.nivel !== 'sin-datos' || m.hct.notas.length){
+    o.push('<div class="card"><div class="sec-title">Hemoconcentración</div>' +
+      '<div class="note ' + TONO_HCT[m.hct.nivel] + '" style="margin-bottom:0"><b>' + m.hct.titulo + '.</b>' +
+      '<div style="margin-top:5px">' + m.hct.mensaje + '</div>' +
+      (m.hct.acciones.length ? '<ul class="clean" style="margin:7px 0 0">' +
+        m.hct.acciones.map(function(x){ return '<li>' + x + '</li>'; }).join('') + '</ul>' : '') +
+      (m.hct.notas.length ? '<div style="margin-top:8px;font-size:.95em;opacity:.9">' +
+        m.hct.notas.map(function(x){ return '· ' + x; }).join('<br>') + '</div>' : '') +
+      '</div></div>');
+  }
+
+  if(m.seguridad.aplica) o.push(bloqueSeguridad(m));
+
   o.push(acc('Laboratorio', m.laboratorio, true, 'No contar con hematocrito antes de hidratar no debe retrasar la hidratación.'));
   o.push(acc('Monitoreo y seguimiento', m.monitoreo, true));
   o.push(acc(m.criterios.titulo, m.criterios.items, false));
@@ -1481,6 +1795,48 @@ function evaluar(){
 
   $('out').innerHTML = o.join('');
   go(7);
+}
+
+function bloqueSeguridad(m){
+  var o = ['<div class="card"><div class="sec-title">Módulo de seguridad de la infusión</div>' +
+    '<div class="note info" style="margin-bottom:12px">Válvulas de escape para usar <b>durante</b> la administración de líquidos. ' +
+    'Cada una tiene su disparador y su conducta.</div>'];
+
+  m.seguridad.modulos.forEach(function(mod){
+    var abierto = (mod.id === 'sangrado' && mod.estado) || (mod.id === 'cierre' && mod.activo);
+    o.push('<details class="acc"' + (abierto ? ' open' : '') + '><summary>' + mod.titulo + '</summary><div class="acc-body">');
+    o.push('<div style="font-size:.8rem;color:var(--muted);margin-bottom:9px"><b>Cuándo:</b> ' + mod.disparo + '</div>');
+
+    if(mod.estado) o.push('<div class="note ' + mod.estado.tono + '">' + mod.estado.texto + '</div>');
+
+    if(mod.precoz){
+      o.push('<div style="font-size:.76rem;font-weight:700;color:var(--catB2);margin:4px 0 4px">Signos precoces</div>' +
+        '<ul class="clean">' + mod.precoz.map(function(x){ return '<li>' + x + '</li>'; }).join('') + '</ul>');
+      o.push('<div style="font-size:.76rem;font-weight:700;color:var(--catC);margin:10px 0 4px">Signos tardíos</div>' +
+        '<ul class="clean">' + mod.tardio.map(function(x){ return '<li>' + x + '</li>'; }).join('') + '</ul>');
+    }
+
+    o.push('<div style="font-size:.76rem;font-weight:700;color:var(--primary);margin:10px 0 4px">Conducta</div>' +
+      '<ul class="clean">' + mod.conducta.map(function(x){ return '<li>' + x + '</li>'; }).join('') + '</ul>');
+
+    if(mod.diuretico){
+      o.push('<div class="phase' + (mod.permitido ? '' : ' carga') + '" style="margin-top:11px">' +
+        '<div class="phase-head"><div class="phase-n">Furosemida</div>' +
+        '<div class="phase-time">' + (mod.permitido ? 'admisible' : 'NO administrar ahora') + '</div></div>' +
+        '<div class="phase-rate">' + mod.diuretico.dosis + '</div>' +
+        '<div class="phase-meta">' + mod.diuretico.base + '<br>' + mod.diuretico.infusion + '</div>' +
+        '<div class="phase-note" style="background:' + (mod.permitido ? '#EAF6EC' : '#FDECEC') + '">' + mod.advertencia + '</div></div>');
+    }
+
+    if(mod.causas){
+      o.push('<div style="font-size:.76rem;font-weight:700;color:var(--muted);margin:11px 0 4px">Por qué se llegó ahí</div>' +
+        '<ul class="clean">' + mod.causas.map(function(x){ return '<li>' + x + '</li>'; }).join('') + '</ul>');
+    }
+    if(mod.advertencia && !mod.diuretico) o.push('<div class="note warn" style="margin:10px 0 0">' + mod.advertencia + '</div>');
+    o.push('</div></details>');
+  });
+
+  return o.join('') + '</div>';
 }
 
 function acc(titulo, items, abierto, nota){
@@ -1649,6 +2005,42 @@ function documentoXml(m){
     });
   }
   m.avisos.forEach(function(a){ b.push(wP(wR(a.texto, { sz:19, color:'7F1414' }), { before:80, after:60, shd:'FDECEC' })); });
+
+  if(m.hct.nivel !== 'sin-datos' || m.hct.notas.length){
+    b.push(wH1('Hemoconcentración'));
+    b.push(wP(wR(m.hct.titulo, { b:true, sz:20, color: (m.hct.nivel === 'fuga' || m.hct.nivel === 'sangrado') ? 'B71C1C' : '1B6B5A' }), { after:40 }));
+    b.push(wP(wR(m.hct.mensaje, { sz:18, color:'4A4A55' }), { after:50 }));
+    m.hct.acciones.forEach(function(x){ b.push(wBullet(x)); });
+    m.hct.notas.forEach(function(x){ b.push(wBullet(x)); });
+  }
+
+  if(m.seguridad.aplica){
+    b.push(wH1('Módulo de seguridad de la infusión'));
+    m.seguridad.modulos.forEach(function(mod){
+      b.push(wP(wR(mod.titulo, { b:true, sz:20, color:'1B6B5A' }), { before:120, after:40 }));
+      b.push(wP(wR('Cuándo: ' + mod.disparo, { sz:18, i:true, color:'6B6B78' }), { after:40 }));
+      if(mod.precoz){
+        b.push(wP(wR('Signos precoces', { b:true, sz:18, color:'E65100' }), { after:20 }));
+        mod.precoz.forEach(function(x){ b.push(wBullet(x)); });
+        b.push(wP(wR('Signos tardíos', { b:true, sz:18, color:'B71C1C' }), { before:40, after:20 }));
+        mod.tardio.forEach(function(x){ b.push(wBullet(x)); });
+      }
+      b.push(wP(wR('Conducta', { b:true, sz:18 }), { before:40, after:20 }));
+      mod.conducta.forEach(function(x){ b.push(wBullet(x)); });
+      if(mod.diuretico){
+        b.push(wP(wR('Furosemida: ' + mod.diuretico.dosis + '. ' + mod.diuretico.base + '. ' + mod.diuretico.infusion,
+          { sz:18, b:true }), { before:40, after:20 }));
+        b.push(wP(wR((mod.permitido ? '' : 'NO ADMINISTRAR AHORA. ') + mod.advertencia,
+          { sz:18, color: mod.permitido ? '4A4A55' : 'B71C1C' }), { after:40 }));
+      } else if(mod.advertencia){
+        b.push(wP(wR(mod.advertencia, { sz:18, color:'7F1414' }), { before:40, after:40 }));
+      }
+      if(mod.causas){
+        b.push(wP(wR('Por qué se llegó ahí', { b:true, sz:18, color:'6B6B78' }), { before:40, after:20 }));
+        mod.causas.forEach(function(x){ b.push(wBullet(x)); });
+      }
+    });
+  }
 
   b.push(wH1('Manejo sintomático'));
   b.push(wTabla([

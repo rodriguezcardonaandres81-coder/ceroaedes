@@ -40,6 +40,7 @@ Las etiquetas `ficha §6` y `protocolo` sobre cada casilla indican de dónde sal
 - **A** — hidratación oral. Adultos: 2 000 a 3 000 ml/24 h. Pediátricos: **Holliday-Segar puro** (100 ml/kg los primeros 10 kg, 50 ml/kg los siguientes 10 kg, 20 ml/kg por cada kilo adicional), conforme al ítem 22 del instrumento de auditoría.
 - **B1** — lo mismo, pero **más 5 % de déficit** en pediátricos por pertenecer a grupo de riesgo, conforme al ítem 27. Si hay intolerancia oral, cristaloides a 2–4 ml/kg/h.
 - **B2** — carga de 10 ml/kg en 1 h (repetible hasta 2 veces si persisten signos de alarma y la diuresis es < 1 ml/kg/h), luego 5–7 → 3–5 → 2–4 ml/kg/h.
+- **B2 con comorbilidad, gestación o ≥ 65 años** — esquema reducido de OPS/CDE 2020: carga de **5 ml/kg** en 1 h, luego 4 → 3 → 2 ml/kg/h. La app lo selecciona sola y explica el motivo, porque duplicar la carga en estos pacientes es la vía directa a la sobrecarga.
 - **C** — bolo de 20 ml/kg en 15–30 min (10 ml/kg en gestantes y ≥ 65 años), luego 10 ml/kg/h → 5–7 → 3–5 → 2–4 ml/kg/h, con las rutas de rescate: segundo y tercer bolo, coloide y transfusión (glóbulos rojos 5–10 ml/kg o sangre fresca 10–20 ml/kg).
 
 Cada fase muestra **ml/h, volumen total, hora proyectada y goteo sin bomba** (macrogotero de 20 gotas/ml y microgotero de 60 µgotas/ml).
@@ -72,7 +73,29 @@ En signos de alarma y en manifestaciones graves hay una casilla **"Ninguno — l
 - **Signos vitales**: TA, FC, FR, temperatura, SatO₂, llenado capilar y estado de conciencia, con **PAM y presión de pulso calculadas**.
 - **Ecografía abdominal y radiografía de tórax** sugeridas ante hallazgos de fuga vascular, que son las que documentan ascitis y derrame pleural.
 
-### 8. Salida en Word y copiado de conducta
+### 8. Hemoconcentración
+
+Se registran hematocrito basal y actual, hemoglobina y plaquetas. El basal es el de la fase febril temprana del propio paciente, como indica la OMS. La app calcula el delta porcentual y lo interpreta **cruzado con el estado hemodinámico**, que es lo que cambia su significado:
+
+| Hematocrito | Hemodinamia | Lectura |
+|---|---|---|
+| Sube ≥ 20 % | cualquiera | Extravasación de plasma. Signo de alarma → mínimo B2; con choque o dificultad respiratoria, categoría C |
+| Sube < 20 % | estable | Aviso temprano: el ascenso precede a los cambios de tensión arterial |
+| **Baja** | **inestable** | **Hemorragia**. Prueba cruzada y transfusión — no es mejoría |
+| **Baja** | **estable** | **Reabsorción**. Criterio para reducir y suspender los líquidos |
+
+Incluye una comprobación de coherencia entre hematocrito y hemoglobina (regla de tres) que avisa de posibles errores de laboratorio antes de que una cifra equivocada mueva una decisión.
+
+### 9. Módulo de seguridad de la infusión
+
+Cuatro válvulas de escape para usar **durante** la administración de líquidos, cada una con su disparador y su conducta:
+
+- **Detención por sobrecarga** — signos precoces y tardíos, causas, y furosemida con la dosis calculada por peso (0,1–0,5 mg/kg/dosis; infusión 0,1 mg/kg/h). **El diurético se bloquea mientras no haya terminado la fase crítica**, citando a la OMS: *«Avoid diuretics during the plasma leakage phase because they may lead to intravascular volume depletion»*. Durante la fuga, el diurético vacía el espacio intravascular y puede precipitar el choque.
+- **Oliguria o anuria** — con la advertencia de que en dengue la causa más frecuente es la hipovolemia y no la falla renal: restringir líquidos a un paciente anúrico que en realidad está hipovolémico es un error grave.
+- **Discriminador de sangrado** — el cruce hematocrito/hemodinamia, con los volúmenes de transfusión calculados por peso.
+- **Cierre de líquidos en la fase de reabsorción** — se activa desde el día 6, pero deja claro que la señal para suspender es fisiológica y no del calendario.
+
+### 10. Salida en Word y copiado de conducta
 
 - **Exportar a Word** genera un `.docx` real con tablas: clasificación, ficha del paciente, hallazgos, plan de líquidos fase por fase, manejo sintomático, laboratorio, monitoreo y criterios de alta o de referencia. El médico lo abre, copia y pega en la historia clínica.
 - **Copiar conducta** deja en el portapapeles la misma información como texto plano, para pegar directamente sin abrir Word.
@@ -119,7 +142,7 @@ ceroaedes/
 ├── sw.js                   # Service worker (uso sin conexión)
 ├── assets/                 # Iconos
 ├── tests/
-│   ├── engine.test.js      # 185 pruebas del motor clínico
+│   ├── engine.test.js      # 233 pruebas del motor clínico
 │   └── ui.test.js          # Recorridos en navegador real + validación del .docx
 ├── LICENSE
 └── README.md
@@ -143,7 +166,7 @@ El motor verifica la definición operativa de caso, la clasificación en los cua
 Después de editar `index.html`, suba el número de versión en `sw.js`:
 
 ```js
-const VERSION = 'ceroaedes-v2.5.1';
+const VERSION = 'ceroaedes-v2.6.1';
 ```
 
 Sin ese cambio, los celulares que ya la tengan instalada seguirán mostrando la versión cacheada.
@@ -161,6 +184,8 @@ Sin ese cambio, los celulares que ya la tengan instalada seguirán mostrando la 
 - *Instrumento de seguimiento y evaluación de casos de dengue*, versión 15/06/23.
 - Centers for Disease Control and Prevention. *Clinical Testing Guidance for Dengue*. Atlanta: CDC.
 - Centers for Disease Control and Prevention. *Dengue Clinical Case Management — Pocket Guide*. Atlanta: CDC; 2024. (Umbrales de hipotensión por edad.)
+- Organización Panamericana de la Salud. *Algoritmos para el manejo clínico del dengue*. CDE; 2020. (Esquema reducido del Grupo B2 y criterios de hospitalización.)
+- Organización Mundial de la Salud. *Dengue: guidelines for diagnosis, treatment, prevention and control*. Ginebra: OMS; 2009. (Sobrecarga de líquidos, furosemida e interpretación del hematocrito.)
 - Organización Mundial de la Salud. *Laboratory testing for dengue virus: interim guidance*. Abril de 2025.
 
 ## Autor
