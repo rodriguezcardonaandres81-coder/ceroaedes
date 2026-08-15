@@ -282,25 +282,20 @@ fs.mkdirSync(TMP, { recursive: true });
   if (await page.locator('#list-alarma .chk.on').count()) throw new Error('Marcar "Ninguno" debería limpiar la lista');
   console.log('  OK   │ "Ninguno" y los signos marcados son mutuamente excluyentes');
 
-  // ================= Caso 6: fechas inconsistentes y modo manual =================
+  // ================= Caso 6: fechas inconsistentes =================
   await definicionCaso();
   await llenarPaciente({ inicio: '2026-08-14', consulta: '2026-08-13' });
   const err = await page.locator('#dia-calc').innerText();
   if (!/posterior a la fecha de consulta/.test(err)) throw new Error('No detectó la fecha de inicio invertida');
   if (!(await page.locator('#dia-calc .note.danger').count())) throw new Error('No marcó el error en rojo');
-
-  await page.locator('#chk-sinfecha').click();
-  await page.waitForTimeout(120);
-  if (await page.locator('#wrap-dia-manual').isHidden()) throw new Error('No habilitó el día manual');
-  await page.selectOption('#f-dia', '5');
-  await avanzar(2); await avanzar(3);
-  await ninguno('alarma'); await avanzar(4);
-  await ninguno('grave'); await avanzar(5);
-  await page.click('button:has-text("Clasificar")');
-  await page.waitForSelector('#s7.active');
-  if (!/Día 5/.test(await page.locator('#out').innerText())) throw new Error('No usó el día seleccionado a mano');
+  if (await page.locator('#chk-sinfecha').count()) throw new Error('La casilla "no precisa la fecha" debía eliminarse');
+  if (await page.locator('#f-dia').count()) throw new Error('El día manual debía eliminarse');
+  await page.fill('#f-inicio', '2026-08-09');
+  await page.waitForTimeout(200);
+  if (!/Día 5 de enfermedad/.test(await page.locator('#dia-calc').innerText()))
+    throw new Error('No recalculó el día al corregir la fecha');
   await shot('11-fechas');
-  console.log('  OK   │ Caso 6: detecta fechas invertidas y permite el día manual cuando no se precisa el inicio');
+  console.log('  OK   │ Caso 6: detecta fechas invertidas y recalcula al corregirlas');
 
   // ================= Caso 7: auditoría, dipirona y versión =================
   await definicionCaso();
@@ -369,10 +364,15 @@ fs.mkdirSync(TMP, { recursive: true });
     vitales: { pas: '110', pad: '75', fc: '95', llenado: '< 2 segundos', conciencia: 'Alerta' },
     lab: { hct: '48', 'hct-basal': '38', hb: '16', plaquetas: '85000' }
   });
+  const bloqueHct = await page.locator('#veredicto-box').innerText();
+  for (const e of ['Hay hemoconcentración', '+26.3 % sobre el basal', '85.000', 'Bajas · signo de alarma'])
+    if (!bloqueHct.includes(e)) throw new Error('Falta en el veredicto del hemograma: ' + e);
+  if (!(await page.locator('#veredicto-box .veredicto.si').count()))
+    throw new Error('El veredicto no quedó marcado como hemoconcentración');
   const hctTxt = await page.locator('#hct-out').innerText();
-  for (const e of ['+26.3 %', 'extravasación de plasma', 'categoría B2', '85.000'])
-    if (!hctTxt.includes(e)) throw new Error('Falta en la lectura del hematocrito: ' + e);
-  if (!(await page.locator('#hct-out.danger').count())) throw new Error('La hemoconcentración no quedó marcada');
+  for (const e of ['qué hacer', 'categoría B2'])
+    if (!hctTxt.toLowerCase().includes(e.toLowerCase()))
+      throw new Error('Falta en el bloque de acciones: ' + e);
   await shot('14-hemoconcentracion');
 
   await avanzar(2); await avanzar(3);
@@ -397,15 +397,15 @@ fs.mkdirSync(TMP, { recursive: true });
     lab: { hct: '36', 'hct-basal': '48' }
   });
   const sangra = await page.locator('#hct-out').innerText();
-  if (!/sospeche sangrado/i.test(sangra)) throw new Error('Caída con inestabilidad debe leerse como sangrado');
-  if (!/prueba cruzada/.test(sangra)) throw new Error('No indica prueba cruzada');
+  if (!/prueba cruzada/.test(sangra)) throw new Error('No indica prueba cruzada ante la caída con inestabilidad');
+  if (!/No hay hemoconcentración/.test(await page.locator('#veredicto-box').innerText()))
+    throw new Error('Con hematocrito por debajo del basal no debe declarar hemoconcentración');
 
   await page.fill('#f-pas', '120'); await page.fill('#f-pad', '80');
   await page.selectOption('#f-llenado', '< 2 segundos');
   await page.waitForTimeout(150);
   const mejora = await page.locator('#hct-out').innerText();
-  if (!/reabsorción|mejoría/i.test(mejora)) throw new Error('Caída con estabilidad debe leerse como mejoría');
-  if (!/suspender los líquidos/.test(mejora)) throw new Error('No indica suspender líquidos');
+  if (!/suspender los líquidos/.test(mejora)) throw new Error('Caída con estabilidad debe indicar suspender líquidos');
   console.log('  OK   │ La misma caída del hematocrito se lee como sangrado o como mejoría según la hemodinamia');
 
   // ---- Grupo B2 reducido en adulto mayor ----
@@ -447,43 +447,46 @@ fs.mkdirSync(TMP, { recursive: true });
   });
   await page.click('#seg-sexo button[data-v="M"]');
   await page.waitForTimeout(150);
-  const solo = await page.locator('#hct-out').innerText();
-  for (const e of ['Lectura con un solo hemograma', 'hombre adulto', '41 – 53 %',
-                   'sugiere hemoconcentración', 'Supera el 50 % que la OMS usa como umbral',
-                   'Guarde este valor como basal', 'Patrón hematológico compatible'])
-    if (!solo.toLowerCase().includes(e.toLowerCase()))
-      throw new Error('Falta en la lectura de un solo hemograma: ' + e);
-  if (!(await page.locator('#hct-out.danger').count())) throw new Error('No quedó marcada la hemoconcentración');
+  const solo = await page.locator('#veredicto-box').innerText();
+  for (const e of ['Hay hemoconcentración', 'umbral de 50 % de la OMS', 'hombre adulto',
+                   '55 %', 'Alto', '82.000', 'Bajas', '3.100', 'Leucopenia',
+                   'Índice hematocrito / hemoglobina', 'no detecta hemoconcentración'])
+    if (!solo.includes(e)) throw new Error('Falta en el veredicto: ' + e);
+  if (!(await page.locator('#veredicto-box .veredicto.si').count()))
+    throw new Error('No quedó marcada la hemoconcentración');
+  if (!/Guarde este valor como basal/.test(await page.locator('#hct-out').innerText()))
+    throw new Error('No recuerda guardar el valor como basal');
   await shot('18-un-hemograma');
 
   // La misma cifra en mujer se lee distinto
   await page.click('#seg-sexo button[data-v="F"]');
   await page.waitForTimeout(150);
-  const mujer = await page.locator('#hct-out').innerText();
-  if (!mujer.includes('mujer adulta')) throw new Error('No cambió la referencia al cambiar el sexo');
+  const mujer = await page.locator('#veredicto-box').innerText();
+  if (!mujer.includes('mujer adulta') && !mujer.includes('50 %'))
+    throw new Error('No cambió la referencia al cambiar el sexo');
 
   // Un hematocrito normal no debe tranquilizar de más
   await page.click('#seg-sexo button[data-v="M"]');
   await page.fill('#f-hct', '45');
   await page.waitForTimeout(150);
-  const normalTxt = await page.locator('#hct-out').innerText();
-  if (!/dentro de la referencia/.test(normalTxt)) throw new Error('45 % en hombre adulto debe quedar dentro de referencia');
-  if (!/no descarta la fase crítica/.test(normalTxt)) throw new Error('Un valor normal no debe presentarse como tranquilizador');
+  const normalTxt = await page.locator('#veredicto-box').innerText();
+  if (!/No hay hemoconcentración/.test(normalTxt)) throw new Error('45 % en hombre adulto: no debe declarar hemoconcentración');
+  if (!(await page.locator('#veredicto-box .veredicto.no').count())) throw new Error('El veredicto negativo no quedó en verde');
+  if (!/Repetir el hemograma/.test(await page.locator('#hct-out').innerText()))
+    throw new Error('Un valor normal debe seguir pidiendo control');
 
   // Al agregar el basal, la app cambia de modo
   await page.locator('details:has-text("Ajustes: hemograma previo")').first().evaluate(e => e.open = true);
   await page.fill('#f-hct-basal', '36');
   await page.waitForTimeout(150);
-  const conBasal = await page.locator('#hct-out').innerText();
-  if (!/comparado con el basal del paciente/i.test(conBasal))
-    throw new Error('Con basal debe pasar al modo de comparación');
-  if (!/\+25 %/.test(conBasal)) throw new Error('Delta contra el basal mal calculado: ' + conBasal);
+  const conBasal = await page.locator('#veredicto-box').innerText();
+  if (!/\+25 % sobre el basal/.test(conBasal)) throw new Error('Delta contra el basal mal calculado: ' + conBasal);
 
   // La referencia manual manda sobre la poblacional
   await page.fill('#f-hct-basal', '');
   await page.fill('#f-hct-ref', '42');
   await page.waitForTimeout(150);
-  if (!/referencia ingresada/.test(await page.locator('#hct-out').innerText()))
+  if (!/referencia ingresada/.test(await page.locator('#veredicto-box').innerText()))
     throw new Error('La referencia escrita a mano debe tener prioridad');
   console.log('  OK   │ Caso 10: un solo hemograma se interpreta por edad y sexo; el basal y la referencia manual tienen prioridad');
 

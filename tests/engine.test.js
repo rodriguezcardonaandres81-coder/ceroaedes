@@ -474,6 +474,56 @@ t('Triada hemoconcentración, trombocitopenia y leucopenia se reconoce',
 t('Sin hematocrito pide registrarlo',
   ctx.interpretarHematocrito(P({ edad: '34', peso: 70 })).nivel, 'sin-datos');
 
+console.log('\n── Veredicto del hemograma ────────────────────────');
+
+const vHay = ctx.veredictoHemograma(P({ edad: '34', sexo: 'M', hctActual: '55', hb: '18',
+                                        plaquetas: '82000', leucocitos: '3100' }));
+t('Hematocrito 55 % en hombre adulto → hay hemoconcentración', vHay.estado, 'si');
+t('El veredicto se enuncia sin rodeos', vHay.titulo, 'Hay hemoconcentración');
+t('Tres fichas: hematocrito, plaquetas y leucocitos', vHay.tiles.length, 3);
+t('La ficha de plaquetas marca el signo de alarma',
+  vHay.tiles[1].estado, 'Bajas · signo de alarma');
+t('La ficha de leucocitos marca la leucopenia', vHay.tiles[2].estado, 'Leucopenia');
+t('La ficha de hematocrito lo marca como alto', vHay.tiles[0].estado, 'Alto');
+
+const vNo = ctx.veredictoHemograma(P({ edad: '34', sexo: 'M', hctActual: '44', hb: '14.5',
+                                       plaquetas: '210000', leucocitos: '6200' }));
+t('Hematocrito 44 % en hombre adulto → no hay hemoconcentración', vNo.estado, 'no');
+t('Y las tres fichas quedan normales',
+  vNo.tiles.filter(x => /Normal/.test(x.estado)).length, 3);
+
+t('Zona intermedia se marca como sugestiva',
+  ctx.veredictoHemograma(P({ edad: '34', sexo: 'F', hctActual: '45.5' })).estado, 'sugestivo');
+t('En hombre, 52 % ya supera el umbral de 50 % de la OMS',
+  ctx.veredictoHemograma(P({ edad: '34', sexo: 'M', hctActual: '52' })).estado, 'si');
+t('Con basal, +20 % da hemoconcentración',
+  ctx.veredictoHemograma(P({ edad: '34', hctBasal: '40', hctActual: '48' })).estado, 'si');
+t('Con basal, +12 % queda sugestivo',
+  ctx.veredictoHemograma(P({ edad: '34', hctBasal: '40', hctActual: '45' })).estado, 'sugestivo');
+t('Sin hematocrito no emite veredicto',
+  ctx.veredictoHemograma(P({ edad: '34' })).estado, 'sin-dato');
+
+console.log('\n── Índice hematocrito / hemoglobina ───────────────');
+
+t('Hto 45 y Hb 15 dan índice 3', ctx.indiceHtoHb(P({ hctActual: '45', hb: '15' })).valor, 3);
+t('Índice 3 se lee como coherente con la regla de tres',
+  /Coherente con la regla de tres/.test(ctx.indiceHtoHb(P({ hctActual: '45', hb: '15' })).lectura), 'true');
+t('El índice deriva la CHCM', ctx.indiceHtoHb(P({ hctActual: '45', hb: '15' })).chcm, 33.3);
+t('Índice alto se interpreta como hipocromía, no como hemoconcentración',
+  /hipocromía/.test(ctx.indiceHtoHb(P({ hctActual: '45', hb: '12.5' })).lectura), 'true');
+t('Y lo dice explícitamente',
+  /No indica hemoconcentración/.test(ctx.indiceHtoHb(P({ hctActual: '45', hb: '12.5' })).lectura), 'true');
+t('Sin hemoglobina no calcula índice', ctx.indiceHtoHb(P({ hctActual: '45', hb: '' })), null);
+t('Hemoglobina cero no divide por cero', ctx.indiceHtoHb(P({ hctActual: '45', hb: '0' })), null);
+
+/* La prueba que fija el hallazgo: en hemoconcentración pura el índice no se mueve */
+const antes = ctx.indiceHtoHb(P({ hctActual: '42', hb: '14' }));
+const despues = ctx.indiceHtoHb(P({ hctActual: '52.5', hb: '17.5' }));
+t('Hematocrito y hemoglobina suben 25 % y el índice no cambia',
+  antes.valor === despues.valor, 'true');
+t('El veredicto sí detecta esa misma hemoconcentración',
+  ctx.veredictoHemograma(P({ edad: '34', sexo: 'M', hctBasal: '42', hctActual: '52.5' })).estado, 'si');
+
 console.log('\n── Fase del curso de la enfermedad ────────────────');
 
 t('Adulto en día 2 está en fase febril',

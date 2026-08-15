@@ -61,7 +61,7 @@ El orden sigue el razonamiento clínico, no la estructura de los datos:
 
 ### 5. Día de enfermedad calculado por fechas
 
-Se registran la **fecha de inicio de síntomas** y la **fecha de consulta**, y el día se calcula solo. El día 1 es el día en que inicia la fiebre, como cuenta el INS: inicio el 12 y consulta el 13 son dos días de evolución. La app avisa si el inicio quedó después de la consulta, y permite seleccionar el día a mano cuando el paciente no precisa la fecha. Eso también deja registrar consultas de pacientes vistos días atrás.
+Se registran la **fecha de inicio de síntomas** y la **fecha de consulta**, y el día se calcula solo. El día 1 es el día en que inicia la fiebre, como cuenta el INS: inicio el 12 y consulta el 13 son dos días de evolución. La app avisa si el inicio quedó después de la consulta. Como la fecha de consulta es editable, también sirve para registrar pacientes vistos días atrás.
 
 ### 6. Ausencia confirmada, no asumida
 
@@ -81,7 +81,7 @@ Es SVG puro, sin librerías. La paleta categórica (#C2410C, #0D9488, #7C3AED) e
 
 ### 9. Hemoconcentración
 
-Se registran hematocrito, hemoglobina, plaquetas y leucocitos. **Con un solo hemograma basta**, que es la condición real de trabajo: los laboratorios se toman antes de hidratar, como indica la OMS — *«Obtain reference HCT before fluid therapy»*. La app trabaja en dos modos:
+Se registran hematocrito, hemoglobina, plaquetas y leucocitos. Basta un hemograma, tomado antes de hidratar como indica la OMS — *«Obtain reference HCT before fluid therapy»*. El resultado se presenta como un **veredicto directo** —hay, no hay o es sugestiva de hemoconcentración— con tres fichas de lectura rápida para hematocrito, plaquetas y leucocitos, y debajo solo las acciones a seguir. La app trabaja en dos modos:
 
 **Con un solo hemograma**, lo compara con la referencia para edad y sexo (editable, porque cada laboratorio tiene la suya) y aplica los umbrales absolutos de la OMS: en choque, hematocrito **< 40 % en niños y mujeres adultas o < 45 % en hombres adultos indica sangrado**; **> 50 % o en ascenso tras el primer bolo indica fuga persistente**. Ese valor queda además como basal para los controles siguientes.
 
@@ -94,7 +94,7 @@ Se registran hematocrito, hemoglobina, plaquetas y leucocitos. **Con un solo hem
 | **Baja** | **inestable** | **Hemorragia**. Prueba cruzada y transfusión — no es mejoría |
 | **Baja** | **estable** | **Reabsorción**. Criterio para reducir y suspender los líquidos |
 
-Incluye una comprobación de coherencia entre hematocrito y hemoglobina (regla de tres) que avisa de posibles errores de laboratorio antes de que una cifra equivocada mueva una decisión.
+**Sobre el índice hematocrito/hemoglobina.** La app lo calcula y lo muestra, pero con la etiqueta correcta: es la *regla de tres*, equivalente a 100 dividido por la CHCM, y sirve para detectar **hipocromía** o un problema de la muestra. **No detecta hemoconcentración**: en la extravasación de plasma el hematocrito y la hemoglobina suben en la misma proporción, de modo que el índice no se mueve. Hay una prueba automatizada que fija ese hecho — sube ambos valores un 25 % y verifica que el índice permanece idéntico mientras el veredicto sí detecta la hemoconcentración.
 
 ### 10. Módulo de seguridad de la infusión
 
@@ -152,7 +152,7 @@ ceroaedes/
 ├── sw.js                   # Service worker (uso sin conexión)
 ├── assets/                 # Iconos
 ├── tests/
-│   ├── engine.test.js      # 275 pruebas del motor clínico
+│   ├── engine.test.js      # 297 pruebas del motor clínico
 │   └── ui.test.js          # Recorridos en navegador real + validación del .docx
 ├── LICENSE
 └── README.md
@@ -176,7 +176,7 @@ El motor verifica la definición operativa de caso, la clasificación en los cua
 Después de editar `index.html`, suba el número de versión en `sw.js`:
 
 ```js
-const VERSION = 'ceroaedes-v2.8.1';
+const VERSION = 'ceroaedes-v2.9.1';
 ```
 
 Sin ese cambio, los celulares que ya la tengan instalada seguirán mostrando la versión cacheada.

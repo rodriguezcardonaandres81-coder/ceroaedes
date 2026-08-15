@@ -134,6 +134,31 @@ footer b{color:var(--text)}
 
 
 
+
+/* ===== Veredicto del hemograma ===== */
+.veredicto{border-radius:12px;padding:14px 16px;margin-bottom:10px;border:2px solid;text-align:center}
+.veredicto .vd-lbl{font-size:.64rem;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;opacity:.75}
+.veredicto .vd-val{font-size:1.18rem;font-weight:800;margin:3px 0 5px;line-height:1.25}
+.veredicto .vd-det{font-size:.79rem;line-height:1.45;opacity:.95}
+.veredicto.si{background:#FDECEC;border-color:#B71C1C;color:#7F1414}
+.veredicto.sugestivo{background:#FFF8E1;border-color:#F9A825;color:#6D4C00}
+.veredicto.no{background:#EAF6EC;border-color:#2E7D32;color:#1B5E20}
+.veredicto.sin-dato{background:#F5F7FA;border-color:#CFD6DD;color:#5A6673}
+
+.fichas{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:8px;margin-bottom:10px}
+.ficha{border:1.5px solid var(--line);border-radius:10px;padding:9px 8px;text-align:center;background:#fff}
+.ficha .f-lbl{font-size:.63rem;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--muted)}
+.ficha .f-val{font-size:1.02rem;font-weight:800;margin:3px 0 2px;color:var(--text);letter-spacing:-.3px}
+.ficha .f-est{font-size:.66rem;font-weight:800;letter-spacing:.3px;line-height:1.3}
+.ficha.ok{border-color:#BFE0C7}      .ficha.ok .f-est{color:#2E7D32}
+.ficha.warn{border-color:#F3DFA8}    .ficha.warn .f-est{color:#8A6100}
+.ficha.danger{border-color:#EFBEBE;background:#FDF7F7} .ficha.danger .f-est{color:#B71C1C}
+.ficha-nota{font-size:.74rem;line-height:1.45;color:var(--muted);margin-bottom:8px}
+.ficha-nota b{color:var(--text)}
+.indice{font-size:.75rem;line-height:1.45;padding:9px 11px;border-radius:8px;border-left:3px solid}
+.indice.ok{background:#F3F9F5;border-color:#2E7D32;color:#2F4A36}
+.indice.warn{background:#FFFBF0;border-color:#F9A825;color:#6D4C00}
+
 /* ===== Curva del curso de la enfermedad ===== */
 .curva{width:100%;height:auto;display:block;font-family:inherit}
 .curva text{text-anchor:middle}
@@ -362,28 +387,12 @@ footer b{color:var(--text)}
 
     <div id="dia-calc"></div>
 
-    <div class="chk" id="chk-sinfecha" style="margin-top:4px">
-      <input type="checkbox"><div class="t">No precisa la fecha de inicio<span class="d">Habilita la selección manual del día de enfermedad.</span></div>
-    </div>
-
-    <div id="wrap-dia-manual" style="display:none">
-      <label>Día de enfermedad (día de fiebre)</label>
-      <select id="f-dia" onchange="syncDia()">
-        <option value="">Seleccione…</option>
-        <option value="1">Día 1</option><option value="2">Día 2</option>
-        <option value="3">Día 3</option><option value="4">Día 4</option>
-        <option value="5">Día 5</option><option value="6">Día 6</option>
-        <option value="7">Día 7</option><option value="8">Día 8 o más</option>
-        <option value="0">Afebril / no precisa</option>
-      </select>
-    </div>
 
   </div>
 
   <div class="card">
     <div class="sec-title">Fase del curso de la enfermedad</div>
     <div id="fase-critica-alert"></div>
-    <div class="c-nota">Curvas esquemáticas del curso típico del dengue (OMS): ilustran la evolución esperada, no las mediciones de este paciente.</div>
   </div>
 
   <div class="card">
@@ -420,9 +429,6 @@ footer b{color:var(--text)}
   <div class="card">
     <div class="sec-title">Hemograma y hemoconcentración</div>
     <div class="note info" style="margin-bottom:12px">
-      Con <b>un solo hemograma</b> basta: la app lo compara con la referencia para la edad y el sexo y aplica los
-      umbrales absolutos de la OMS. Si además tiene un hemograma previo del mismo paciente, la comparación gana
-      confiabilidad y la app la prefiere.<br><br>
       <b>Tómelo antes de hidratar.</b> La OMS lo indica así: <i>«Obtain reference HCT before fluid therapy»</i>.
       Ese valor queda como basal del paciente para todos los controles siguientes.
     </div>
@@ -435,6 +441,8 @@ footer b{color:var(--text)}
       <div><label>Plaquetas (/mm³)</label><input type="number" id="f-plaquetas" step="1000" min="0" placeholder="Ej: 85000" oninput="syncLab()"></div>
       <div><label>Leucocitos (/mm³)</label><input type="number" id="f-leucocitos" step="100" min="0" placeholder="Ej: 3200" oninput="syncLab()"></div>
     </div>
+
+    <div id="veredicto-box"></div>
 
     <div id="hct-out" class="note info">
       Registre el hematocrito para evaluar la hemoconcentración.
@@ -577,7 +585,7 @@ footer b{color:var(--text)}
 
 /* === ENGINE START === */
 
-var APP_VERSION = '2.8.0';   /* fuente única: pie de página, Word y service worker */
+var APP_VERSION = '2.9.0';   /* fuente única: pie de página, Word y service worker */
 
 /* Origen de cada criterio: 'ficha' = casilla de la sección 6 de la ficha;
    'prot' = está en la definición del protocolo pero no como casilla. */
@@ -1171,6 +1179,79 @@ function referenciaHematocrito(S){
            : { bajo:36, alto:46, medio:41, etiqueta:'mujer adulta' };
 }
 
+/* Índice hematocrito/hemoglobina — la «regla de tres».
+   No detecta hemoconcentración: en la fuga de plasma el hematocrito y la
+   hemoglobina suben en la misma proporción y el índice no se mueve. Lo que mide
+   es la concentración de hemoglobina del glóbulo rojo, porque el índice es
+   exactamente 100/CHCM. Un índice alto significa hipocromía, no fuga. */
+function indiceHtoHb(S){
+  var hto = parseFloat(S.hctActual), hb = parseFloat(S.hb);
+  if(isNaN(hto) || isNaN(hb) || hb <= 0) return null;
+  var v = Math.round((hto/hb)*100)/100, chcm = Math.round((hb/hto)*1000)/10;
+  if(v >= 2.8 && v <= 3.2)
+    return { valor:v, chcm:chcm, tono:'ok', lectura:'Coherente con la regla de tres. CHCM ' + chcm + ' g/dL.' };
+  if(v > 3.2)
+    return { valor:v, chcm:chcm, tono:'warn',
+      lectura:'Índice alto: equivale a una CHCM de ' + chcm + ' g/dL, es decir hipocromía. Oriente a ferropenia o rasgo talasémico, o a un problema de la muestra. No indica hemoconcentración.' };
+  return { valor:v, chcm:chcm, tono:'warn',
+    lectura:'Índice bajo: CHCM ' + chcm + ' g/dL. Revise la coherencia de las dos cifras antes de decidir sobre ellas.' };
+}
+
+/* Veredicto directo: hay o no hay hemoconcentración */
+function veredictoHemograma(S){
+  var act = parseFloat(S.hctActual), plq = parseFloat(S.plaquetas), leu = parseFloat(S.leucocitos);
+  var d = deltaHematocrito(S.hctBasal, S.hctActual), ref = refEfectiva(S);
+  var v = { estado:'sin-dato', titulo:'', detalle:'', tiles:[], indice: indiceHtoHb(S) };
+
+  /* --- hemoconcentración --- */
+  if(!isNaN(act)){
+    if(d !== null){
+      if(d >= 20){ v.estado = 'si'; v.detalle = 'Hematocrito ' + act + ' %, +' + d + ' % sobre el basal del paciente. El ascenso del 20 % o más es el marcador de extravasación de plasma.'; }
+      else if(d >= 10){ v.estado = 'sugestivo'; v.detalle = 'Hematocrito ' + act + ' %, +' + d + ' % sobre el basal. Todavía no alcanza el 20 %, pero la tendencia va en ascenso.'; }
+      else if(d < 0){ v.estado = 'no'; v.detalle = 'Hematocrito ' + act + ' %, ' + d + ' % respecto al basal. No hay hemoconcentración; interprete la caída junto con la hemodinamia.'; }
+      else { v.estado = 'no'; v.detalle = 'Hematocrito ' + act + ' %, +' + d + ' % sobre el basal. Sin hemoconcentración significativa.'; }
+    } else if(ref){
+      var dr = Math.round(((act - ref.medio)/ref.medio)*1000)/10;
+      if(act > HCT_ALTO_OMS || act > ref.alto){
+        v.estado = 'si';
+        v.detalle = 'Hematocrito ' + act + ' %, por encima ' + (act > HCT_ALTO_OMS ? 'del umbral de 50 % de la OMS' : 'el límite superior de referencia (' + ref.alto + ' %)') +
+          ' para ' + ref.etiqueta + '.';
+      } else if(dr >= 10){
+        v.estado = 'sugestivo';
+        v.detalle = 'Hematocrito ' + act + ' %, +' + dr + ' % sobre el punto medio de referencia para ' + ref.etiqueta + ' (' + ref.medio + ' %). Dentro del rango, pero en su parte alta.';
+      } else {
+        v.estado = 'no';
+        v.detalle = 'Hematocrito ' + act + ' % frente a la referencia para ' + ref.etiqueta + ' (' + ref.bajo + ' – ' + ref.alto + ' %).';
+      }
+    }
+  }
+  v.titulo = { si:'Hay hemoconcentración', sugestivo:'Hemoconcentración sugestiva',
+               no:'No hay hemoconcentración', 'sin-dato':'Registre el hematocrito' }[v.estado];
+
+  /* --- fichas de lectura rápida --- */
+  if(!isNaN(act)){
+    var alto = (act > HCT_ALTO_OMS) || (ref && act > ref.alto), bajo = (ref && act < ref.bajo);
+    v.tiles.push({ k:'hto', etiqueta:'Hematocrito', valor: act + ' %',
+      estado: alto ? 'Alto' : (bajo ? 'Bajo' : 'Normal'),
+      tono: alto ? 'danger' : (bajo ? 'warn' : 'ok') });
+  }
+  if(!isNaN(plq)){
+    var pbaja = plq < 100000;
+    v.tiles.push({ k:'plq', etiqueta:'Plaquetas', valor: plq.toLocaleString('es-CO'),
+      estado: pbaja ? 'Bajas · signo de alarma' : 'Normales',
+      tono: pbaja ? 'danger' : 'ok',
+      nota: pbaja ? 'Por debajo de 100.000 /mm³ es signo de alarma de la ficha: márquelo.' : null });
+  }
+  if(!isNaN(leu)){
+    var lbajo = leu < 4000;
+    v.tiles.push({ k:'leu', etiqueta:'Leucocitos', valor: leu.toLocaleString('es-CO'),
+      estado: lbajo ? 'Leucopenia' : 'Normales',
+      tono: lbajo ? 'warn' : 'ok',
+      nota: lbajo ? 'La leucopenia cuenta como manifestación para la definición de caso.' : null });
+  }
+  return v;
+}
+
 /* Umbrales absolutos de la OMS 2009 (diagrama de manejo de casos, capítulo 2).
    En choque: «if HCT was low (<40% in children and adult females, <45% in adult
    males) this indicates bleeding». Y «if HCT increases/still high (>50%)» marca
@@ -1526,6 +1607,7 @@ function construirReporte(S){
   m.hemo = evaluacionHemodinamica(S);
   m.fase = faseDeLaEnfermedad(S);
   m.hct = interpretarHematocrito(S);
+  m.veredicto = veredictoHemograma(S);
   m.seguridad = moduloSeguridad(S);
   m.auditoria = auditoria(S);
   m.laboratorio = laboratorio(S);
@@ -1562,6 +1644,12 @@ function construirReporte(S){
   plan.fases.forEach(function(f){
     L.push('· ' + f.n + ': ' + f.rate + ' (' + f.mlkg + ', ' + f.dur + ')' + (f.hora !== 'condicional' ? ' — inicio estimado ' + f.hora : '') + '.' + (f.nota ? ' ' + f.nota : ''));
   });
+  if(m.veredicto.estado !== 'sin-dato'){
+    L.push('HEMOGRAMA: ' + m.veredicto.titulo + '. ' + m.veredicto.detalle);
+    m.veredicto.tiles.forEach(function(t){ L.push('· ' + t.etiqueta + ' ' + t.valor + ' — ' + t.estado + '.'); });
+    if(m.veredicto.indice) L.push('· Índice hematocrito/hemoglobina ' + m.veredicto.indice.valor + '. ' + m.veredicto.indice.lectura);
+    L.push('');
+  }
   if(m.hct.nivel !== 'sin-datos'){
     L.push('HEMOCONCENTRACIÓN: ' + m.hct.titulo + '. ' + m.hct.mensaje);
     m.hct.acciones.forEach(function(x){ L.push('· ' + x); });
@@ -1605,7 +1693,7 @@ var S = {
   endemica:false, fiebre:false, manif:[], torniquete:'nr',
   alarma:[], sinAlarma:false, grave:[], sinGrave:false,
   cond:[], social:[], toleraVO:true, diuresisOk:true,
-  sinFecha:false, pas:'', pad:'', fc:'', fr:'', temp:'', sato2:'', llenado:'', conciencia:'',
+  pas:'', pad:'', fc:'', fr:'', temp:'', sato2:'', llenado:'', conciencia:'',
   hctBasal:'', hctActual:'', hctRef:'', hb:'', plaquetas:'', leucocitos:''
 };
 var MODELO = null;
@@ -1664,22 +1752,53 @@ function renderRefSugerida(){
     : 'Registre la edad y el sexo para sugerir la referencia poblacional.';
 }
 
+function bloqueVeredicto(S){
+  var v = veredictoHemograma(S), o = [];
+  if(v.estado === 'sin-dato' && !v.tiles.length) return '';
+
+  o.push('<div class="veredicto ' + v.estado + '">' +
+    '<div class="vd-lbl">Hemoconcentración</div>' +
+    '<div class="vd-val">' + v.titulo + '</div>' +
+    (v.detalle ? '<div class="vd-det">' + v.detalle + '</div>' : '') + '</div>');
+
+  if(v.tiles.length){
+    o.push('<div class="fichas">' + v.tiles.map(function(t){
+      return '<div class="ficha ' + t.tono + '"><div class="f-lbl">' + t.etiqueta + '</div>' +
+        '<div class="f-val">' + t.valor + '</div><div class="f-est">' + t.estado + '</div></div>';
+    }).join('') + '</div>');
+    var notas = v.tiles.filter(function(t){ return t.nota; });
+    if(notas.length) o.push('<div class="ficha-nota">' + notas.map(function(t){
+      return '<b>' + t.etiqueta + ':</b> ' + t.nota; }).join('<br>') + '</div>');
+  }
+
+  if(v.indice){
+    o.push('<div class="indice ' + v.indice.tono + '"><b>Índice hematocrito / hemoglobina: ' + v.indice.valor + '</b> — ' +
+      v.indice.lectura + '<br><span style="opacity:.85">Este índice no detecta hemoconcentración: en la fuga de plasma el hematocrito ' +
+      'y la hemoglobina suben en la misma proporción y el índice no se mueve. Equivale a 100 dividido por la CHCM.</span></div>');
+  }
+  return o.join('');
+}
+
 function renderHct(){
-  var r = interpretarHematocrito(S), o = $('hct-out');
+  var r = interpretarHematocrito(S), v = veredictoHemograma(S), o = $('hct-out'), vb = $('veredicto-box');
   renderRefSugerida();
-  if(r.nivel === 'sin-datos' && !r.notas.length){
+  if(vb) vb.innerHTML = bloqueVeredicto(S);
+
+  if(v.estado === 'sin-dato' && !v.tiles.length){
+    o.style.display = 'block';
     o.className = 'note info';
-    o.innerHTML = r.titulo + '. ' + r.mensaje;
+    o.innerHTML = 'Registre el hematocrito para evaluar la hemoconcentración. Con hemoglobina, plaquetas y leucocitos la lectura es más completa.';
     return;
   }
+  /* El veredicto ya dice qué pasa: aquí solo va qué hacer */
+  if(!r.acciones.length){ o.style.display = 'none'; return; }
+  o.style.display = 'block';
   o.className = 'note ' + TONO_HCT[r.nivel];
-  o.innerHTML = (r.modo === 'referencia' ? '<div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.5px;opacity:.75;margin-bottom:4px">Lectura con un solo hemograma</div>' :
-                 (r.modo === 'basal' ? '<div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.5px;opacity:.75;margin-bottom:4px">Comparado con el basal del paciente</div>' : '')) +
-    '<b>' + r.titulo + '.</b><div style="margin-top:5px">' + r.mensaje + '</div>' +
-    (r.acciones.length ? '<ul class="clean" style="margin:7px 0 0">' +
-      r.acciones.map(function(x){ return '<li>' + x + '</li>'; }).join('') + '</ul>' : '') +
-    (r.notas.length ? '<div style="margin-top:8px;font-size:.95em;opacity:.9">' +
-      r.notas.map(function(x){ return '· ' + x; }).join('<br>') + '</div>' : '');
+  o.innerHTML = '<div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.5px;opacity:.75;margin-bottom:5px">Qué hacer</div>' +
+    '<ul class="clean" style="margin:0">' + r.acciones.map(function(x){ return '<li>' + x + '</li>'; }).join('') + '</ul>' +
+    (r.modo === 'referencia'
+      ? '<div style="margin-top:7px;font-size:.95em;opacity:.85">Lectura sobre una sola muestra: la OMS prefiere el hematocrito de la fase febril temprana del propio paciente. Guarde este valor como basal.</div>'
+      : '');
 }
 
 function syncVitales(){
@@ -1768,13 +1887,10 @@ function setSexo(v){
   if(v === 'M'){ S.embarazo = false; $('f-embarazo').checked = false; $('f-embarazo').parentNode.classList.remove('on'); }
   syncEdad(); syncPeso(); renderRefSugerida();
 }
-function syncDia(){ S.dia = $('f-dia').value; renderFaseCritica(); }
-
 function syncFechas(){
   S.fechaInicio = $('f-inicio').value;
   S.fecha = $('f-fecha').value;
   var d = diaDeEnfermedad(S.fechaInicio, S.fecha), box = $('dia-calc');
-  if(S.sinFecha){ box.innerHTML = ''; renderFaseCritica(); return; }
   if(d === null){
     if(S.fechaInicio && S.fecha){
       box.innerHTML = '<div class="note danger">La fecha de inicio de síntomas es posterior a la fecha de consulta. Revise las dos fechas.</div>';
@@ -1791,13 +1907,6 @@ function syncFechas(){
   renderFaseCritica();
 }
 
-function setSinFecha(v){
-  S.sinFecha = v;
-  $('wrap-dia-manual').style.display = v ? 'block' : 'none';
-  $('f-inicio').disabled = v;
-  if(v){ S.dia = $('f-dia').value; $('dia-calc').innerHTML = ''; renderFaseCritica(); }
-  else syncFechas();
-}
 
 /* ================= Gráfica del curso de la enfermedad =================
    Figura de referencia de la OMS: fases, curva térmica, hematocrito y plaquetas,
@@ -2055,7 +2164,7 @@ function evaluar(){
     }).join('') + '</div></details>');
 
   if(m.hct.nivel !== 'sin-datos' || m.hct.notas.length){
-    o.push('<div class="card"><div class="sec-title">Hemoconcentración</div>' +
+    o.push('<div class="card"><div class="sec-title">Hemoconcentración</div>' + bloqueVeredicto(S) +
       '<div class="note ' + TONO_HCT[m.hct.nivel] + '" style="margin-bottom:0"><b>' + m.hct.titulo + '.</b>' +
       '<div style="margin-top:5px">' + m.hct.mensaje + '</div>' +
       (m.hct.acciones.length ? '<ul class="clean" style="margin:7px 0 0">' +
@@ -2295,6 +2404,17 @@ function documentoXml(m){
 
   if(m.hct.nivel !== 'sin-datos' || m.hct.notas.length){
     b.push(wH1('Hemoconcentración'));
+    if(m.veredicto.estado !== 'sin-dato'){
+      b.push(wP(wR(m.veredicto.titulo, { b:true, sz:22,
+        color: m.veredicto.estado === 'si' ? 'B71C1C' : (m.veredicto.estado === 'sugestivo' ? '8A6100' : '2E7D32') }), { after:30 }));
+      b.push(wP(wR(m.veredicto.detalle, { sz:18, color:'4A4A55' }), { after:50 }));
+      if(m.veredicto.tiles.length)
+        b.push(wTabla([['Parámetro','Valor','Lectura']].concat(
+          m.veredicto.tiles.map(function(t){ return [t.etiqueta, t.valor, t.estado]; })), [3000, 2600, 3600]));
+      if(m.veredicto.indice)
+        b.push(wP(wR('Índice hematocrito/hemoglobina ' + m.veredicto.indice.valor + '. ' + m.veredicto.indice.lectura,
+          { sz:18, color:'4A4A55' }), { after:60 }));
+    }
     b.push(wP(wR(m.hct.titulo, { b:true, sz:20, color: (m.hct.nivel === 'fuga' || m.hct.nivel === 'sangrado') ? 'B71C1C' : '1B6B5A' }), { after:40 }));
     b.push(wP(wR(m.hct.mensaje, { sz:18, color:'4A4A55' }), { after:50 }));
     m.hct.acciones.forEach(function(x){ b.push(wBullet(x)); });
@@ -2431,7 +2551,6 @@ function bindInv(id, cb){
   $('f-hora').value = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
   S.hora = $('f-hora').value;
   $('f-hora').addEventListener('change', function(){ S.hora = this.value; });
-  bindInv('chk-sinfecha', function(v){ setSinFecha(v); });
   syncFechas();
 
   buildList('list-manif', MANIF, 'manif');
