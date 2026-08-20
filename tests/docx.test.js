@@ -44,6 +44,7 @@ function t(nombre, real, esperado) {
   await page.locator('#f-fiebre').click();
   await page.locator('#list-manif .chk').nth(0).click();
   await page.locator('#list-manif .chk').nth(2).click();
+  await page.locator('#f-nexo').click();
   await page.click('#s1 button:has-text("Siguiente")');
   await page.fill('#f-nombre', 'Ana <b>Muñoz</b> & Peña');
   await page.fill('#f-edad', '34');
@@ -60,6 +61,8 @@ function t(nombre, real, esperado) {
   await page.click('#s4 button:has-text("Siguiente")');
   await page.locator('#list-grave .chk').nth(0).click();   // shock
   await page.click('#s5 button:has-text("Siguiente")');
+  await page.selectOption('#f-ingesta', 'agua');
+  await page.locator('#list-automed .chk').first().click();   // AINE
   await page.click('#s6 button:has-text("Clasificar y calcular manejo")');
   await page.waitForSelector('#s7.active');
 
@@ -144,6 +147,13 @@ function t(nombre, real, esperado) {
   t('La conducta lleva la velocidad de bomba', /Con bomba: /.test(doc), 'true');
   t('El Word conserva la lectura del hematocrito', /Lectura del hematocrito/.test(doc), 'true');
   t('El pie numera las páginas', /w:instr=" PAGE "/.test(pie), 'true');
+
+  /* Ítems 3, 4.2, 7, 8, 17 y 23 del instrumento de MinSalud */
+  t('El Word rotula el destino del paciente', /Destino del paciente/.test(doc), 'true');
+  t('El Word registra el nexo epidemiológico', /Nexo epidemiológico para arbovirosis PRESENTE/.test(doc), 'true');
+  t('El Word ya no menciona la vacuna contra el dengue', /vacuna/i.test(doc), 'false');
+  t('El Word corrige la ingesta de solo agua', /NO reponen los electrolitos/.test(doc), 'true');
+  t('El Word ordena suspender el AINE', /SUSPENDER de inmediato/.test(doc), 'true');
 
   console.log('\n── Documento Word: apertura real ─────────────────');
 

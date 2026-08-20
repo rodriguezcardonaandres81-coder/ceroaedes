@@ -152,9 +152,9 @@ ceroaedes/
 ├── sw.js                   # Service worker (uso sin conexión)
 ├── assets/                 # Iconos
 ├── tests/
-│   ├── engine.test.js      # 355 pruebas del motor clínico
-│   ├── ui.test.js          # 23 recorridos en navegador real
-│   └── docx.test.js        # 43 comprobaciones del documento Word generado
+│   ├── engine.test.js      # 405 pruebas del motor clínico
+│   ├── ui.test.js          # 26 recorridos en navegador real
+│   └── docx.test.js        # 48 comprobaciones del documento Word generado
 ├── LICENSE
 └── README.md
 ```
@@ -166,25 +166,63 @@ La función `construirReporte()` produce un único modelo de datos del que se de
 ## Pruebas
 
 ```bash
-npm test                                  # 355 pruebas del motor clínico (sin navegador)
+npm test                                  # 405 pruebas del motor clínico (sin navegador)
 npm i -D playwright
-npm run test:ui                           # 23 recorridos de interfaz en Chromium real
-npm run test:docx                         # 43 comprobaciones del .docx exportado
+npm run test:ui                           # 26 recorridos de interfaz en Chromium real
+npm run test:docx                         # 48 comprobaciones del .docx exportado
 npm run test:all                          # las tres suites
 ```
 
 **Motor clínico** — definición operativa de caso, clasificación en los cuatro grupos, volúmenes de cada fase para adulto y pediátrico, dosis reducidas en gestación y adulto mayor, ajuste por peso ideal, conversiones a goteo, selección de laboratorios por día de enfermedad, lectura del hematocrito y válvulas de seguridad de la infusión.
 
-**Interfaz** — los trece recorridos completos, incluidos los casos que antes fallaban: notación decimal colombiana, rangos de plausibilidad, operación con teclado y persistencia de las decisiones del médico.
+**Interfaz** — los recorridos completos, incluidos los casos que antes fallaban: notación decimal colombiana, rangos de plausibilidad, operación con teclado y persistencia de las decisiones del médico.
 
 **Documento Word** — descarga el `.docx` real desde el navegador, comprueba la integridad del ZIP y del CRC de cada miembro, valida cada parte XML contra el esquema **ISO/IEC 29500-4**, verifica el escapado del texto de origen humano, la justificación y la negrita del cuerpo, la ausencia de grises ilegibles, y lo abre con LibreOffice para confirmar que no pide reparación.
+
+## Cobertura del instrumento de MinSalud
+
+La aplicación **no es un instrumento de auditoría de historia clínica**: está pensada para el médico sin experiencia en dengue que necesita clasificar, calcular líquidos y saber qué pedir. Del *Instrumento de seguimiento y evaluación de casos de dengue* (MinSalud) recoge, por tanto, solo los ítems que **cambian la conducta**, no los que sirven para calificar a una IPS.
+
+| Ítem | Cubierto | Cómo |
+|---|---|---|
+| 1 Fiebre caracterizada | Sí | Fecha de inicio, día de enfermedad calculado y temperatura |
+| 2 Definición de caso | Sí | Las 6 manifestaciones de la ficha SIVIGILA |
+| 3 Nexo epidemiológico | Sí | Refuerza la sospecha y orienta el diferencial |
+| 4.1 Antecedentes personales | Sí | Como condiciones asociadas, que son las que mueven a B1 |
+| 5 Riesgo social | Sí | Vive solo, transporte, pobreza |
+| 6 Signos de alarma | Sí | Los 12, con constancia del negativo |
+| 7 Ingesta de líquidos | Sí | La ingesta nula equivale a intolerancia oral y lleva a B1 |
+| 8 Automedicación | Sí | Cada fármaco genera su conducta correctiva |
+| 10–15 Examen físico | Sí | Signos vitales, hemodinamia, torniquete, hemorragias, abdomen |
+| 16–19 Laboratorio | Sí | Hemograma, imágenes, función hepática y pruebas confirmatorias por día |
+| 20–22 Diagnóstico y manejo | Sí | Diferencial, clasificación por gravedad y por grupo A/B1/B2/C |
+| 23–24 Destino del paciente | Sí | Ambulatorio, hospitalización o UCI, rotulado explícitamente |
+| 31–56 Manejo | Sí | Plan de líquidos por fase, antipirético, contraindicaciones y monitoreo |
+
+**Deliberadamente fuera de alcance**, por ser datos administrativos o de auditoría institucional: ítem 9 (conciliación medicamentosa), 25–30 (remisión, tiempos, IPS destino), 57–65 (nivel de apropiación de la IPS), y los campos de afiliación, aseguradora, desenlace, autopsia y evaluador.
+
+## Un solo archivo para todas las pantallas
+
+No hay una versión "de celular" y otra "de computador": es el mismo `index.html` respondiendo al espacio disponible. El diseño base es de celular —es donde se usa en consulta— y de ahí crece por escalones.
+
+| Ancho | Contenedor | Qué cambia |
+|---|---|---|
+| < 360 px | 100 % | Menos relleno; los campos pareados pasan a una columna |
+| 360 – 699 px | 100 % (máx. 470 px) | Diseño base de celular |
+| 700 – 999 px | 700 px | Más aire; los botones dejan de ocupar el ancho completo |
+| 1000 – 1319 px | 1000 px | Las listas de criterios se reparten en **dos columnas** |
+| ≥ 1320 px | 1180 px | Deja de crecer: más ancho vuelve incómoda la lectura |
+
+Además hay un ajuste para pantallas bajas en horizontal, y una hoja de impresión que oculta botones y barra de pasos y despliega los acordeones.
+
+Las fases del plan de líquidos quedan **a propósito en una sola columna** en todos los tamaños: son una secuencia de administración y repartirlas en dos invita a leerlas fuera de orden.
 
 ## Actualizar la aplicación en los dispositivos
 
 Después de editar `index.html`, suba el número de versión en `sw.js`:
 
 ```js
-const VERSION = 'ceroaedes-v3.1.1';
+const VERSION = 'ceroaedes-v3.2.1';
 ```
 
 Sin ese cambio, los celulares que ya la tengan instalada seguirán mostrando la versión cacheada.

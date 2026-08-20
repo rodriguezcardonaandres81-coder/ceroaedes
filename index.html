@@ -147,6 +147,9 @@ footer b{color:var(--text)}
 .veredicto.sugestivo{background:#FFF8E1;border-color:#F9A825;color:#6D4C00}
 .veredicto.no{background:#EAF6EC;border-color:#2E7D32;color:#1B5E20}
 .veredicto.sin-dato{background:#F5F7FA;border-color:#CFD6DD;color:#5A6673}
+.veredicto.sin-referencia{background:#F0F5FB;border-color:#5B8DB8;color:#1B4A73}
+.ficha.neutro{background:#F5F7FA;border-color:#CFD6DD}
+.ficha.neutro .f-est{color:#5A6673}
 
 .fichas{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:8px;margin-bottom:10px}
 .ficha{border:1.5px solid var(--line);border-radius:10px;padding:9px 8px;text-align:center;background:#fff}
@@ -235,6 +238,80 @@ footer b{color:var(--text)}
   .w-chips span{opacity:1}
 }
 
+/* ==================================================================
+   Adaptación al tamaño de pantalla
+   El diseño base es de celular — es donde se usa en consulta. A partir de
+   ahí la aplicación se ensancha por escalones: primero gana ancho y aire,
+   luego reparte las listas largas en dos columnas y pone los botones en
+   fila, que es lo que hace usable un monitor de escritorio.
+   Todo se resuelve con CSS: no hay una versión "de PC" y otra "de celular",
+   es el mismo archivo respondiendo al espacio disponible.
+   ================================================================== */
+
+/* --- Tableta vertical y ventanas medianas --- */
+@media (min-width: 700px){
+  body{font-size:15.5px}
+  #app-container{max-width:700px;margin:18px 0;min-height:calc(100vh - 36px);border-radius:20px}
+  header{padding:22px 28px 18px}
+  .brand{font-size:1.9rem}
+  .content{padding:20px 26px 26px}
+  .step-title{font-size:1.2rem}
+  .step-sub{font-size:.85rem;margin-bottom:18px}
+  .card{padding:20px}
+  .card.tight{padding:16px}
+  /* Los botones dejan de ocupar el ancho completo y se acomodan en fila */
+  .screen>.btn{width:auto;min-width:230px;display:inline-block;vertical-align:top;margin-right:10px}
+}
+
+/* --- Escritorio: listas en dos columnas --- */
+@media (min-width: 1000px){
+  body{font-size:16px;align-items:flex-start}
+  #app-container{max-width:1000px;margin:26px 0;min-height:calc(100vh - 52px)}
+  .content{padding:24px 34px 32px}
+  .step-title{font-size:1.35rem}
+  /* Las listas de criterios son lo que más gana con el ancho: 12 signos de
+     alarma en una sola columna obligan a desplazarse; en dos caben de un vistazo. */
+  #list-manif,#list-alarma,#list-grave,#list-cond,#list-social,#list-automed{
+    display:grid;grid-template-columns:1fr 1fr;gap:0 12px;align-items:start}
+  #list-manif .chk,#list-alarma .chk,#list-grave .chk,
+  #list-cond .chk,#list-social .chk,#list-automed .chk{margin-bottom:10px}
+  /* Los cuatro botones del resultado caben en una sola fila a este ancho */
+  .screen>.btn{min-width:200px}
+  .result-hero{padding:26px}
+  .result-hero .name{font-size:1.6rem}
+  table.t{font-size:.9rem}
+  /* La tabla del plan de líquidos y las fichas del hemograma respiran */
+  /* Las fases del plan quedan a propósito en UNA columna: son una secuencia de
+     administración y repartirlas en dos invita a leerlas fuera de orden. */
+  .phase{padding:16px}
+}
+
+/* --- Monitores grandes: se detiene el crecimiento --- */
+@media (min-width: 1320px){
+  #app-container{max-width:1180px}
+  .content{padding:26px 44px 36px}
+  /* Más allá de este ancho una línea de texto se vuelve incómoda de leer,
+     así que el contenedor deja de crecer aunque sobre pantalla. */
+}
+
+/* --- Pantallas muy bajas o en horizontal: menos aire vertical --- */
+@media (max-height: 560px) and (orientation: landscape){
+  header{padding:10px 20px 8px}
+  .brand{font-size:1.25rem}
+  .tagline{display:none}
+  #app-container{margin:0;border-radius:0;min-height:100vh}
+}
+
+/* --- Celulares angostos: que nada se salga --- */
+@media (max-width: 360px){
+  body{font-size:14.5px}
+  .content{padding:12px 13px 18px}
+  .card{padding:13px}
+  .card.tight{padding:10px}
+  .row.g2{grid-template-columns:1fr}
+  .brand{font-size:1.4rem}
+}
+
 @media print{
   body{background:#fff;display:block}
   #app-container{max-width:100%;box-shadow:none;margin:0;border-radius:0}
@@ -316,6 +393,15 @@ footer b{color:var(--text)}
       <input type="checkbox" id="f-fiebre" onclick="event.stopPropagation();toggleChk(this.parentNode,'fiebre')">
       <div class="t">Fiebre<span class="d">Criterio obligatorio. Sin fiebre no se cumple ninguna de las tres definiciones de caso.</span></div>
     </div>
+  </div>
+
+  <div class="card tight">
+    <div class="sec-title">Antecedentes epidemiológicos</div>
+    <div class="chk" role="checkbox" tabindex="0" aria-checked="false" onclick="toggleChk(this,'nexo',event)" onkeydown="if(event.key===' '||event.key==='Enter'){event.preventDefault();this.click();}">
+      <input type="checkbox" id="f-nexo" onclick="event.stopPropagation();toggleChk(this.parentNode,'nexo')">
+      <div class="t">Nexo epidemiológico para arbovirosis<span class="d">Convivió o estuvo en contacto con un caso de dengue, chikungunya o Zika, o estuvo en zona con brote, en los 14 días previos. Oriente el interrogatorio por tiempo, lugar y persona.</span></div>
+    </div>
+    <div id="nexo-out" class="note info" style="margin-bottom:0">El nexo epidemiológico refuerza la sospecha y orienta el diagnóstico diferencial; no es requisito de la definición de caso.</div>
   </div>
 
   <div class="card tight">
@@ -539,7 +625,7 @@ footer b{color:var(--text)}
   <div class="note info">
     <b>Ante hallazgos sugestivos de fuga vascular</b> —dolor abdominal, aumento del perímetro abdominal, matidez en bases,
     ruidos respiratorios disminuidos— solicite <b>ecografía abdominal y radiografía de tórax</b>: son las que documentan
-    ascitis y derrame pleural, es decir la acumulación de líquidos. El instrumento de auditoría lo exige en el ítem 15
+    ascitis y derrame pleural, es decir la acumulación de líquidos. El instrumento de auditoría lo exige en el ítem 17
     y el algoritmo OPS las ubica formalmente en la categoría C.
   </div>
 
@@ -573,6 +659,25 @@ footer b{color:var(--text)}
   <div class="card tight"><div class="sec-title">Condiciones asociadas</div><div id="list-cond"></div></div>
   <div class="card tight"><div class="sec-title">Riesgo social</div><div id="list-social"></div></div>
   <div class="card tight"><div class="sec-title">Criterios de manejo en casa</div><div id="list-via"></div></div>
+
+  <div class="card tight">
+    <div class="sec-title">Ingesta de líquidos en las últimas 24 horas</div>
+    <select id="f-ingesta" onchange="syncHabitos()">
+      <option value="">Sin interrogar</option>
+      <option value="adecuada">Adecuada — sales de rehidratación oral, sopas, jugos o leche, y los tolera</option>
+      <option value="agua">Solo agua o infusiones (aromáticas, té)</option>
+      <option value="poca">Escasa — bebe muy poco pese a insistirle</option>
+      <option value="nula">Nula o casi nula — rechaza o vomita todo lo que toma</option>
+    </select>
+    <div id="ingesta-out" class="note info" style="margin-bottom:0">Es el ítem 7 del instrumento de MinSalud y define si la hidratación oral está funcionando o hay que suplirla.</div>
+  </div>
+
+  <div class="card tight">
+    <div class="sec-title">Automedicación antes de la consulta</div>
+    <div id="ninguno-automed"></div>
+    <div id="list-automed"></div>
+    <div id="automed-out" class="note info" style="margin-bottom:0">Ítem 8 del instrumento. Lo que el paciente ya tomó cambia la conducta: los AINE y la aspirina hay que suspenderlos de inmediato.</div>
+  </div>
 
   <button class="btn btn-calc" onclick="evaluar()">Clasificar y calcular manejo</button>
   <button class="btn btn-back" onclick="go(5)">Atrás</button>
@@ -612,7 +717,7 @@ footer b{color:var(--text)}
 
 /* === ENGINE START === */
 
-var APP_VERSION = '3.1.0';   /* fuente única: pie de página, Word y service worker */
+var APP_VERSION = '3.2.1';   /* fuente única: pie de página, Word y service worker */
 
 /* Origen de cada criterio: 'ficha' = casilla de la sección 6 de la ficha;
    'prot' = está en la definición del protocolo pero no como casilla. */
@@ -665,6 +770,64 @@ var SOCIAL = [
   ['transporte','Falta de transporte',''],
   ['pobreza','Pobreza extrema','']
 ];
+
+/* ---------- Ítem 7 del instrumento MinSalud: ingesta de líquidos ----------
+   No se registra por registrar: cada respuesta trae la corrección que le
+   corresponde, y la ingesta nula pesa igual que la intolerancia a la vía oral. */
+var INGESTA = {
+  adecuada: { etiqueta:'Adecuada — SRO, sopas, jugos o leche, y los tolera', tono:'ok',
+    lectura:'La hidratación oral está funcionando. Manténgala y verifique que alcance el volumen calculado para el peso.' },
+  agua: { etiqueta:'Solo agua o infusiones (aromáticas, té)', tono:'warn',
+    lectura:'El agua sola y las infusiones NO reponen los electrolitos que se pierden con la fiebre, el vómito y la sudoración. Indique sales de rehidratación oral, sopas, jugos de fruta no cítricos o leche, y explique por qué el agua sola no basta.' },
+  poca: { etiqueta:'Escasa — bebe muy poco pese a insistirle', tono:'warn',
+    lectura:'La ingesta es insuficiente: la hidratación oral necesita supervisión. Verifique cada hora que alcance el volumen indicado; si no lo logra, reevalúe la vía de reposición.' },
+  nula: { etiqueta:'Nula o casi nula — rechaza o vomita todo lo que toma', tono:'danger',
+    lectura:'Equivale a intolerancia a la vía oral: el paciente NO puede hidratarse solo en casa. Pasa como mínimo a categoría B1 y necesita reposición supervisada.' }
+};
+function lecturaIngesta(S){
+  var i = INGESTA[S.ingesta];
+  return i ? { clave:S.ingesta, etiqueta:i.etiqueta, tono:i.tono, lectura:i.lectura } : null;
+}
+/* La ingesta nula pesa lo mismo que "no tolera la vía oral" en la clasificación. */
+function ingestaInsuficiente(S){ return S.ingesta === 'nula'; }
+
+/* ---------- Ítem 8 del instrumento MinSalud: automedicación ---------- */
+var AUTOMED = [
+  ['aines','AINE: ibuprofeno, diclofenaco, naproxeno','Aumentan el riesgo de sangrado y de gastritis justo cuando las plaquetas están cayendo.'],
+  ['asa','Ácido acetilsalicílico (aspirina)','Antiagregante: agrava el sangrado, y en menores de edad se asocia a síndrome de Reye.'],
+  ['esteroide','Esteroides','Sin indicación en dengue; enmascaran la fiebre y el cuadro clínico.'],
+  ['antibiotico','Antibiótico sin fórmula médica','El dengue no responde a antibióticos y su uso retrasa el diagnóstico correcto.'],
+  ['im','Algún medicamento por vía intramuscular','La vía intramuscular está contraindicada: produce hematomas en un paciente con trombocitopenia.'],
+  ['dipirona','Dipirona o metamizol','Admitida solo si es necesaria y en dosis única; nunca intramuscular ni en pacientes pediátricos.'],
+  ['tradicional','Medicina tradicional o infusiones medicinales','Pregunte cuál y anótela: algunas plantas tienen efecto anticoagulante o hepatotóxico.']
+];
+
+/* Traduce lo que el paciente ya tomó en la conducta correctiva que corresponde.
+   Es la razón de ser de la pregunta: no basta con dejar constancia. */
+function conductaAutomedicacion(S){
+  var A = S.automed || [];
+  if(!A.length) return null;
+  var tiene = function(k){ return A.indexOf(k) >= 0; };
+  var acciones = [], sangrado = tiene('aines') || tiene('asa');
+
+  if(sangrado){
+    acciones.push('SUSPENDER de inmediato ' + (tiene('asa') && tiene('aines') ? 'la aspirina y los AINE' : (tiene('asa') ? 'la aspirina' : 'el AINE')) +
+      '. Reemplazar por acetaminofén en la dosis calculada por peso.');
+    acciones.push('Vigilancia estrecha de manifestaciones hemorrágicas: petequias, equimosis, sangrado de mucosas, epistaxis, gingivorragia y sangrado digestivo. Repita la prueba del torniquete y controle el recuento de plaquetas.');
+  }
+  if(tiene('esteroide')) acciones.push('Suspender el esteroide: no tiene indicación en dengue y enmascara la fiebre y la evolución clínica.');
+  if(tiene('antibiotico')) acciones.push('Suspender el antibiótico salvo que exista una infección bacteriana documentada. El dengue no responde a antibióticos.');
+  if(tiene('im')) acciones.push('No administrar más medicamentos por vía intramuscular ni rectal: en un paciente con trombocitopenia producen hematomas y sangrado.');
+  if(tiene('dipirona')) acciones.push('Dipirona ya administrada: no repetir la dosis. Se admite solo si es necesaria y en dosis única, nunca intramuscular ni en pacientes pediátricos.');
+  if(tiene('tradicional')) acciones.push('Registre en la historia clínica qué preparación tradicional recibió y en qué cantidad: algunas plantas tienen efecto anticoagulante o hepatotóxico y pueden confundir el cuadro.');
+
+  return {
+    tomados: A.map(function(k){ return nombreDe(AUTOMED, k); }),
+    acciones: acciones,
+    riesgoSangrado: sangrado,
+    tono: sangrado ? 'danger' : 'warn'
+  };
+}
 
 /* ---------- Entrada numérica con notación colombiana ----------
    En Colombia la coma es el separador decimal y el punto el de miles. Un
@@ -787,7 +950,13 @@ function definicionCaso(S){
   var base = S.endemica && S.fiebre && nm >= 2;
   var hayAlarma = S.alarma.length > 0, hayGrave = S.grave.length > 0;
 
-  var r = { base: base, faltan: faltan, clasificacion: '', codigo: 0, cumple: false, detalle: '' };
+  var r = { base: base, faltan: faltan, clasificacion: '', codigo: 0, cumple: false, detalle: '', nexo: '' };
+
+  /* Ítem 3 del instrumento: el nexo no es requisito de la definición operativa,
+     pero refuerza la sospecha y es lo que orienta el diagnóstico diferencial. */
+  r.nexo = S.nexo
+    ? 'Nexo epidemiológico para arbovirosis PRESENTE: contacto con un caso o estancia en zona de brote en los 14 días previos. Refuerza la sospecha; precise tiempo, lugar y persona en la historia clínica.'
+    : 'Sin nexo epidemiológico registrado. Interrogue tiempo, lugar y persona: su ausencia no descarta el dengue, pero obliga a ampliar el diagnóstico diferencial con malaria, leptospirosis, rickettsiosis, influenza y otras arbovirosis.';
 
   if(hayGrave && S.endemica && (S.fiebre || hayAlarma)){
     r.clasificacion = 'Dengue grave'; r.codigo = 3; r.cumple = true;
@@ -813,7 +982,7 @@ function clasificar(S){
   if(S.grave.length) return 'C';
   if(S.alarma.length) return 'B2';
   var cond = autoCondiciones(S).concat(S.cond);
-  if(cond.length || S.social.length || !S.toleraVO || !S.diuresisOk) return 'B1';
+  if(cond.length || S.social.length || !S.toleraVO || !S.diuresisOk || ingestaInsuficiente(S)) return 'B1';
   return 'A';
 }
 
@@ -1011,7 +1180,7 @@ function laboratorio(S){
   L.push(pruebaConfirmatoria(S.dia));
   L.push(NS1_NEGATIVO);
   L.push(siguientePaso(S.dia));
-  L.push('Ecografía abdominal y radiografía de tórax ante hallazgos clínicos sugestivos de fuga vascular — documentan ascitis y derrame pleural (instrumento de auditoría, ítem 15).');
+  L.push('Ecografía abdominal y radiografía de tórax ante hallazgos clínicos sugestivos de fuga vascular — documentan ascitis y derrame pleural (instrumento de auditoría, ítem 17).');
 
   if(cat === 'A'){
     L.push('Hemograma completo al menos cada 48 horas.');
@@ -1170,16 +1339,19 @@ function auditoria(S){
   var soc = S.social.map(function(k){ return nombreDe(SOCIAL,k); });
   var graves = S.grave.map(function(k){ return nombreDe(GRAVE,k); });
   var pp = presionPulso(S), pm = pam(S);
+  var ing = lecturaIngesta(S), auto = conductaAutomedicacion(S);
 
   return [
-    { bloque:'A. Anamnesis (ítems 1 a 7)', items: [
+    { bloque:'A. Anamnesis (ítems 1 a 8)', items: [
       reg('1. Fiebre caracterizada: fecha de inicio, intensidad en °C y patrón de evolución.',
         (S.fiebre ? 'Fiebre presente' : 'Sin fiebre') + (S.dia && S.dia !== '0' ? ' · día ' + S.dia + ' de evolución' : '') +
         (S.temp ? ' · ' + S.temp + ' °C' : '') + '. Complete fecha de inicio y patrón: '),
       reg('2. Interrogatorio que permite construir la definición de caso.', lista(manifs)),
       reg('3. Nexo epidemiológico para arbovirosis y otras infecciones tropicales (tiempo, lugar y persona).',
-        S.endemica ? 'Procedente de área endémica. Precise municipio y fecha de exposición: ' : 'No procedente de área endémica. Consigne el diagnóstico diferencial: '),
-      reg('4. Antecedentes personales y familiares; fecha de última menstruación y método de planificación cuando aplique.',
+        (S.endemica ? 'Procedente de área endémica. ' : 'NO procedente de área endémica. ') +
+        (S.nexo ? 'Nexo epidemiológico PRESENTE: contacto con un caso o estancia en zona de brote en los 14 días previos. Precise municipio, fecha y persona: '
+                : 'Sin nexo epidemiológico referido. Precise municipio y fecha de exposición: ')),
+      reg('4.1. Antecedentes personales y familiares: diabetes mellitus, drepanocitosis, enfermedad renal crónica, hepatopatías, coagulopatías, hipertensión, obesidad mórbida, enfermedad cardiovascular, asma.',
         lista(cond) || 'Sin condiciones asociadas registradas. '),
       reg('5. Factores de riesgo social: vive solo, difícil acceso, pobreza u otros.',
         lista(soc) || 'Sin riesgo social registrado.'),
@@ -1187,40 +1359,43 @@ function auditoria(S){
         (S.sinAlarma ? 'Buscados dirigidamente: ninguno presente' : (alarmas.length ? 'Presentes: ' + alarmas.join('; ') : 'Sin registrar')) +
         ' · Tolerancia a la vía oral: ' + (S.toleraVO ? 'conservada' : 'no tolera') +
         ' · Diuresis últimas 6 h: ' + (S.diuresisOk ? 'normal' : 'ausente o disminuida')),
-      reg('7. Conciliación medicamentosa: antihipertensivos, hipoglicemiantes, diuréticos, esteroides, AINES, anticoagulantes, antiagregantes.',
-        S.cond.indexOf('anticoag') >= 0 ? 'Recibe tratamiento anticoagulante. Complete el resto: ' : 'Complete: ')
+      reg('7. Ingesta de líquidos: tipo, cantidad y frecuencia, incluidas infusiones.',
+        ing ? ing.etiqueta + '. ' + ing.lectura + ' Precise cantidad y frecuencia: ' : 'Sin interrogar. Registre qué bebe, cuánto y con qué frecuencia: '),
+      reg('8. Automedicación: antipiréticos, AINE, ASA, antibióticos o medicina tradicional.',
+        auto ? 'REFIERE: ' + auto.tomados.join('; ') + '. Conducta: ' + auto.acciones.join(' ')
+             : (S.sinAutomed ? 'Interrogada dirigidamente: no se automedicó.' : 'Sin interrogar. Pregunte por antipiréticos, AINE, aspirina, antibióticos y medicina tradicional: '))
     ]},
     { bloque:'B. Examen físico (ítems 8 a 13)', items: [
-      reg('8. Frecuencia cardiaca, frecuencia respiratoria, temperatura, saturación de oxígeno, peso y nivel de conciencia.',
+      reg('10. Frecuencia cardiaca, frecuencia respiratoria, temperatura, saturación de oxígeno, peso y nivel de conciencia.',
         [S.fc ? 'FC ' + S.fc + ' lpm' : null, S.fr ? 'FR ' + S.fr + ' rpm' : null,
          S.temp ? 'T ' + S.temp + ' °C' : null, S.sato2 ? 'SatO₂ ' + S.sato2 + ' %' : null,
          S.peso ? 'Peso ' + S.peso + ' kg' : null, S.conciencia || null].filter(Boolean).join(' · ') || null),
-      reg('9. Estado de hidratación: mucosas, edema palpebral, de pared abdominal y extremidades, fontanela anterior en lactantes.', null),
-      reg('10. Estado hemodinámico: TA, PAM, presión de pulso, llenado capilar, estado de la piel y calidad del pulso, con pruebas dinámicas para hipotensión ortostática.',
+      reg('11. Estado de hidratación: mucosas, edema palpebral, de pared abdominal y extremidades, fontanela anterior en lactantes.', null),
+      reg('12. Estado hemodinámico: TA, PAM, presión de pulso, llenado capilar, estado de la piel y calidad del pulso, con pruebas dinámicas para hipotensión ortostática.',
         [(S.pas && S.pad) ? 'TA ' + S.pas + '/' + S.pad + ' mmHg' : null, pm !== null ? 'PAM ' + pm + ' mmHg' : null,
          pp !== null ? 'Presión de pulso ' + pp + ' mmHg' : null, S.llenado ? 'Llenado capilar ' + S.llenado : null,
          S.alarma.indexOf('hipotension') >= 0 ? 'Hipotensión postural presente' : null].filter(Boolean).join(' · ') +
         '. Complete estado de la piel y calidad del pulso: '),
-      reg('11. Búsqueda activa de manifestaciones hemorrágicas: petequias, sangrado por mucosas, prueba del torniquete.',
+      reg('13. Búsqueda activa de manifestaciones hemorrágicas: petequias, sangrado por mucosas, prueba del torniquete.',
         'Prueba del torniquete: ' + TORNIQUETE[S.torniquete || 'nr'] +
         ' · Hemorragia en mucosas: ' + (S.alarma.indexOf('mucosas') >= 0 ? 'presente' : 'no referida') +
         '. Complete petequias y otros sangrados: '),
-      reg('12. Examen torácico: patrón respiratorio, uso de músculos accesorios, ruidos respiratorios disminuidos, agregados pulmonares, matidez en bases.', null),
-      reg('13. Examen abdominal: dolor provocado, hepatomegalia, esplenomegalia, aumento del perímetro abdominal, ascitis.',
+      reg('14. Examen torácico: patrón respiratorio, uso de músculos accesorios, ruidos respiratorios disminuidos, agregados pulmonares, matidez en bases.', null),
+      reg('15. Examen abdominal: dolor provocado, hepatomegalia, esplenomegalia, aumento del perímetro abdominal, ascitis.',
         [S.alarma.indexOf('abdominal') >= 0 ? 'Dolor abdominal intenso y continuo' : null,
          S.alarma.indexOf('hepatomegalia') >= 0 ? 'Hepatomegalia dolorosa > 2 cm' : null,
          S.alarma.indexOf('liquidos') >= 0 ? 'Acumulación de líquidos' : null].filter(Boolean).join(' · ') || 'Complete: ')
     ]},
     { bloque:'C. Laboratorio e imágenes diagnósticas (ítems 14 a 17)', items: [
-      reg('14. Hemograma completo solicitado e interpretado.',
+      reg('16. Hemograma completo solicitado e interpretado.',
         clasificar(S) === 'A' ? 'Solicitar; control al menos cada 48 horas.' : 'Solicitar ANTES de iniciar líquidos intravenosos.'),
-      reg('15. Ecografía abdominal y radiografía de tórax ante hallazgos clínicos sugestivos de fuga vascular.',
+      reg('17. Ecografía abdominal y radiografía de tórax ante hallazgos clínicos sugestivos de fuga vascular.',
         (S.alarma.indexOf('liquidos') >= 0 || S.grave.indexOf('extravasacion') >= 0)
           ? 'INDICADAS: hay acumulación de líquidos o extravasación registrada.'
           : 'Solicitar si aparecen dolor abdominal, aumento del perímetro abdominal, matidez en bases o ruidos respiratorios disminuidos.'),
-      reg('16. Función hepática, glucosa, electrolitos séricos, urea, creatinina, gases arteriales o lactato y enzimas cardiacas, según indicación médica; interpretados y consignados.',
+      reg('18. Función hepática, glucosa, electrolitos séricos, urea, creatinina, gases arteriales o lactato y enzimas cardiacas, según indicación médica; interpretados y consignados.',
         (clasificar(S) === 'B2' || clasificar(S) === 'C') ? 'INDICADOS por la categoría de intervención.' : 'Según indicación del médico tratante.'),
-      reg('17. Pruebas confirmatorias según el tiempo de evolución de la fiebre.',
+      reg('19. Pruebas confirmatorias según el tiempo de evolución de la fiebre.',
         pruebaConfirmatoria(S.dia) + ' ' + siguientePaso(S.dia) + ' Un resultado negativo no descarta el evento.')
     ]}
   ];
@@ -1344,7 +1519,22 @@ function veredictoHemograma(S){
 
   /* --- hemoconcentración --- */
   if(!isNaN(act)){
-    if(d !== null){
+    /* Sin basal propio y sin edad/sexo no hay contra qué comparar. Antes este caso
+       caía en 'sin-dato' y la tarjeta decía "Registre el hematocrito" con el
+       hematocrito ya escrito en el campo de arriba: el mensaje contradecía a la
+       pantalla y no le decía al médico qué le faltaba. */
+    if(d === null && !ref){
+      if(act > HCT_ALTO_OMS){
+        v.estado = 'sugestivo';
+        v.detalle = 'Hematocrito ' + act + ' %, por encima del umbral de 50 % de la OMS. ' +
+          'Escriba la edad y el sexo para compararlo con la referencia poblacional, o el hematocrito basal del propio paciente si lo tiene: ' +
+          'la OMS prefiere el de la fase febril temprana.';
+      } else {
+        v.estado = 'sin-referencia';
+        v.detalle = 'Hematocrito ' + act + ' % registrado. Falta la edad y el sexo para compararlo con la referencia poblacional. ' +
+          'Si tiene el hematocrito basal del paciente —el de la fase febril temprana— escríbalo en «Ajustes: hemograma previo»: es la comparación que prefiere la OMS.';
+      }
+    } else if(d !== null){
       if(d >= 20){ v.estado = 'si'; v.detalle = 'Hematocrito ' + act + ' %, +' + d + ' % sobre el basal del paciente. El ascenso del 20 % o más es el marcador de extravasación de plasma.'; }
       else if(d >= 10){ v.estado = 'sugestivo'; v.detalle = 'Hematocrito ' + act + ' %, +' + d + ' % sobre el basal. Todavía no alcanza el 20 %, pero la tendencia va en ascenso.'; }
       else if(d < 0){ v.estado = 'no'; v.detalle = 'Hematocrito ' + act + ' %, ' + d + ' % respecto al basal. No hay hemoconcentración; interprete la caída junto con la hemodinamia.'; }
@@ -1368,14 +1558,18 @@ function veredictoHemograma(S){
     }
   }
   v.titulo = { si:'Hay hemoconcentración', sugestivo:'Hemoconcentración sugestiva',
-               no:'No hay hemoconcentración', 'sin-dato':'Registre el hematocrito' }[v.estado];
+               no:'No hay hemoconcentración', 'sin-referencia':'Falta la edad para interpretarlo',
+               'sin-dato':'Registre el hematocrito' }[v.estado];
 
   /* --- fichas de lectura rápida --- */
   if(!isNaN(act)){
     var alto = ref ? (act > Math.max(HCT_ALTO_OMS, ref.alto)) : (act > HCT_ALTO_OMS), bajo = (ref && act < ref.bajo);
+    /* Sin referencia no se puede afirmar "Normal": decirlo era una conclusión sin
+       respaldo, y además contradecía al veredicto de arriba. */
+    var sinRef = (!ref && d === null);
     v.tiles.push({ k:'hto', etiqueta:'Hematocrito', valor: act + ' %',
-      estado: alto ? 'Alto' : (bajo ? 'Bajo' : 'Normal'),
-      tono: alto ? 'danger' : (bajo ? 'warn' : 'ok') });
+      estado: alto ? 'Alto' : (bajo ? 'Bajo' : (sinRef ? 'Sin referencia' : 'Normal')),
+      tono: alto ? 'danger' : (bajo ? 'warn' : (sinRef ? 'neutro' : 'ok')) });
   }
   if(!isNaN(plq)){
     var pbaja = plq < 100000;
@@ -1760,6 +1954,17 @@ function construirReporte(S){
   if(cat === 'B2') m.avisos.push({ tono:'danger', texto:'Escalar a categoría C si hay deterioro clínico o incremento rápido del hematocrito. Criterios de mejoría: desaparición progresiva de signos de alarma, signos vitales estables, diuresis normal o aumentada, descenso del hematocrito, tolerancia a la vía oral y recuperación del apetito.' });
   if(cat === 'C') m.avisos.push({ tono:'danger', texto:'Si sigue inestable y el hematocrito cae bruscamente, sospeche sangrado: tome prueba cruzada y transfunda — ' + plan.hemorragia.gr + '; ' + plan.hemorragia.sangre + '. Si no mejora, reevalúe la hemodinamia, valore función de bomba (miocarditis o miocardiopatía) y defina uso de aminas. Corrija la acidosis persistente y estabilice las comorbilidades.' });
 
+  /* Ítems 4.2, 7 y 8 del instrumento: cada uno entra como conducta, no como registro. */
+
+  m.ingesta = lecturaIngesta(S);
+  if(m.ingesta && m.ingesta.clave !== 'adecuada')
+    m.avisos.push({ tono: m.ingesta.tono, texto:'Ingesta de líquidos — ' + m.ingesta.etiqueta + '. ' + m.ingesta.lectura });
+
+  m.automed = conductaAutomedicacion(S);
+  if(m.automed)
+    m.avisos.push({ tono: m.automed.tono,
+      texto:'Automedicación referida: ' + m.automed.tomados.join('; ') + '. ' + m.automed.acciones.join(' ') });
+
   m.vitales = vitalesTabla(S);
   m.hemo = evaluacionHemodinamica(S);
   m.fase = faseDeLaEnfermedad(S);
@@ -1781,6 +1986,8 @@ function construirReporte(S){
   L.push('Clasificación (definición operativa de caso): ' + def.clasificacion + '.');
   L.push('Categoría de intervención (algoritmo OPS): ' + cat + ' — ' + meta.nombre + '.');
   L.push('Conducta: ' + meta.conducta + '. ' + meta.donde);
+  L.push('Destino del paciente: ' + meta.conducta + '.');
+  L.push(m.def.nexo);
   if(m.fase.fase !== 'sin-dato') L.push('Fase del curso clínico: ' + m.fase.titulo + '. ' + m.fase.mensaje);
   L.push('');
   L.push('SIGNOS DE ALARMA: ' + (S.alarma.length
@@ -1855,11 +2062,13 @@ var S = {
   endemica:false, fiebre:false, manif:[], torniquete:'nr',
   alarma:[], sinAlarma:false, grave:[], sinGrave:false,
   cond:[], social:[], toleraVO:true, diuresisOk:true,
+  nexo:false,
+  ingesta:'', automed:[], sinAutomed:false,
   pas:'', pad:'', fc:'', fr:'', temp:'', sato2:'', llenado:'', conciencia:'', pulso:'', piel:'',
   hctBasal:'', hctActual:'', hctRef:'', hb:'', plaquetas:'', leucocitos:''
 };
 var MODELO = null;
-var NINGUNO = { alarma:'sinAlarma', grave:'sinGrave' };
+var NINGUNO = { alarma:'sinAlarma', grave:'sinGrave', automed:'sinAutomed' };
 function $(id){ return document.getElementById(id); }
 
 /* Opción excluyente "Ninguno": obliga a confirmar la ausencia en vez de asumirla */
@@ -1878,6 +2087,7 @@ function renderNinguno(contenedor, bucket, texto, sub){
       var chks = $('list-' + bucket).querySelectorAll('.chk');
       for(var i=0;i<chks.length;i++){ chks[i].classList.remove('on'); chks[i].querySelector('input').checked = false; }
     }
+    if(bucket === 'automed') renderAutomed();
     atenuarLista(bucket);
   };
   atenuarLista(bucket);
@@ -1978,6 +2188,29 @@ function renderHct(){
       : '');
 }
 
+/* Ítems 7 y 8: ingesta de líquidos y automedicación */
+function syncHabitos(){
+  S.ingesta = $('f-ingesta').value;
+  var box = $('ingesta-out'), l = lecturaIngesta(S);
+  if(l){ box.className = 'note ' + l.tono; box.innerHTML = '<b>' + esc(l.etiqueta) + '.</b> ' + esc(l.lectura); }
+  else { box.className = 'note info';
+    box.innerHTML = 'Es el ítem 7 del instrumento de MinSalud y define si la hidratación oral está funcionando o hay que suplirla.'; }
+}
+function renderAutomed(){
+  var box = $('automed-out'), c = conductaAutomedicacion(S);
+  if(c){
+    box.className = 'note ' + c.tono;
+    box.innerHTML = '<b>Conducta:</b><ul class="clean" style="margin:6px 0 0">' +
+      c.acciones.map(function(x){ return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>';
+  } else if(S.sinAutomed){
+    box.className = 'note ok';
+    box.innerHTML = 'Sin automedicación referida. Queda constancia del negativo en la historia clínica.';
+  } else {
+    box.className = 'note info';
+    box.innerHTML = 'Ítem 8 del instrumento. Lo que el paciente ya tomó cambia la conducta: los AINE y la aspirina hay que suspenderlos de inmediato.';
+  }
+}
+
 function syncVitales(){
   var pas = numDec($('f-pas').value), pad = numDec($('f-pad').value),
       fc = numDec($('f-fc').value), fr = numDec($('f-fr').value),
@@ -2014,6 +2247,7 @@ function buildList(containerId, items, bucket, cls){
       if(!box.checked && i >= 0) S[bucket].splice(i,1);
       if(box.checked && NINGUNO[bucket]) apagarNinguno(bucket);
       if(bucket === 'manif') updateManifCount();
+      if(bucket === 'automed') renderAutomed();
       if(it[0] === 'menor5') S.menor5Tocado = true;
     };
     /* Operable con teclado: la lista es de <div>, no de <label>. */
@@ -2032,6 +2266,16 @@ function toggleChk(el, key, ev){
   el.setAttribute('aria-checked', box.checked ? 'true' : 'false');
   S[key] = box.checked;
   if(key === 'fiebre' || key === 'endemica') updateManifCount();
+  if(key === 'nexo') renderNexo();
+}
+
+/* Ítem 3: qué significa el nexo epidemiológico */
+function renderNexo(){
+  var box = $('nexo-out');
+  if(S.nexo){ box.className = 'note ok';
+    box.innerHTML = '<b>Nexo epidemiológico presente.</b> Refuerza la sospecha de arbovirosis. Precise tiempo, lugar y persona en la historia clínica.'; return; }
+  box.className = 'note info';
+  box.innerHTML = 'El nexo epidemiológico refuerza la sospecha y orienta el diagnóstico diferencial; no es requisito de la definición de caso.';
 }
 
 function updateManifCount(){
@@ -2290,12 +2534,12 @@ function evaluar(){
   o.push('<div class="result-hero" style="background:' + m.meta.color + '">' +
     '<div class="cat">Categoría de intervención ' + m.cat + '</div>' +
     '<div class="name">' + m.meta.nombre + '</div>' +
-    '<div class="where">' + m.meta.donde + '</div></div>');
+    '<div class="where"><b>Destino del paciente: ' + m.meta.conducta + '.</b><br>' + m.meta.donde + '</div></div>');
 
   o.push('<div class="sivi' + (m.def.cumple ? '' : ' nocumple') + '">' +
     '<div class="lbl">Clasificación para notificación · SIVIGILA</div>' +
     '<div class="val">' + m.def.clasificacion + '</div>' +
-    '<div class="det">' + m.def.detalle + '</div></div>');
+    '<div class="det">' + m.def.detalle + '<br><br>' + m.def.nexo + '</div></div>');
 
   if(m.fase.fase !== 'sin-dato'){
     o.push('<div class="card"><div class="sec-title">Fase del curso de la enfermedad</div>' +
@@ -2629,13 +2873,15 @@ function documentoXml(m){
   b.push(wCaja(
     wP(wR('CATEGORÍA DE INTERVENCIÓN ' + m.cat, { b:true, sz:17, color:'FFFFFF' }), { after:30 }) +
     wP(wR(m.meta.nombre, { b:true, sz:26, color:'FFFFFF' }), { after:40 }) +
-    wP(wR(m.meta.conducta + '. ' + m.meta.donde, { sz:18, color:'FFFFFF' }), { after:0 }),
+    wP(wR('Destino del paciente: ' + m.meta.conducta + '.', { b:true, sz:19, color:'FFFFFF' }), { after:25 }) +
+    wP(wR(m.meta.donde, { sz:18, color:'FFFFFF' }), { after:0 }),
     colorCat));
 
   b.push(wCaja(
     wP(wR('CLASIFICACIÓN PARA NOTIFICACIÓN · SIVIGILA', { b:true, sz:15, color:'1B5E9E' }), { after:25 }) +
     wP(wR(m.def.clasificacion, { b:true, sz:21, color:'0D3C6B' }), { after:25 }) +
-    wP(wR(m.def.detalle, { sz:17, color:'3A5A78' }), { after:0 }),
+    wP(wR(m.def.detalle, { sz:17, color:'3A5A78' }), { after:25 }) +
+    wP(wR(m.def.nexo, { sz:17, color:'3A5A78' }), { after:0 }),
     'F2F7FC', 'CBDDF0'));
 
   if(m.fase.fase !== 'sin-dato'){
@@ -2926,6 +3172,9 @@ function bindInv(id, cb){
     'Deja constancia de que se descartaron las cuatro manifestaciones graves de dengue.');
   renderCondList();
   buildList('list-social', SOCIAL, 'social');
+  buildList('list-automed', AUTOMED, 'automed');
+  renderNinguno('ninguno-automed', 'automed', 'No se automedicó — se lo pregunté',
+    'Deja constancia del negativo: sin esta marca, el informe dirá que no se interrogó.');
 
   $('list-via').innerHTML =
     '<div class="chk" id="chk-vo"><input type="checkbox"><div class="t">NO tolera plenamente la vía oral<span class="d">Si no tolera, el paciente no puede manejarse solo en casa.</span></div></div>' +

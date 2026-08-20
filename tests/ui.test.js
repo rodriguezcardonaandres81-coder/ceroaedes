@@ -616,6 +616,119 @@ fs.mkdirSync(TMP, { recursive: true });
     throw new Error('Cambiar el sexo volvió a marcar "Menor de 5 años" tras desmarcarlo');
   console.log('  OK   │ Caso 13: desmarcar "Menor de 5 años" es una decisión que la app respeta');
 
+
+  // ====== Caso 14: los tres ítems nuevos del instrumento MinSalud ======
+  await definicionCaso();
+  // El ítem 3 vive en la pantalla de definición de caso
+  await page.locator('#f-nexo').click();
+  await page.waitForTimeout(100);
+  if (!/nexo epidemiológico presente/i.test(await page.locator('#nexo-out').innerText()))
+    throw new Error('El nexo no se refleja en pantalla');
+  if (await page.locator('#f-vacuna').count())
+    throw new Error('La casilla de vacuna contra el dengue debería estar eliminada');
+
+  await llenarPaciente({ edad: '34', peso: '70' });
+  await page.fill('#f-nombre', 'Ana Pérez');
+  await avanzar(2); await avanzar(3);
+  await ninguno('alarma'); await avanzar(4);
+  await ninguno('grave'); await avanzar(5);
+
+  // Ítem 7 — ingesta de líquidos
+  await page.selectOption('#f-ingesta', 'agua');
+  await page.waitForTimeout(100);
+  if (!/no reponen los electrolitos/i.test(await page.locator('#ingesta-out').innerText()))
+    throw new Error('La ingesta de solo agua no genera la corrección');
+
+  // Ítem 8 — automedicación
+  const aine = page.locator('#list-automed .chk').first();
+  await aine.click();
+  await page.waitForTimeout(100);
+  const conducta = await page.locator('#automed-out').innerText();
+  if (!/suspender de inmediato/i.test(conducta))
+    throw new Error('El AINE no genera la orden de suspender: ' + conducta);
+
+  await page.click('#s6 button:has-text("Clasificar y calcular manejo")');
+  await page.waitForSelector('#s7.active');
+  const res14 = await page.locator('#s7').innerText();
+  for (const e of ['Destino del paciente', 'nexo epidemiológico',
+                   'electrolitos', 'SUSPENDER de inmediato'])
+    if (!res14.toLowerCase().includes(e.toLowerCase()))
+      throw new Error('Falta en el resultado: ' + e);
+  await shot('19-instrumento-minsalud');
+  console.log('  OK   │ Caso 14: nexo, ingesta y automedicación llegan hasta la conducta');
+
+  // Ítem 7: la ingesta nula sí mueve la categoría; la escasa no
+  await page.click('#s7 button:has-text("Ajustar datos")');
+  await page.waitForSelector('#s6.active');
+  await page.selectOption('#f-ingesta', 'nula');
+  await page.click('#s6 button:has-text("Clasificar y calcular manejo")');
+  await page.waitForSelector('#s7.active');
+  if (!/B1/.test(await page.locator('#s7 .result-hero .cat').innerText()))
+    throw new Error('La ingesta nula debería llevar a B1');
+  console.log('  OK   │ La ingesta nula equivale a intolerancia oral y lleva a B1');
+
+  // ====== Caso 15: la pantalla se adapta al equipo donde se abra ======
+  const anchos = [
+    { w: 320, h: 568, nombre: 'celular angosto', maxContenedor: 320 },
+    { w: 390, h: 844, nombre: 'celular',         maxContenedor: 390 },
+    { w: 768, h: 1024, nombre: 'tableta',        maxContenedor: 700 },
+    { w: 1280, h: 900, nombre: 'computador',     maxContenedor: 1000 },
+    { w: 1600, h: 1000, nombre: 'monitor grande',maxContenedor: 1180 }
+  ];
+  for (const a of anchos) {
+    const ctxA = await browser.newContext({ viewport: { width: a.w, height: a.h } });
+    const pg = await ctxA.newPage();
+    pg.on('dialog', d => d.dismiss());
+    await pg.goto(URL);
+    await pg.click('#s0 button:has-text("Comenzar")');
+    await pg.locator('#f-endemica').click();
+    await pg.locator('#f-fiebre').click();
+    await pg.locator('#list-manif .chk').nth(0).click();
+    await pg.locator('#list-manif .chk').nth(2).click();
+    await pg.click('#s1 button:has-text("Siguiente")');
+    await pg.fill('#f-edad', '34'); await pg.fill('#f-peso', '70');
+    await pg.click('#s2 button:has-text("Siguiente")');
+    await pg.click('#s3 button:has-text("Siguiente")');
+
+    // El contenedor crece con la pantalla, pero deja de crecer donde debe
+    const ancho = await pg.evaluate(() =>
+      Math.round(document.getElementById('app-container').getBoundingClientRect().width));
+    if (ancho > a.maxContenedor)
+      throw new Error(`En ${a.nombre} (${a.w}px) el contenedor mide ${ancho}px y no debería pasar de ${a.maxContenedor}px`);
+    if (a.w >= 1000 && ancho < 900)
+      throw new Error(`En ${a.nombre} el contenedor se quedó en ${ancho}px: no está aprovechando la pantalla`);
+
+    // Nada se sale de la pantalla a lo ancho, en ningún tamaño
+    const desborde = await pg.evaluate(() =>
+      document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    if (desborde > 0)
+      throw new Error(`En ${a.nombre} (${a.w}px) hay ${desborde}px de desborde horizontal`);
+
+    // En computador los 12 signos de alarma se reparten en dos columnas
+    const columnas = await pg.evaluate(() => {
+      const izq = [...document.querySelectorAll('#list-alarma .chk')]
+        .map(e => Math.round(e.getBoundingClientRect().left));
+      return new Set(izq).size;
+    });
+    const esperadas = a.w >= 1000 ? 2 : 1;
+    if (columnas !== esperadas)
+      throw new Error(`En ${a.nombre} la lista de alarma quedó en ${columnas} columna(s) y se esperaban ${esperadas}`);
+
+    // Ningún control queda por debajo del tamaño mínimo para tocar con el dedo
+    const chicos = await pg.evaluate(() => {
+      let n = 0;
+      document.querySelectorAll('button, .chk, select, input[type=text]').forEach(e => {
+        const r = e.getBoundingClientRect();
+        if (r.height > 0 && r.height < 44) n++;
+      });
+      return n;
+    });
+    if (chicos > 0) throw new Error(`En ${a.nombre} hay ${chicos} controles de menos de 44 px de alto`);
+
+    await pg.screenshot({ path: path.join(OUT, '20-ancho-' + a.w + '.png'), fullPage: true });
+    await ctxA.close();
+  }
+  console.log('  OK   │ Caso 15: la app se ensancha en el computador y se ajusta en el celular, sin desbordes');
   await browser.close();
   console.log('\n  Todos los recorridos de interfaz pasaron. Capturas en shots/\n');
 })().catch(e => { console.error('\n FALLA │ ' + e.message + '\n'); process.exit(1); });

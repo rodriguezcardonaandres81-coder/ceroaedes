@@ -658,40 +658,47 @@ const aud = ctx.auditoria(P({
   torniquete: 'pos', alarma: ['abdominal', 'liquidos'], cond: ['dm'], social: ['solo']
 }));
 t('Tres bloques: anamnesis, examen físico y laboratorio', aud.length, 3);
-t('Bloque A cubre los ítems 1 a 7', aud[0].items.length, 7);
+/* Los ítems se buscan por su número, no por su posición en el arreglo: así,
+   agregar o quitar un ítem del instrumento no rompe todas las pruebas de golpe. */
+const it = (bloques, n) => {
+  const todos = bloques.flatMap(b => b.items);
+  const f = todos.find(x => new RegExp('^' + n.replace('.', '\\.') + '\\.').test(x.item));
+  return f ? String(f.valor) : '';
+};
+t('Bloque A cubre los ítems 1 a 8 (el 4 se abre en 4.1)', aud[0].items.length, 8);
 t('Bloque B cubre los ítems 8 a 13', aud[1].items.length, 6);
 t('Bloque C cubre los ítems 14 a 17', aud[2].items.length, 4);
 t('Ítem 3 recoge el nexo epidemiológico',
-  /área endémica/.test(aud[0].items[2].valor), 'true');
+  /área endémica/.test(it(aud,'3')), 'true');
 t('Ítem 4 recoge los antecedentes marcados',
-  /Diabetes mellitus/.test(aud[0].items[3].valor), 'true');
+  /Diabetes mellitus/.test(it(aud,'4.1')), 'true');
 t('Ítem 5 recoge el riesgo social',
-  /Vive solo/.test(aud[0].items[4].valor), 'true');
-t('Ítem 8 recoge los signos vitales capturados',
-  /FC 110 lpm/.test(aud[1].items[0].valor), 'true');
-t('Ítem 10 calcula la PAM y la presión de pulso',
-  /PAM 84 mmHg · Presión de pulso 17 mmHg/.test(aud[1].items[2].valor), 'true');
+  /Vive solo/.test(it(aud,'5')), 'true');
+t('Ítem 10 recoge los signos vitales capturados',
+  /FC 110 lpm/.test(it(aud,'10')), 'true');
+t('Ítem 12 calcula la PAM y la presión de pulso',
+  /PAM 84 mmHg · Presión de pulso 17 mmHg/.test(it(aud,'12')), 'true');
 t('Ítem 11 consigna el resultado del torniquete',
-  /torniquete: Positiva/.test(aud[1].items[3].valor), 'true');
-t('Ítem 13 recoge los hallazgos abdominales marcados',
-  /Dolor abdominal intenso y continuo/.test(aud[1].items[5].valor), 'true');
-t('Ítem 15 marca ecografía y radiografía como INDICADAS si hay acumulación de líquidos',
-  /INDICADAS/.test(aud[2].items[1].valor), 'true');
-t('Ítem 16 marca los paraclínicos como indicados en B2',
-  /INDICADOS/.test(aud[2].items[2].valor), 'true');
-t('Ítem 17 trae la prueba según el día de evolución',
-  /Día 4 de evolución/.test(aud[2].items[3].valor), 'true');
-t('Ítem 17 advierte que un negativo no descarta el evento',
-  /no descarta el evento/.test(aud[2].items[3].valor), 'true');
+  /torniquete: Positiva/.test(it(aud,'13')), 'true');
+t('Ítem 15 recoge los hallazgos abdominales marcados',
+  /Dolor abdominal intenso y continuo/.test(it(aud,'15')), 'true');
+t('Ítem 17 marca ecografía y radiografía como INDICADAS si hay acumulación de líquidos',
+  /INDICADAS/.test(it(aud,'17')), 'true');
+t('Ítem 18 marca los paraclínicos como indicados en B2',
+  /INDICADOS/.test(it(aud,'18')), 'true');
+t('Ítem 19 trae la prueba según el día de evolución',
+  /Día 4 de evolución/.test(it(aud,'19')), 'true');
+t('Ítem 19 advierte que un negativo no descarta el evento',
+  /no descarta el evento/.test(it(aud,'19')), 'true');
 t('Ítem 9 queda como campo por completar (no lo captura la app)',
-  aud[1].items[1].valor, 'null');
+  it(aud,'11') || 'null', 'null');
 t('Ítem 12 queda como campo por completar', aud[1].items[2 + 2].valor === null, 'true');
 
 const audSin = ctx.auditoria(P({ edad: '34', peso: 70, sinAlarma: true }));
 t('Ítem 6 registra la ausencia confirmada de signos de alarma',
-  /ninguno presente/.test(audSin.items ? '' : audSin[0].items[5].valor), 'true');
-t('Ítem 15 sin fuga vascular queda como condicional',
-  /Solicitar si aparecen/.test(ctx.auditoria(P({ edad: '34', peso: 70 }))[2].items[1].valor), 'true');
+  /ninguno presente/.test(it(audSin,'6')), 'true');
+t('Ítem 17 sin fuga vascular queda como condicional',
+  /Solicitar si aparecen/.test(it(ctx.auditoria(P({ edad: '34', peso: 70 })), '17')), 'true');
 
 t('El reporte incorpora el bloque de auditoría',
   ctx.construirReporte(P({ edad: '34', peso: 70 })).auditoria.length, 3);
@@ -826,6 +833,143 @@ t('El texto de conducta lleva los avisos de la categoría',
 /* 10. Laboratorio: las tres pruebas virológicas */
 t('El laboratorio del día 3 nombra el aislamiento viral',
   /aislamiento viral/.test(ctx.laboratorio(P({ edad: '34', peso: 70, dia: '3' })).join(' ')), 'true');
+
+
+console.log('\n── Instrumento MinSalud: ítems 3, 4.2, 7 y 8 (v3.2) ──');
+
+/* Ítem 3 — nexo epidemiológico para arbovirosis */
+t('Con nexo, la definición de caso lo declara presente',
+  /Nexo epidemiológico para arbovirosis PRESENTE/.test(ctx.definicionCaso(P({ edad:'34', peso:70, nexo:true })).nexo), 'true');
+t('Sin nexo, obliga a ampliar el diagnóstico diferencial',
+  /ampliar el diagnóstico diferencial/.test(ctx.definicionCaso(P({ edad:'34', peso:70 })).nexo), 'true');
+t('El nexo NO cambia la clasificación SIVIGILA',
+  ctx.definicionCaso(P({ edad:'34', peso:70, nexo:true })).clasificacion,
+  ctx.definicionCaso(P({ edad:'34', peso:70 })).clasificacion);
+t('El nexo NO cambia la categoría de intervención',
+  ctx.clasificar(P({ edad:'34', peso:70, nexo:true })), 'A');
+t('El nexo llega al texto para historia clínica',
+  /Nexo epidemiológico/.test(ctx.construirReporte(P({ edad:'34', peso:70, nexo:true })).conductaTexto), 'true');
+
+/* Ítem 7 — ingesta de líquidos */
+t('Sin interrogar no hay lectura de ingesta', ctx.lecturaIngesta(P({})), null);
+t('Ingesta adecuada se lee como tal', ctx.lecturaIngesta(P({ ingesta:'adecuada' })).tono, 'ok');
+t('Solo agua o infusiones advierte que no reponen electrolitos',
+  /NO reponen los electrolitos/.test(ctx.lecturaIngesta(P({ ingesta:'agua' })).lectura), 'true');
+t('Ingesta escasa pide supervisión horaria',
+  /cada hora/.test(ctx.lecturaIngesta(P({ ingesta:'poca' })).lectura), 'true');
+t('Ingesta nula equivale a intolerancia a la vía oral',
+  ctx.ingestaInsuficiente(P({ ingesta:'nula' })), 'true');
+t('Ingesta nula lleva a B1 a un paciente que si no sería A',
+  ctx.clasificar(P({ edad:'34', peso:70, ingesta:'nula' })), 'B1');
+t('Ingesta escasa NO cambia la categoría por sí sola',
+  ctx.clasificar(P({ edad:'34', peso:70, ingesta:'poca' })), 'A');
+t('Ingesta adecuada NO cambia la categoría',
+  ctx.clasificar(P({ edad:'34', peso:70, ingesta:'adecuada' })), 'A');
+t('La ingesta con agua sola aparece como aviso en el reporte',
+  ctx.construirReporte(P({ edad:'34', peso:70, ingesta:'agua' })).avisos
+    .some(a => /electrolitos/.test(a.texto)), 'true');
+t('La ingesta adecuada no genera aviso correctivo',
+  ctx.construirReporte(P({ edad:'34', peso:70, ingesta:'adecuada' })).avisos
+    .some(a => /Ingesta de líquidos/.test(a.texto)), 'false');
+
+/* Ítem 8 — automedicación */
+t('Sin automedicación no hay conducta', ctx.conductaAutomedicacion(P({ automed:[] })), null);
+t('El AINE se ordena suspender',
+  /SUSPENDER de inmediato/.test(ctx.conductaAutomedicacion(P({ automed:['aines'] })).acciones.join(' ')), 'true');
+t('El AINE eleva la vigilancia de sangrado',
+  ctx.conductaAutomedicacion(P({ automed:['aines'] })).riesgoSangrado, 'true');
+t('La aspirina también',
+  ctx.conductaAutomedicacion(P({ automed:['asa'] })).riesgoSangrado, 'true');
+t('Con AINE y aspirina el texto nombra los dos',
+  /la aspirina y los AINE/.test(ctx.conductaAutomedicacion(P({ automed:['asa','aines'] })).acciones.join(' ')), 'true');
+t('El antibiótico se suspende salvo infección documentada',
+  /infección bacteriana documentada/.test(ctx.conductaAutomedicacion(P({ automed:['antibiotico'] })).acciones.join(' ')), 'true');
+t('La vía intramuscular se prohíbe hacia adelante',
+  /No administrar más medicamentos por vía intramuscular/.test(ctx.conductaAutomedicacion(P({ automed:['im'] })).acciones.join(' ')), 'true');
+t('La dipirona ya tomada no se repite',
+  /no repetir la dosis/.test(ctx.conductaAutomedicacion(P({ automed:['dipirona'] })).acciones.join(' ')), 'true');
+t('La medicina tradicional se pide registrar',
+  /qué preparación tradicional/.test(ctx.conductaAutomedicacion(P({ automed:['tradicional'] })).acciones.join(' ')), 'true');
+t('La automedicación sin AINE ni ASA queda en tono de advertencia',
+  ctx.conductaAutomedicacion(P({ automed:['antibiotico'] })).tono, 'warn');
+t('Con AINE el tono es de peligro',
+  ctx.conductaAutomedicacion(P({ automed:['aines'] })).tono, 'danger');
+t('La automedicación NO cambia la categoría de intervención',
+  ctx.clasificar(P({ edad:'34', peso:70, automed:['aines','asa'] })), 'A');
+t('La automedicación llega al texto para historia clínica',
+  /Automedicación referida/.test(ctx.construirReporte(P({ edad:'34', peso:70, automed:['aines'] })).conductaTexto), 'true');
+
+/* Auditoría: los cuatro ítems quedan registrados */
+const audN = ctx.auditoria(P({ edad:'34', peso:70, nexo:true,
+  ingesta:'agua', automed:['aines'], social:['solo'] }));
+t('Ítem 3 registra el nexo presente', /Nexo epidemiológico PRESENTE/.test(it(audN,'3')), 'true');
+t('Ya no queda rastro del ítem de vacuna',
+  /vacuna/i.test(audN.flatMap(b => b.items).map(x => x.item + ' ' + x.valor).join(' ')), 'false');
+t('Ítem 7 registra la ingesta y su corrección', /infusiones/.test(it(audN,'7')), 'true');
+t('Ítem 8 registra la automedicación y la conducta', /SUSPENDER/.test(it(audN,'8')), 'true');
+const audNeg = ctx.auditoria(P({ edad:'34', peso:70, sinAutomed:true }));
+t('El negativo de automedicación queda como interrogado',
+  /no se automedicó/.test(it(audNeg,'8')), 'true');
+t('Sin interrogar, el informe lo dice y no lo da por negativo',
+  /Sin interrogar/.test(it(ctx.auditoria(P({ edad:'34', peso:70 })), '8')), 'true');
+
+/* Destino del paciente */
+t('El destino del paciente se rotula en el texto de conducta',
+  /Destino del paciente: Ambulatoria/.test(ctx.construirReporte(P({ edad:'34', peso:70 })).conductaTexto), 'true');
+t('En dengue grave el destino es UCI o remisión',
+  /Destino del paciente: Unidad de cuidados intensivos \/ remisión/.test(
+    ctx.construirReporte(P({ edad:'34', peso:70, grave:['shock'] })).conductaTexto), 'true');
+
+
+console.log('\n── Hematocrito sin edad: el veredicto no puede mentir ──');
+
+/* Reportado en uso real: con hematocrito 40, Hb 12, plaquetas 85.000 y leucocitos
+   3.200 escritos ANTES de la edad, la tarjeta decía "Registre el hematocrito"
+   —con el hematocrito ya en pantalla— y la ficha de abajo lo daba por "Normal"
+   sin ninguna referencia contra la cual afirmarlo. */
+const sinEdad = P({ peso: 70, edad: '', hctActual: 40, hb: 12, plaquetas: 85000, leucocitos: 3200 });
+const vSinEdad = ctx.veredictoHemograma(sinEdad);
+t('Con hematocrito escrito ya NO dice "Registre el hematocrito"',
+  vSinEdad.titulo === 'Registre el hematocrito', 'false');
+t('Dice exactamente qué falta', vSinEdad.estado, 'sin-referencia');
+t('...y lo nombra en el detalle', /Falta la edad y el sexo/.test(vSinEdad.detalle), 'true');
+t('...y ofrece la alternativa del basal propio',
+  /hematocrito basal del paciente/.test(vSinEdad.detalle), 'true');
+t('El valor registrado aparece en el detalle', /40 %/.test(vSinEdad.detalle), 'true');
+
+const fichaHto = vSinEdad.tiles.find(x => x.k === 'hto');
+t('La ficha no afirma "Normal" sin referencia', fichaHto.estado, 'Sin referencia');
+t('...y no se pinta de verde', fichaHto.tono, 'neutro');
+t('Plaquetas y leucocitos sí se leen sin edad, porque no dependen de ella',
+  vSinEdad.tiles.filter(x => x.k === 'plq' || x.k === 'leu').map(x => x.estado).join(' · '),
+  'Bajas · signo de alarma · Leucopenia');
+
+/* Sin edad pero por encima del umbral absoluto de la OMS sí se puede concluir algo */
+t('Sin edad, un hematocrito de 56 % sí levanta sospecha por el umbral de la OMS',
+  ctx.veredictoHemograma(P({ peso: 70, edad: '', hctActual: 56 })).estado, 'sugestivo');
+t('...nombrando el umbral',
+  /umbral de 50 % de la OMS/.test(ctx.veredictoHemograma(P({ peso: 70, edad: '', hctActual: 56 })).detalle), 'true');
+
+/* Con la edad puesta, todo vuelve a la lectura poblacional de siempre */
+t('Al escribir la edad, el mismo hematocrito ya se compara con la referencia',
+  ctx.veredictoHemograma(P({ peso: 70, edad: '34', sexo: 'F', hctActual: 40 })).estado, 'no');
+
+/* Y el campo realmente vacío sigue pidiendo el dato */
+t('Sin hematocrito sí pide registrarlo',
+  ctx.veredictoHemograma(P({ peso: 70, edad: '34' })).titulo, 'Registre el hematocrito');
+
+
+console.log('\n── Numeración del registro de auditoría ──────────');
+
+/* Al agregar los ítems del instrumento vigente quedaron dos ítems numerados 8:
+   el de automedicación (bloque A) y el de signos vitales (bloque B, con la
+   numeración del instrumento anterior). Los bloques B y C se renumeraron contra
+   INSTRUMENTO.xlsm y esta prueba impide que vuelva a repetirse un número. */
+const numeros = ctx.auditoria(P({ edad:'34', peso:70 }))
+  .flatMap(b => b.items).map(x => String(x.item).match(/^([0-9.]+)\./)[1]);
+t('Ningún número de ítem se repite', new Set(numeros).size, numeros.length);
+t('La numeración sigue al instrumento vigente del MinSalud',
+  numeros.join(' '), '1 2 3 4.1 5 6 7 8 10 11 12 13 14 15 16 17 18 19');
 
 console.log('\n───────────────────────────────────────────────────');
 console.log(`  ${pass} pruebas correctas, ${fail} fallidas`);
