@@ -4,6 +4,7 @@
 const { chromium } = require('playwright');
 const path = require('path');
 const fs = require('fs');
+const http = require('http');
 
 const URL = 'file://' + path.join(__dirname, '..', 'index.html');
 const OUT = path.join(__dirname, '..', 'shots');
@@ -820,23 +821,71 @@ fs.mkdirSync(TMP, { recursive: true });
     throw new Error('El pie no muestra la fecha de revisión clínica');
   console.log('  OK   │ Caso 17: la fecha de revisión clínica se ve en la bienvenida y en el pie');
 
-  // ====== Caso 18: el conteo de visitas viene desactivado y no rompe nada ======
-  const beacons = [];
+  // ====== Caso 18: el conteo anónimo de visitas ======
+  /* Abierta desde el disco (file://) no hay a quién avisar: no debe salir ninguna
+     petición. Publicada por http(s) sí debe salir, y con el token correcto. */
+  const beaconsLocal = [];
   const ctx18 = await browser.newContext({ viewport: { width: 390, height: 844 } });
   const pg18 = await ctx18.newPage();
-  pg18.on('request', r => { if (/cloudflareinsights|google-analytics|googletagmanager/.test(r.url())) beacons.push(r.url()); });
+  pg18.on('request', r => { if (/cloudflareinsights|google-analytics|googletagmanager/.test(r.url())) beaconsLocal.push(r.url()); });
   pg18.on('dialog', d => d.dismiss());
   await pg18.goto(URL);
-  await pg18.waitForTimeout(600);
-  if (beacons.length)
-    throw new Error('Sin token configurado no debería salir ninguna petición de analítica: ' + beacons.join(', '));
-  const tokenPendiente = await pg18.evaluate(() =>
-    [...document.querySelectorAll('script')].some(s => /PEGUE_AQUI_SU_TOKEN/.test(s.textContent)));
-  if (!tokenPendiente) throw new Error('Falta el gancho de analítica con el token en blanco');
+  await pg18.waitForTimeout(700);
+  if (beaconsLocal.length)
+    throw new Error('Desde file:// no debería salir ninguna petición de analítica: ' + beaconsLocal.join(', '));
   await pg18.click('#s0 button:has-text("Comenzar")');
   await pg18.waitForSelector('#s1.active');
   await ctx18.close();
-  console.log('  OK   │ Caso 18: el conteo de visitas está listo, apagado, y no envía nada sin token');
+
+  /* Ahora servida por HTTP, como en GitHub Pages */
+  const raiz = path.join(__dirname, '..');
+  const tipos = { '.html': 'text/html', '.json': 'application/json', '.js': 'text/javascript', '.png': 'image/png' };
+  const servidor = http.createServer((req, res) => {
+    const rel = decodeURIComponent(req.url.split('?')[0]).replace(/^\/+/, '') || 'index.html';
+    const archivo = path.join(raiz, rel);
+    if (!archivo.startsWith(raiz) || !fs.existsSync(archivo) || fs.statSync(archivo).isDirectory()) {
+      res.writeHead(404); res.end('no'); return;
+    }
+    res.writeHead(200, { 'Content-Type': tipos[path.extname(archivo)] || 'application/octet-stream' });
+    res.end(fs.readFileSync(archivo));
+  });
+  await new Promise(r => servidor.listen(0, '127.0.0.1', r));
+  const puerto = servidor.address().port;
+
+  const beaconsWeb = [];
+  const ctx18b = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const pg18b = await ctx18b.newPage();
+  pg18b.on('request', r => { if (/cloudflareinsights/.test(r.url())) beaconsWeb.push(r.url()); });
+  pg18b.on('dialog', d => d.dismiss());
+  /* La petición sale a internet; si el entorno no tiene red, se corta y basta con
+     que el navegador la haya intentado, que es lo que se está midiendo. */
+  await pg18b.route('**/beacon.min.js*', route => route.abort());
+  await pg18b.goto(`http://127.0.0.1:${puerto}/index.html`);
+  await pg18b.waitForTimeout(900);
+  if (!beaconsWeb.length)
+    throw new Error('Publicada por HTTP sí debería enviarse el conteo de visitas');
+
+  const token = await pg18b.evaluate(() => {
+    const s = document.querySelector('script[data-cf-beacon]');
+    return s ? JSON.parse(s.getAttribute('data-cf-beacon')).token : null;
+  });
+  if (!/^[0-9a-f]{32}$/.test(token || ''))
+    throw new Error('El token de Cloudflare no tiene el formato esperado: ' + token);
+  if (/PEGUE_AQUI/.test(token))
+    throw new Error('Quedó el token de ejemplo sin reemplazar');
+
+  /* Y aunque el conteo falle, la aplicación tiene que funcionar igual */
+  await pg18b.click('#s0 button:has-text("Comenzar")');
+  await pg18b.waitForSelector('#s1.active');
+  const errores18 = [];
+  pg18b.on('pageerror', e => errores18.push(e.message));
+  await pg18b.locator('#f-endemica').click();
+  await pg18b.locator('#f-fiebre').click();
+  if (errores18.length)
+    throw new Error('La app falló con el conteo activo: ' + errores18.join(' | '));
+  await ctx18b.close();
+  await new Promise(r => servidor.close(r));
+  console.log('  OK   │ Caso 18: el conteo sale al publicar por HTTP, no sale desde el disco, y si falla la app sigue');
   await browser.close();
   console.log('\n  Todos los recorridos de interfaz pasaron. Capturas en shots/\n');
 })().catch(e => { console.error('\n FALLA │ ' + e.message + '\n'); process.exit(1); });

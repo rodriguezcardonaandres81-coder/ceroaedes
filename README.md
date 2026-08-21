@@ -235,9 +235,11 @@ Esa fecha se muestra **en la pantalla de bienvenida, en el pie de la aplicación
 
 ## Conteo anónimo de visitas
 
-El `<head>` trae preparado el gancho de **Cloudflare Web Analytics**, apagado. Para activarlo, cree la cuenta gratuita en `dash.cloudflare.com → Analytics & Logs → Web Analytics → Add a site` y reemplace `PEGUE_AQUI_SU_TOKEN` por el token que le entregan.
+El `<head>` trae el gancho de **Cloudflare Web Analytics** activo para el sitio `rodriguezcardonaandres81-coder.github.io`. Para cambiar de cuenta o de sitio, entre a `dash.cloudflare.com → Analytics & Logs → Web Analytics → Manage site` y reemplace el token en la constante `TOKEN` del `<head>`. Si lo deja vacío o con el texto `PEGUE_AQUI_SU_TOKEN`, no se carga nada.
 
-Mientras diga `PEGUE_AQUI_SU_TOKEN` no se carga ningún script ni sale ninguna petición — hay una prueba que lo verifica. Tampoco se carga si la app se abre desde el disco (`file://`).
+Tampoco se carga si la app se abre desde el disco (`file://`): ahí no hay a quién avisar. Hay pruebas que verifican las dos cosas — que desde `file://` no salga ninguna petición y que publicada por HTTP sí salga, con un token del formato correcto.
+
+**Cloudflare mide por hostname**, y en GitHub Pages todos los proyectos de un usuario comparten `usuario.github.io`. Si hay otros repos publicados, sus visitas también se cuentan; en el panel se filtra por la ruta `/ceroaedes/`.
 
 Qué se envía: dirección de la página, país y navegador. **Qué no se envía: absolutamente nada del paciente** — los datos clínicos nunca salen del dispositivo. No usa cookies ni identifica personas. El *service worker* deja pasar esa petición sin cachearla, de modo que sin conexión simplemente no se envía y la aplicación funciona igual.
 

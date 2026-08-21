@@ -9,9 +9,10 @@
 
 <!-- ==================================================================
      CONTEO ANÓNIMO DE VISITAS — Cloudflare Web Analytics
-     PARA ACTIVARLO: cree la cuenta gratuita en dash.cloudflare.com →
-     Analytics & Logs → Web Analytics → Add a site, y pegue el token que le
-     dan reemplazando PEGUE_AQUI_SU_TOKEN. Mientras diga eso, no se carga nada.
+     Sitio registrado: rodriguezcardonaandres81-coder.github.io
+     PARA CAMBIAR DE CUENTA O DE SITIO: dash.cloudflare.com → Analytics & Logs →
+     Web Analytics → Manage site, y reemplace el token de abajo. Si lo deja vacío
+     o con el texto PEGUE_AQUI_SU_TOKEN, no se carga nada.
 
      Qué se envía: la dirección de la página, el país y el navegador.
      Qué NO se envía: nada del paciente. Los datos clínicos nunca salen del
@@ -23,11 +24,11 @@
      ================================================================== -->
 <script>
 (function(){
-  var TOKEN = 'PEGUE_AQUI_SU_TOKEN';
+  var TOKEN = 'cb0f8425221c4c0eaf6f4d382b3812b6';
   if(!TOKEN || TOKEN === 'PEGUE_AQUI_SU_TOKEN') return;   /* sin token, no se carga nada */
   if(location.protocol === 'file:') return;               /* abierta desde disco: no hay a quién avisar */
   var e = document.createElement('script');
-  e.defer = true;
+  e.type = 'module';                                      /* formato actual de Cloudflare */
   e.src = 'https://static.cloudflareinsights.com/beacon.min.js';
   e.setAttribute('data-cf-beacon', JSON.stringify({ token: TOKEN }));
   e.onerror = function(){};                               /* si falla, la app sigue igual */
@@ -748,7 +749,7 @@ footer b{color:var(--text)}
 
 /* === ENGINE START === */
 
-var APP_VERSION = '3.3.0';   /* fuente única: pie de página, Word y service worker */
+var APP_VERSION = '3.3.1';   /* fuente única: pie de página, Word y service worker */
 
 /* ==================================================================
    SELLO DE REVISIÓN CLÍNICA

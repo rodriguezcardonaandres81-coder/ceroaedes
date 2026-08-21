@@ -2,7 +2,7 @@
    Cachea la aplicación completa para uso sin conexión.
    Sube el número de versión para forzar la actualización en los dispositivos. */
 
-const VERSION = 'ceroaedes-v3.3.0';
+const VERSION = 'ceroaedes-v3.3.1';
 const ASSETS = [
   './',
   './index.html',
