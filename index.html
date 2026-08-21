@@ -6,6 +6,34 @@
 <meta name="theme-color" content="#1B6B5A">
 <meta name="description" content="Cero_Aedes by AR — Clasificación y manejo de dengue según la ficha SIVIGILA 210/220/580 y el algoritmo OPS/OMS. Cálculo de reposición hídrica por peso y exportación a Word.">
 <link rel="manifest" href="manifest.json">
+
+<!-- ==================================================================
+     CONTEO ANÓNIMO DE VISITAS — Cloudflare Web Analytics
+     PARA ACTIVARLO: cree la cuenta gratuita en dash.cloudflare.com →
+     Analytics & Logs → Web Analytics → Add a site, y pegue el token que le
+     dan reemplazando PEGUE_AQUI_SU_TOKEN. Mientras diga eso, no se carga nada.
+
+     Qué se envía: la dirección de la página, el país y el navegador.
+     Qué NO se envía: nada del paciente. Los datos clínicos nunca salen del
+     teléfono — no se transmiten ni se guardan fuera del dispositivo.
+     No usa cookies ni identifica personas.
+
+     Si el equipo está sin conexión el conteo simplemente no se envía y la
+     aplicación funciona igual: el script es diferido y no bloquea nada.
+     ================================================================== -->
+<script>
+(function(){
+  var TOKEN = 'PEGUE_AQUI_SU_TOKEN';
+  if(!TOKEN || TOKEN === 'PEGUE_AQUI_SU_TOKEN') return;   /* sin token, no se carga nada */
+  if(location.protocol === 'file:') return;               /* abierta desde disco: no hay a quién avisar */
+  var e = document.createElement('script');
+  e.defer = true;
+  e.src = 'https://static.cloudflareinsights.com/beacon.min.js';
+  e.setAttribute('data-cf-beacon', JSON.stringify({ token: TOKEN }));
+  e.onerror = function(){};                               /* si falla, la app sigue igual */
+  document.head.appendChild(e);
+})();
+</script>
 <link rel="icon" href="assets/icon-192.png">
 <link rel="apple-touch-icon" href="assets/icon-192.png">
 <title>Cero_Aedes by AR — Clasificación y manejo de dengue</title>
@@ -370,6 +398,8 @@ footer b{color:var(--text)}
       <span>Clasifica</span><span>Calcula líquidos</span><span>Exporta a Word</span>
     </div>
 
+    <div id="revision-box" class="note info" style="margin-top:14px;text-align:left"></div>
+
     <div class="w-note">
       Esta aplicación <b>acompaña</b> la consulta: ordena la definición de caso, calcula los volúmenes por peso
       y arma el registro. <b>No reemplaza el juicio clínico</b> ni la reestratificación del paciente.
@@ -679,7 +709,7 @@ footer b{color:var(--text)}
     <div id="automed-out" class="note info" style="margin-bottom:0">Ítem 8 del instrumento. Lo que el paciente ya tomó cambia la conducta: los AINE y la aspirina hay que suspenderlos de inmediato.</div>
   </div>
 
-  <button class="btn btn-calc" onclick="evaluar()">Clasificar y calcular manejo</button>
+  <button class="btn btn-calc" onclick="if(puedeClasificar())evaluar()">Clasificar y calcular manejo</button>
   <button class="btn btn-back" onclick="go(5)">Atrás</button>
 </div>
 
@@ -698,6 +728,7 @@ footer b{color:var(--text)}
   <b>Cero_Aedes by AR</b> · <span id="app-version">v—</span> &copy; 2026<br>
   Desarrollado por <b>Andrés Rodríguez Cardona</b> — Epidemiólogo<br>
   Ficha de notificación SIVIGILA 210/220/580 y Algoritmo de diagnóstico y tratamiento de dengue (OPS/OMS — MinSalud, Colombia)<br>
+  <span id="revision-pie" style="font-size:.9em"></span><br>
   <span style="font-size:.9em">Herramienta de apoyo. No reemplaza el juicio clínico.</span>
 </footer>
 </div>
@@ -717,7 +748,53 @@ footer b{color:var(--text)}
 
 /* === ENGINE START === */
 
-var APP_VERSION = '3.2.1';   /* fuente única: pie de página, Word y service worker */
+var APP_VERSION = '3.3.0';   /* fuente única: pie de página, Word y service worker */
+
+/* ==================================================================
+   SELLO DE REVISIÓN CLÍNICA
+   El contenido clínico caduca aunque el código siga funcionando. Una app de
+   dosis abandonada en su versión 1.0 sigue abriéndose años después y sigue
+   dando la dosis de entonces, sin que nada en pantalla lo advierta.
+   Aquí la fecha va a la vista del médico, al pie de la aplicación y al
+   documento de Word, y la propia app avisa cuando se pasa de vigencia.
+
+   AL ACTUALIZAR EL CONTENIDO CLÍNICO: cambie la fecha y la lista de fuentes.
+   ================================================================== */
+var REVISION = {
+  fecha: '2026-08-20',                 /* AAAA-MM-DD de la última revisión clínica */
+  fuentes: 'Ficha SIVIGILA 210/220/580 (2024), Protocolo de Vigilancia de Dengue del INS v07, ' +
+           'Algoritmo de diagnóstico y tratamiento de dengue MinSalud 2019, OPS/CDE 2020, ' +
+           'OMS 2009 y 2012, e Instrumento de seguimiento y evaluación de casos de dengue del MinSalud.',
+  mesesVigencia: 12                    /* pasado este plazo la app pide reverificar */
+};
+
+/* Meses transcurridos desde la revisión, para avisar cuando el contenido envejece. */
+function mesesDesdeRevision(hoyISO){
+  var r = String(REVISION.fecha).split('-').map(Number);
+  var h = String(hoyISO || '').split('-').map(Number);
+  if(r.length !== 3 || h.length !== 3 || isNaN(h[0])) return null;
+  var m = (h[0] - r[0]) * 12 + (h[1] - r[1]);
+  if(h[2] < r[2]) m--;
+  return m < 0 ? 0 : m;
+}
+function estadoRevision(hoyISO){
+  var m = mesesDesdeRevision(hoyISO);
+  var base = 'Contenido clínico revisado el ' + fechaLarga(REVISION.fecha) + '.';
+  if(m === null) return { vigente:true, meses:null, tono:'info', texto: base };
+  if(m < REVISION.mesesVigencia)
+    return { vigente:true, meses:m, tono:'info',
+      texto: base + ' Fuentes: ' + REVISION.fuentes };
+  return { vigente:false, meses:m, tono:'warn',
+    texto: 'ATENCIÓN: han pasado ' + m + ' meses desde la última revisión clínica (' + fechaLarga(REVISION.fecha) + '). ' +
+      'Verifique que el algoritmo y las dosis sigan vigentes antes de usar esta herramienta con un paciente. ' +
+      'Fuentes de la última revisión: ' + REVISION.fuentes };
+}
+var MESES_ES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+function fechaLarga(iso){
+  var p = String(iso).split('-');
+  if(p.length !== 3) return String(iso);
+  return parseInt(p[2],10) + ' de ' + (MESES_ES[parseInt(p[1],10)-1] || p[1]) + ' de ' + p[0];
+}
 
 /* Origen de cada criterio: 'ficha' = casilla de la sección 6 de la ficha;
    'prot' = está en la definición del protocolo pero no como casilla. */
@@ -790,6 +867,24 @@ function lecturaIngesta(S){
 }
 /* La ingesta nula pesa lo mismo que "no tolera la vía oral" en la clasificación. */
 function ingestaInsuficiente(S){ return S.ingesta === 'nula'; }
+
+/* ---------- Criterios de manejo en casa: sí / no / sin interrogar ----------
+   Antes eran casillas invertidas: no tocarlas equivalía a AFIRMAR que el paciente
+   tolera la vía oral y tiene diuresis normal. Un paciente en quien nadie preguntó
+   salía documentado en la historia clínica como interrogado, bajo la firma del
+   médico, y además podía quedar clasificado en A —manejo en casa— sin que nadie
+   hubiera verificado los dos criterios que justifican mandarlo a casa. */
+var SIN_INTERROGAR = '';
+function criterioCasa(v){
+  return { si:'conservada', no:'ausente', '':'sin interrogar' }[v] || 'sin interrogar';
+}
+/* ¿Quedó algún criterio de manejo en casa sin preguntar? */
+function criteriosCasaPendientes(S){
+  var f = [];
+  if(S.toleraVO === SIN_INTERROGAR) f.push('tolerancia a la vía oral');
+  if(S.diuresisOk === SIN_INTERROGAR) f.push('diuresis en las últimas 6 horas');
+  return f;
+}
 
 /* ---------- Ítem 8 del instrumento MinSalud: automedicación ---------- */
 var AUTOMED = [
@@ -982,7 +1077,9 @@ function clasificar(S){
   if(S.grave.length) return 'C';
   if(S.alarma.length) return 'B2';
   var cond = autoCondiciones(S).concat(S.cond);
-  if(cond.length || S.social.length || !S.toleraVO || !S.diuresisOk || ingestaInsuficiente(S)) return 'B1';
+  /* Solo un "no" explícito mueve a B1. El "sin interrogar" no clasifica: se
+     bloquea antes de llegar aquí, y en el motor se comporta como dato ausente. */
+  if(cond.length || S.social.length || S.toleraVO === 'no' || S.diuresisOk === 'no' || ingestaInsuficiente(S)) return 'B1';
   return 'A';
 }
 
@@ -1357,8 +1454,8 @@ function auditoria(S){
         lista(soc) || 'Sin riesgo social registrado.'),
       reg('6. Síntomas y signos de alarma interrogados, más ingesta de al menos 200 cc de líquido en la última hora sin vomitarlo y diuresis en las últimas 6 horas.',
         (S.sinAlarma ? 'Buscados dirigidamente: ninguno presente' : (alarmas.length ? 'Presentes: ' + alarmas.join('; ') : 'Sin registrar')) +
-        ' · Tolerancia a la vía oral: ' + (S.toleraVO ? 'conservada' : 'no tolera') +
-        ' · Diuresis últimas 6 h: ' + (S.diuresisOk ? 'normal' : 'ausente o disminuida')),
+        ' · Tolerancia a la vía oral: ' + (S.toleraVO === 'si' ? 'conservada' : (S.toleraVO === 'no' ? 'NO tolera' : 'SIN INTERROGAR')) +
+        ' · Diuresis últimas 6 h: ' + (S.diuresisOk === 'si' ? 'normal' : (S.diuresisOk === 'no' ? 'AUSENTE o disminuida' : 'SIN INTERROGAR'))),
       reg('7. Ingesta de líquidos: tipo, cantidad y frecuencia, incluidas infusiones.',
         ing ? ing.etiqueta + '. ' + ing.lectura + ' Precise cantidad y frecuencia: ' : 'Sin interrogar. Registre qué bebe, cuánto y con qué frecuencia: '),
       reg('8. Automedicación: antipiréticos, AINE, ASA, antibióticos o medicina tradicional.',
@@ -1946,11 +2043,19 @@ function construirReporte(S){
   if(cond.length) m.hallazgos.push({ titulo:'Condiciones asociadas', color:'B08300', items: cond });
   if(S.social.length) m.hallazgos.push({ titulo:'Riesgo social', color:'B08300', items: S.social.map(function(k){ return nombreDe(SOCIAL,k); }) });
   var otros = [];
-  if(!S.toleraVO) otros.push('No tolera plenamente la vía oral');
-  if(!S.diuresisOk) otros.push('Sin micción normal en las últimas 6 horas');
+  if(S.toleraVO === 'no') otros.push('No tolera plenamente la vía oral');
+  if(S.diuresisOk === 'no') otros.push('Sin micción normal en las últimas 6 horas');
   if(otros.length) m.hallazgos.push({ titulo:'Criterios de manejo en casa no cumplidos', color:'B08300', items: otros });
+  /* Nunca se afirma lo que no se preguntó: si algo quedó sin interrogar, queda
+     escrito como tal en la historia clínica y en el documento de Word. */
+  var pend = criteriosCasaPendientes(S);
+  if(pend.length) m.hallazgos.push({ titulo:'Sin interrogar', color:'8A6100',
+    items: pend.map(function(x){ return 'No se interrogó: ' + x + '.'; }) });
+  m.pendientes = pend;
 
+  m.revision = estadoRevision(S.fecha);
   m.avisos = [];
+  if(!m.revision.vigente) m.avisos.push({ tono:'warn', texto: m.revision.texto });
   if(cat === 'B2') m.avisos.push({ tono:'danger', texto:'Escalar a categoría C si hay deterioro clínico o incremento rápido del hematocrito. Criterios de mejoría: desaparición progresiva de signos de alarma, signos vitales estables, diuresis normal o aumentada, descenso del hematocrito, tolerancia a la vía oral y recuperación del apetito.' });
   if(cat === 'C') m.avisos.push({ tono:'danger', texto:'Si sigue inestable y el hematocrito cae bruscamente, sospeche sangrado: tome prueba cruzada y transfunda — ' + plan.hemorragia.gr + '; ' + plan.hemorragia.sangre + '. Si no mejora, reevalúe la hemodinamia, valore función de bomba (miocarditis o miocardiopatía) y defina uso de aminas. Corrija la acidosis persistente y estabilice las comorbilidades.' });
 
@@ -2061,7 +2166,7 @@ var S = {
   peso:0, talla:0, usarPesoIdeal:false, embarazo:false, dia:'',
   endemica:false, fiebre:false, manif:[], torniquete:'nr',
   alarma:[], sinAlarma:false, grave:[], sinGrave:false,
-  cond:[], social:[], toleraVO:true, diuresisOk:true,
+  cond:[], social:[], toleraVO:'', diuresisOk:'',
   nexo:false,
   ingesta:'', automed:[], sinAutomed:false,
   pas:'', pad:'', fc:'', fr:'', temp:'', sato2:'', llenado:'', conciencia:'', pulso:'', piel:'',
@@ -2495,6 +2600,20 @@ function next(n){
   }
   if(n === 4) renderResumenHemo();
   go(n+1);
+}
+
+/* Puerta previa a la clasificación: no se afirma en la historia clínica algo que
+   nadie preguntó, y menos los dos criterios que deciden si el paciente se va a casa. */
+function puedeClasificar(){
+  var pend = criteriosCasaPendientes(S);
+  if(pend.length){
+    alert('Falta interrogar ' + pend.join(' y ') + '.\n\n' +
+      'Son los dos criterios que justifican el manejo en casa. Respóndalos en «Criterios de manejo en casa»: ' +
+      'si el paciente no tolera la vía oral o no ha orinado, la categoría cambia.');
+    var el = $('f-vo'); if(el) el.scrollIntoView({ behavior:'smooth', block:'center' });
+    return false;
+  }
+  return true;
 }
 
 /* Recuerda en la pantalla de gravedad lo que se midió en el primer contacto */
@@ -3050,7 +3169,12 @@ function documentoXml(m){
   });
 
   b.push(wCaja(
-    wP(wR('Documento generado con Cero_Aedes by AR v' + APP_VERSION + '.', { sz:16, color:'4A4A55' }), { after:20 }) +
+    wP(wR('Documento generado con Cero_Aedes by AR v' + APP_VERSION +
+      '. Contenido clínico revisado el ' + fechaLarga(REVISION.fecha) + '.', { sz:16, color:'4A4A55' }), { after:20 }) +
+    (m.revision && !m.revision.vigente
+      ? wP(wR('ATENCIÓN: han pasado ' + m.revision.meses + ' meses desde esa revisión. Verifique la vigencia del algoritmo y de las dosis.',
+          { sz:16, color:'7F1414' }), { after:20 })
+      : '') +
     wP(wR('Esta es una guía de apoyo a la decisión clínica: NO reemplaza el criterio médico. Los cálculos son orientativos y no sustituyen la valoración ni la reestratificación continua del paciente. Verifique siempre los volúmenes antes de administrarlos.',
       { sz:16, color:'6B6B78' }), { after:0 }),
     'FAFAFC', 'DCDCE4'));
@@ -3141,6 +3265,42 @@ function exportarWord(){
 }
 
 /* ================= Inicialización ================= */
+/* Sello de revisión clínica: en la bienvenida y en el pie */
+function renderRevision(){
+  var hoy = new Date();
+  var iso = hoy.getFullYear() + '-' + String(hoy.getMonth()+1).padStart(2,'0') + '-' + String(hoy.getDate()).padStart(2,'0');
+  var r = estadoRevision(iso), box = $('revision-box'), pie = $('revision-pie');
+  if(box){
+    box.className = 'note ' + r.tono;
+    box.innerHTML = r.vigente
+      ? '<b>Contenido clínico revisado el ' + fechaLarga(REVISION.fecha) + '.</b> ' +
+        'Antes de usarla con un paciente, confirme que el algoritmo de su institución siga siendo el vigente.'
+      : '<b>Contenido clínico sin revisar desde hace ' + r.meses + ' meses</b> (última revisión: ' +
+        fechaLarga(REVISION.fecha) + '). Verifique que el algoritmo y las dosis sigan vigentes antes de usarla con un paciente.';
+  }
+  if(pie) pie.textContent = 'Contenido clínico revisado el ' + fechaLarga(REVISION.fecha) +
+    (r.vigente ? '' : ' — fuera del plazo de vigencia, reverifíquelo');
+}
+
+/* Criterios de manejo en casa: sí / no / sin interrogar */
+function syncCasa(){
+  S.toleraVO = $('f-vo').value;
+  S.diuresisOk = $('f-di').value;
+  var box = $('casa-out'), pend = criteriosCasaPendientes(S);
+  if(pend.length){
+    box.className = 'note warn';
+    box.innerHTML = '<b>Falta interrogar:</b> ' + esc(pend.join(' y ')) +
+      '. Son los dos criterios que justifican el manejo en casa; la app no clasifica hasta que los conteste. ' +
+      'Si no los pregunta, la historia clínica queda diciendo que no se interrogaron.';
+  } else if(S.toleraVO === 'no' || S.diuresisOk === 'no'){
+    box.className = 'note danger';
+    box.innerHTML = '<b>No cumple criterios de manejo en casa.</b> Con intolerancia a la vía oral o diuresis ausente, el paciente pasa como mínimo a categoría B1: manejo supervisado por personal de salud.';
+  } else {
+    box.className = 'note ok';
+    box.innerHTML = '<b>Cumple los dos criterios de manejo en casa</b>, interrogados y registrados.';
+  }
+}
+
 function bindInv(id, cb){
   var el = $(id);
   el.onclick = function(e){
@@ -3176,13 +3336,26 @@ function bindInv(id, cb){
   renderNinguno('ninguno-automed', 'automed', 'No se automedicó — se lo pregunté',
     'Deja constancia del negativo: sin esta marca, el informe dirá que no se interrogó.');
 
+  /* Tres estados explícitos. El valor inicial es "Sin interrogar" y no deja
+     clasificar: son los dos criterios que justifican mandar al paciente a casa. */
   $('list-via').innerHTML =
-    '<div class="chk" id="chk-vo"><input type="checkbox"><div class="t">NO tolera plenamente la vía oral<span class="d">Si no tolera, el paciente no puede manejarse solo en casa.</span></div></div>' +
-    '<div class="chk" id="chk-di"><input type="checkbox"><div class="t">NO ha tenido micción normal en las últimas 6 horas<span class="d">La diuresis conservada es criterio de manejo domiciliario.</span></div></div>';
-  bindInv('chk-vo', function(v){ S.toleraVO = !v; });
-  bindInv('chk-di', function(v){ S.diuresisOk = !v; });
+    '<label for="f-vo">¿Tolera plenamente la vía oral?</label>' +
+    '<select id="f-vo" onchange="syncCasa()">' +
+      '<option value="">Sin interrogar</option>' +
+      '<option value="si">Sí, tolera líquidos por vía oral</option>' +
+      '<option value="no">No tolera — vomita o rechaza</option>' +
+    '</select>' +
+    '<label for="f-di">¿Ha orinado normalmente en las últimas 6 horas?</label>' +
+    '<select id="f-di" onchange="syncCasa()">' +
+      '<option value="">Sin interrogar</option>' +
+      '<option value="si">Sí, diuresis conservada</option>' +
+      '<option value="no">No, ausente o disminuida</option>' +
+    '</select>' +
+    '<div id="casa-out" class="note info" style="margin-bottom:0"></div>';
+  syncCasa();
 
   $('app-version').textContent = 'v' + APP_VERSION;
+  renderRevision();
   setSexo('F');
   updateManifCount();
   go(0);

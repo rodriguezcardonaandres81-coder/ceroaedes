@@ -29,7 +29,7 @@ const base = {
   nombre: '', fecha: '2026-08-12', fechaInicio: '', sinFecha: false, hora: '08:00', sexo: 'M', edad: '', edadU: 'a',
   peso: 0, talla: 0, usarPesoIdeal: false, embarazo: false, dia: '4',
   endemica: true, fiebre: true, manif: ['cefalea', 'mialgias'],
-  alarma: [], grave: [], cond: [], social: [], toleraVO: true, diuresisOk: true,
+  alarma: [], grave: [], cond: [], social: [], toleraVO: 'si', diuresisOk: 'si',
   hctBasal: '', hctActual: '', hctRef: '', hb: '', plaquetas: '', leucocitos: ''
 };
 const P = o => Object.assign({}, base, o);
@@ -101,7 +101,7 @@ console.log('\n── Categoría de intervención (OPS A/B1/B2/C) ────�
 t('Adulto 70 kg sin hallazgos → A', ctx.clasificar(P({ edad: '34', peso: 70 })), 'A');
 t('Adulto con diabetes → B1', ctx.clasificar(P({ edad: '34', peso: 70, cond: ['dm'] })), 'B1');
 t('Riesgo social → B1', ctx.clasificar(P({ edad: '34', peso: 70, social: ['solo'] })), 'B1');
-t('No tolera vía oral → B1', ctx.clasificar(P({ edad: '34', peso: 70, toleraVO: false })), 'B1');
+t('No tolera vía oral → B1', ctx.clasificar(P({ edad: '34', peso: 70, toleraVO: 'no' })), 'B1');
 t('Lactante de 8 meses → B1', ctx.clasificar(P({ edad: '8', edadU: 'm', peso: 8 })), 'B1');
 t('Adulto de 70 años → B1', ctx.clasificar(P({ edad: '70', peso: 65 })), 'B1');
 t('Gestante sin alarma → B1', ctx.clasificar(P({ edad: '28', sexo: 'F', peso: 62, embarazo: true })), 'B1');
@@ -970,6 +970,75 @@ const numeros = ctx.auditoria(P({ edad:'34', peso:70 }))
 t('Ningún número de ítem se repite', new Set(numeros).size, numeros.length);
 t('La numeración sigue al instrumento vigente del MinSalud',
   numeros.join(' '), '1 2 3 4.1 5 6 7 8 10 11 12 13 14 15 16 17 18 19');
+
+
+console.log('\n── Criterios de manejo en casa: sí / no / sin interrogar ──');
+
+/* Antes eran casillas invertidas: no tocarlas AFIRMABA que el paciente tolera la
+   vía oral y tiene diuresis normal. Un paciente en quien nadie preguntó salía
+   documentado como interrogado, bajo la firma del médico. */
+const sinPreg = P({ edad:'34', peso:70, toleraVO:'', diuresisOk:'' });
+
+t('Sin interrogar se reportan los dos criterios pendientes',
+  ctx.criteriosCasaPendientes(sinPreg).length, 2);
+t('Contestado uno, queda uno pendiente',
+  ctx.criteriosCasaPendientes(P({ edad:'34', peso:70, toleraVO:'si', diuresisOk:'' })).length, 1);
+t('Contestados los dos, no queda ninguno pendiente',
+  ctx.criteriosCasaPendientes(P({ edad:'34', peso:70, toleraVO:'si', diuresisOk:'si' })).length, 0);
+
+t('El "sin interrogar" NO clasifica por sí solo', ctx.clasificar(sinPreg), 'A');
+t('Un "no" explícito en vía oral sí mueve a B1',
+  ctx.clasificar(P({ edad:'34', peso:70, toleraVO:'no', diuresisOk:'si' })), 'B1');
+t('Un "no" explícito en diuresis sí mueve a B1',
+  ctx.clasificar(P({ edad:'34', peso:70, toleraVO:'si', diuresisOk:'no' })), 'B1');
+t('Contestar "sí" a los dos deja al paciente en A',
+  ctx.clasificar(P({ edad:'34', peso:70, toleraVO:'si', diuresisOk:'si' })), 'A');
+
+/* Lo que llega a la historia clínica */
+const repSinPreg = ctx.construirReporte(sinPreg);
+t('El reporte marca los dos criterios como no interrogados', repSinPreg.pendientes.length, 2);
+t('...y sale un bloque "Sin interrogar" en los hallazgos',
+  repSinPreg.hallazgos.some(h => h.titulo === 'Sin interrogar'), 'true');
+t('La historia clínica NUNCA afirma lo que no se preguntó',
+  /tolera la vía oral: conservada/i.test(repSinPreg.conductaTexto), 'false');
+t('El ítem 6 de auditoría lo deja explícito',
+  /SIN INTERROGAR/.test(ctx.auditoria(sinPreg).flatMap(b => b.items)
+    .find(x => /^6\./.test(x.item)).valor), 'true');
+t('Contestados, el ítem 6 sí registra el hallazgo',
+  /conservada/.test(ctx.auditoria(P({ edad:'34', peso:70, toleraVO:'si', diuresisOk:'si' }))
+    .flatMap(b => b.items).find(x => /^6\./.test(x.item)).valor), 'true');
+t('Y el reporte ya no trae pendientes',
+  ctx.construirReporte(P({ edad:'34', peso:70, toleraVO:'si', diuresisOk:'si' })).pendientes.length, 0);
+t('Un "no" se escribe en mayúsculas, para que no pase inadvertido',
+  /NO tolera/.test(ctx.auditoria(P({ edad:'34', peso:70, toleraVO:'no', diuresisOk:'si' }))
+    .flatMap(b => b.items).find(x => /^6\./.test(x.item)).valor), 'true');
+
+
+console.log('\n── Sello de revisión clínica ─────────────────────');
+
+/* El contenido clínico caduca aunque el código siga corriendo: una app de dosis
+   abandonada sigue abriéndose años después dando la dosis de entonces. */
+t('Hay fecha de revisión clínica', /^\d{4}-\d{2}-\d{2}$/.test(ctx.REVISION.fecha), 'true');
+t('La revisión nombra sus fuentes', ctx.REVISION.fuentes.length > 100, 'true');
+t('El mismo día de la revisión no ha pasado ningún mes',
+  ctx.mesesDesdeRevision(ctx.REVISION.fecha), 0);
+t('Once meses después sigue vigente', ctx.estadoRevision('2027-07-20').vigente, 'true');
+t('A los doce meses deja de estar vigente', ctx.estadoRevision('2027-08-20').vigente, 'false');
+t('...y dice cuántos meses lleva', ctx.estadoRevision('2027-08-20').meses, 12);
+t('Vencida, el aviso pide verificar antes de usarla con un paciente',
+  /Verifique que el algoritmo y las dosis sigan vigentes/.test(ctx.estadoRevision('2028-01-20').texto), 'true');
+t('Una fecha anterior a la revisión no da meses negativos',
+  ctx.mesesDesdeRevision('2020-01-01'), 0);
+t('La fecha se escribe en español legible',
+  ctx.fechaLarga('2026-08-20'), '20 de agosto de 2026');
+
+const repVig = ctx.construirReporte(P({ edad:'34', peso:70, fecha:'2026-08-21' }));
+t('El reporte trae el sello de revisión', repVig.revision.vigente, 'true');
+t('Vigente, no ensucia los avisos con la advertencia',
+  repVig.avisos.some(a => /sin revisar|meses desde/.test(a.texto)), 'false');
+const repVenc = ctx.construirReporte(P({ edad:'34', peso:70, fecha:'2028-03-15' }));
+t('Vencida, el reporte sí levanta la advertencia',
+  repVenc.avisos.some(a => /han pasado \d+ meses desde la última revisión/.test(a.texto)), 'true');
 
 console.log('\n───────────────────────────────────────────────────');
 console.log(`  ${pass} pruebas correctas, ${fail} fallidas`);

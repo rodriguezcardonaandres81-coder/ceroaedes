@@ -63,6 +63,8 @@ function t(nombre, real, esperado) {
   await page.click('#s5 button:has-text("Siguiente")');
   await page.selectOption('#f-ingesta', 'agua');
   await page.locator('#list-automed .chk').first().click();   // AINE
+  await page.selectOption('#f-vo', 'si');
+  await page.selectOption('#f-di', 'si');
   await page.click('#s6 button:has-text("Clasificar y calcular manejo")');
   await page.waitForSelector('#s7.active');
 
@@ -147,6 +149,8 @@ function t(nombre, real, esperado) {
   t('La conducta lleva la velocidad de bomba', /Con bomba: /.test(doc), 'true');
   t('El Word conserva la lectura del hematocrito', /Lectura del hematocrito/.test(doc), 'true');
   t('El pie numera las páginas', /w:instr=" PAGE "/.test(pie), 'true');
+  t('El Word lleva la fecha de revisión clínica',
+    /Contenido clínico revisado el \d+ de \w+ de \d{4}/.test(doc), 'true');
 
   /* Ítems 3, 4.2, 7, 8, 17 y 23 del instrumento de MinSalud */
   t('El Word rotula el destino del paciente', /Destino del paciente/.test(doc), 'true');

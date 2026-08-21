@@ -152,9 +152,9 @@ ceroaedes/
 ├── sw.js                   # Service worker (uso sin conexión)
 ├── assets/                 # Iconos
 ├── tests/
-│   ├── engine.test.js      # 405 pruebas del motor clínico
-│   ├── ui.test.js          # 26 recorridos en navegador real
-│   └── docx.test.js        # 48 comprobaciones del documento Word generado
+│   ├── engine.test.js      # 431 pruebas del motor clínico
+│   ├── ui.test.js          # 30 recorridos en navegador real
+│   └── docx.test.js        # 49 comprobaciones del documento Word generado
 ├── LICENSE
 └── README.md
 ```
@@ -166,10 +166,10 @@ La función `construirReporte()` produce un único modelo de datos del que se de
 ## Pruebas
 
 ```bash
-npm test                                  # 405 pruebas del motor clínico (sin navegador)
+npm test                                  # 431 pruebas del motor clínico (sin navegador)
 npm i -D playwright
-npm run test:ui                           # 26 recorridos de interfaz en Chromium real
-npm run test:docx                         # 48 comprobaciones del .docx exportado
+npm run test:ui                           # 30 recorridos de interfaz en Chromium real
+npm run test:docx                         # 49 comprobaciones del .docx exportado
 npm run test:all                          # las tres suites
 ```
 
@@ -216,6 +216,32 @@ No hay una versión "de celular" y otra "de computador": es el mismo `index.html
 Además hay un ajuste para pantallas bajas en horizontal, y una hoja de impresión que oculta botones y barra de pasos y despliega los acordeones.
 
 Las fases del plan de líquidos quedan **a propósito en una sola columna** en todos los tamaños: son una secuencia de administración y repartirlas en dos invita a leerlas fuera de orden.
+
+## Vigencia del contenido clínico
+
+El código puede seguir funcionando perfectamente mientras el contenido clínico caduca. Para que eso no pase en silencio, `index.html` tiene una constante `REVISION` con la fecha de la última revisión y las fuentes contra las que se hizo:
+
+```js
+var REVISION = {
+  fecha: '2026-08-20',
+  fuentes: 'Ficha SIVIGILA 210/220/580 (2024), Protocolo INS v07, ...',
+  mesesVigencia: 12
+};
+```
+
+Esa fecha se muestra **en la pantalla de bienvenida, en el pie de la aplicación y en el documento de Word**. Pasados los meses de vigencia, la app avisa sola —en pantalla y en el Word— que hay que reverificar el algoritmo y las dosis antes de usarla con un paciente.
+
+**Al revisar el contenido clínico, actualice `REVISION.fecha` y la lista de fuentes.** Es lo único que hay que tocar.
+
+## Conteo anónimo de visitas
+
+El `<head>` trae preparado el gancho de **Cloudflare Web Analytics**, apagado. Para activarlo, cree la cuenta gratuita en `dash.cloudflare.com → Analytics & Logs → Web Analytics → Add a site` y reemplace `PEGUE_AQUI_SU_TOKEN` por el token que le entregan.
+
+Mientras diga `PEGUE_AQUI_SU_TOKEN` no se carga ningún script ni sale ninguna petición — hay una prueba que lo verifica. Tampoco se carga si la app se abre desde el disco (`file://`).
+
+Qué se envía: dirección de la página, país y navegador. **Qué no se envía: absolutamente nada del paciente** — los datos clínicos nunca salen del dispositivo. No usa cookies ni identifica personas. El *service worker* deja pasar esa petición sin cachearla, de modo que sin conexión simplemente no se envía y la aplicación funciona igual.
+
+Tenga presente que **el conteo va a quedar corto por diseño**: cuando el médico instala la PWA, las aperturas sin conexión no envían nada. Lo que vea es un piso, no la cifra real.
 
 ## Actualizar la aplicación en los dispositivos
 

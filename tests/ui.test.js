@@ -24,6 +24,13 @@ fs.mkdirSync(TMP, { recursive: true });
   const marcar = (lista, i) => page.locator(`#list-${lista} .chk`).nth(i).click();
   const ninguno = zona => page.locator(`#ninguno-${zona} .chk`).click();
   const avanzar = n => page.click(`#s${n} button:has-text("Siguiente")`);
+  /* Desde la v3.3 los dos criterios de manejo en casa empiezan en "Sin interrogar"
+     y la app no clasifica hasta contestarlos. Los recorridos que solo quieren
+     llegar al resultado responden "sí" a ambos. */
+  const responderCasa = async (vo = 'si', di = 'si') => {
+    await page.selectOption('#f-vo', vo);
+    await page.selectOption('#f-di', di);
+  };
 
   /* Paso 1 — definición de caso */
   async function definicionCaso({ endemica = true, fiebre = true, manifs = [0, 2] } = {}) {
@@ -138,6 +145,7 @@ fs.mkdirSync(TMP, { recursive: true });
   await avanzar(5);
   await shot('06-condiciones');
 
+  await responderCasa();
   await page.click('button:has-text("Clasificar")');
   await page.waitForSelector('#s7.active');
   const salida = await page.locator('#out').innerText();
@@ -186,6 +194,7 @@ fs.mkdirSync(TMP, { recursive: true });
   await avanzar(2); await avanzar(3);
   await ninguno('alarma'); await avanzar(4);
   await ninguno('grave'); await avanzar(5);
+  await responderCasa();
   await page.click('button:has-text("Clasificar")');
   await page.waitForSelector('#s7.active');
   const out2 = await page.locator('#out').innerText();
@@ -206,6 +215,7 @@ fs.mkdirSync(TMP, { recursive: true });
   await ninguno('alarma'); await avanzar(4);
   await ninguno('grave'); await avanzar(5);
   await marcar('cond', 2);                          // diabetes mellitus
+  await responderCasa();
   await page.click('button:has-text("Clasificar")');
   await page.waitForSelector('#s7.active');
   const out2b = await page.locator('#out').innerText();
@@ -221,6 +231,7 @@ fs.mkdirSync(TMP, { recursive: true });
   await marcar('alarma', 1);                        // vómito persistente
   await avanzar(4);
   await ninguno('grave'); await avanzar(5);
+  await responderCasa();
   await page.click('button:has-text("Clasificar")');
   await page.waitForSelector('#s7.active');
   const sivi = await page.locator('.sivi').innerText();
@@ -240,6 +251,7 @@ fs.mkdirSync(TMP, { recursive: true });
   await ninguno('alarma'); await avanzar(4);
   await marcar('grave', 2);                          // shock por dengue
   await avanzar(5);
+  await responderCasa();
   await page.click('button:has-text("Clasificar")');
   await page.waitForSelector('#s7.active');
   const out4 = await page.locator('#out').innerText();
@@ -315,6 +327,7 @@ fs.mkdirSync(TMP, { recursive: true });
   await marcar('alarma', 10);                        // acumulación de líquidos
   await avanzar(4);
   await ninguno('grave'); await avanzar(5);
+  await responderCasa();
   await page.click('button:has-text("Clasificar")');
   await page.waitForSelector('#s7.active');
   const out7 = await page.locator('#out').textContent();
@@ -357,6 +370,7 @@ fs.mkdirSync(TMP, { recursive: true });
   if (!(await page.locator('#resumen-hemo .note.danger').count())) throw new Error('El resumen no quedó en rojo');
   await marcar('grave', 2);                          // shock por dengue
   await avanzar(5);
+  await responderCasa();
   await page.click('button:has-text("Clasificar")');
   await page.waitForSelector('#s7.active');
   const out8 = await page.locator('#out').textContent();
@@ -386,6 +400,7 @@ fs.mkdirSync(TMP, { recursive: true });
   await marcar('alarma', 8);                        // aumento del hematocrito
   await avanzar(4);
   await ninguno('grave'); await avanzar(5);
+  await responderCasa();
   await page.click('button:has-text("Clasificar")');
   await page.waitForSelector('#s7.active');
   const out9 = await page.locator('#out').textContent();
@@ -428,6 +443,7 @@ fs.mkdirSync(TMP, { recursive: true });
   await marcar('alarma', 0);
   await avanzar(4);
   await ninguno('grave'); await avanzar(5);
+  await responderCasa();
   await page.click('button:has-text("Clasificar")');
   await page.waitForSelector('#s7.active');
   const out9c = await page.locator('#out').innerText();
@@ -444,6 +460,7 @@ fs.mkdirSync(TMP, { recursive: true });
   await avanzar(2); await avanzar(3);
   await marcar('alarma', 0); await avanzar(4);
   await ninguno('grave'); await avanzar(5);
+  await responderCasa();
   await page.click('button:has-text("Clasificar")');
   await page.waitForSelector('#s7.active');
   const out9d = await page.locator('#out').textContent();
@@ -647,6 +664,8 @@ fs.mkdirSync(TMP, { recursive: true });
   if (!/suspender de inmediato/i.test(conducta))
     throw new Error('El AINE no genera la orden de suspender: ' + conducta);
 
+  await responderCasa();
+  await responderCasa();
   await page.click('#s6 button:has-text("Clasificar y calcular manejo")');
   await page.waitForSelector('#s7.active');
   const res14 = await page.locator('#s7').innerText();
@@ -661,6 +680,8 @@ fs.mkdirSync(TMP, { recursive: true });
   await page.click('#s7 button:has-text("Ajustar datos")');
   await page.waitForSelector('#s6.active');
   await page.selectOption('#f-ingesta', 'nula');
+  await responderCasa();
+  await responderCasa();
   await page.click('#s6 button:has-text("Clasificar y calcular manejo")');
   await page.waitForSelector('#s7.active');
   if (!/B1/.test(await page.locator('#s7 .result-hero .cat').innerText()))
@@ -729,6 +750,93 @@ fs.mkdirSync(TMP, { recursive: true });
     await ctxA.close();
   }
   console.log('  OK   │ Caso 15: la app se ensancha en el computador y se ajusta en el celular, sin desbordes');
+
+  // ====== Caso 16: los dos criterios de manejo en casa exigen respuesta ======
+  await definicionCaso();
+  await llenarPaciente({ edad: '34', peso: '70' });
+  await avanzar(2); await avanzar(3);
+  await ninguno('alarma'); await avanzar(4);
+  await ninguno('grave'); await avanzar(5);
+
+  const casaInicial = await page.locator('#casa-out').innerText();
+  if (!/falta interrogar/i.test(casaInicial))
+    throw new Error('No avisa que faltan los criterios de manejo en casa: ' + casaInicial);
+  if (await page.locator('#f-vo').inputValue() !== '')
+    throw new Error('La tolerancia oral debería empezar en "Sin interrogar"');
+  if (await page.locator('#f-di').inputValue() !== '')
+    throw new Error('La diuresis debería empezar en "Sin interrogar"');
+
+  dialogos.length = 0;
+  await page.click('#s6 button:has-text("Clasificar y calcular manejo")');
+  await page.waitForTimeout(250);
+  if (await page.locator('#s7.active').count())
+    throw new Error('No debería clasificar con los criterios de manejo en casa sin interrogar');
+  if (!dialogos.some(d => /falta interrogar/i.test(d)))
+    throw new Error('No avisó al intentar clasificar sin interrogar');
+
+  await page.selectOption('#f-vo', 'si');
+  await page.waitForTimeout(100);
+  dialogos.length = 0;
+  await page.click('#s6 button:has-text("Clasificar y calcular manejo")');
+  await page.waitForTimeout(250);
+  if (await page.locator('#s7.active').count())
+    throw new Error('Con un solo criterio contestado tampoco debería clasificar');
+
+  await page.selectOption('#f-di', 'si');
+  await page.waitForTimeout(100);
+  if (!/cumple los dos criterios/i.test(await page.locator('#casa-out').innerText()))
+    throw new Error('No confirma que se cumplen los dos criterios');
+  await responderCasa();
+  await page.click('#s6 button:has-text("Clasificar y calcular manejo")');
+  await page.waitForSelector('#s7.active');
+  const res16 = await page.locator('#s7').innerText();
+  if (/sin interrogar/i.test(res16))
+    throw new Error('Contestados los dos, no debería quedar nada "sin interrogar"');
+  if (!/dengue sin signos de alarma/i.test(res16))
+    throw new Error('Con los dos criterios cumplidos debería quedar en categoría A');
+  console.log('  OK   │ Caso 16: la app no clasifica hasta interrogar vía oral y diuresis');
+
+  // Un "no" explícito mueve la categoría y queda escrito
+  await page.click('#s7 button:has-text("Ajustar datos")');
+  await page.waitForSelector('#s6.active');
+  await page.selectOption('#f-vo', 'no');
+  await page.waitForTimeout(100);
+  if (!/no cumple criterios de manejo en casa/i.test(await page.locator('#casa-out').innerText()))
+    throw new Error('No advierte que deja de cumplir los criterios de manejo en casa');
+  await page.click('#s6 button:has-text("Clasificar y calcular manejo")');
+  await page.waitForSelector('#s7.active');
+  const res16b = await page.locator('#s7').innerText();
+  if (!/no tolera plenamente la vía oral/i.test(res16b))
+    throw new Error('El "no tolera" no aparece en los hallazgos');
+  console.log('  OK   │ Un "no" explícito pasa el paciente a manejo supervisado y queda registrado');
+
+  // ====== Caso 17: sello de revisión clínica visible ======
+  await page.goto(URL);
+  const bienvenida17 = await page.locator('#s0').innerText();
+  if (!/contenido clínico revisado el/i.test(bienvenida17))
+    throw new Error('La bienvenida no muestra la fecha de revisión clínica');
+  const pie17 = await page.locator('#revision-pie').innerText();
+  if (!/contenido clínico revisado el/i.test(pie17))
+    throw new Error('El pie no muestra la fecha de revisión clínica');
+  console.log('  OK   │ Caso 17: la fecha de revisión clínica se ve en la bienvenida y en el pie');
+
+  // ====== Caso 18: el conteo de visitas viene desactivado y no rompe nada ======
+  const beacons = [];
+  const ctx18 = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const pg18 = await ctx18.newPage();
+  pg18.on('request', r => { if (/cloudflareinsights|google-analytics|googletagmanager/.test(r.url())) beacons.push(r.url()); });
+  pg18.on('dialog', d => d.dismiss());
+  await pg18.goto(URL);
+  await pg18.waitForTimeout(600);
+  if (beacons.length)
+    throw new Error('Sin token configurado no debería salir ninguna petición de analítica: ' + beacons.join(', '));
+  const tokenPendiente = await pg18.evaluate(() =>
+    [...document.querySelectorAll('script')].some(s => /PEGUE_AQUI_SU_TOKEN/.test(s.textContent)));
+  if (!tokenPendiente) throw new Error('Falta el gancho de analítica con el token en blanco');
+  await pg18.click('#s0 button:has-text("Comenzar")');
+  await pg18.waitForSelector('#s1.active');
+  await ctx18.close();
+  console.log('  OK   │ Caso 18: el conteo de visitas está listo, apagado, y no envía nada sin token');
   await browser.close();
   console.log('\n  Todos los recorridos de interfaz pasaron. Capturas en shots/\n');
 })().catch(e => { console.error('\n FALLA │ ' + e.message + '\n'); process.exit(1); });

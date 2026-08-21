@@ -2,7 +2,7 @@
    Cachea la aplicación completa para uso sin conexión.
    Sube el número de versión para forzar la actualización en los dispositivos. */
 
-const VERSION = 'ceroaedes-v3.2.1';
+const VERSION = 'ceroaedes-v3.3.0';
 const ASSETS = [
   './',
   './index.html',
@@ -33,6 +33,10 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   const req = event.request;
   if (req.method !== 'GET') return;
+
+  /* El conteo de visitas no se cachea ni se intercepta: si no hay red, que falle
+     en silencio. Nunca debe estorbar al funcionamiento sin conexión. */
+  if (req.url.includes('cloudflareinsights.com')) return;
 
   const esDocumento = req.mode === 'navigate' || (req.headers.get('accept') || '').includes('text/html');
 
