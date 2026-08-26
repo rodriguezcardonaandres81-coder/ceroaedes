@@ -152,8 +152,8 @@ ceroaedes/
 ├── sw.js                   # Service worker (uso sin conexión)
 ├── assets/                 # Iconos
 ├── tests/
-│   ├── engine.test.js      # 431 pruebas del motor clínico
-│   ├── ui.test.js          # 30 recorridos en navegador real
+│   ├── engine.test.js      # 466 pruebas del motor clínico
+│   ├── ui.test.js          # 31 recorridos en navegador real
 │   └── docx.test.js        # 49 comprobaciones del documento Word generado
 ├── LICENSE
 └── README.md
@@ -166,9 +166,9 @@ La función `construirReporte()` produce un único modelo de datos del que se de
 ## Pruebas
 
 ```bash
-npm test                                  # 431 pruebas del motor clínico (sin navegador)
+npm test                                  # 466 pruebas del motor clínico (sin navegador)
 npm i -D playwright
-npm run test:ui                           # 30 recorridos de interfaz en Chromium real
+npm run test:ui                           # 31 recorridos de interfaz en Chromium real
 npm run test:docx                         # 49 comprobaciones del .docx exportado
 npm run test:all                          # las tres suites
 ```
@@ -216,6 +216,30 @@ No hay una versión "de celular" y otra "de computador": es el mismo `index.html
 Además hay un ajuste para pantallas bajas en horizontal, y una hoja de impresión que oculta botones y barra de pasos y despliega los acordeones.
 
 Las fases del plan de líquidos quedan **a propósito en una sola columna** en todos los tamaños: son una secuencia de administración y repartirlas en dos invita a leerlas fuera de orden.
+
+## Dos listas de signos de alarma, y por qué están separadas
+
+La ficha SIVIGILA §6 es un instrumento de **notificación** y lista **doce** hallazgos. El algoritmo de **tratamiento** define el grupo B2 con **ocho**. No son la misma lista, y hasta la v3.3 la aplicación usaba los doce para las dos cosas: cualquiera de ellos disparaba una carga intravenosa de B2.
+
+Desde la v3.4 cada lista gobierna lo suyo. El quinto campo del arreglo `ALARMA` marca con `'ops'` los ocho que cambian la categoría de intervención:
+
+| Signo | Notifica (ficha) | Define B2 (algoritmo) |
+|---|:---:|:---:|
+| Dolor abdominal intenso · Vómito persistente · Acumulación de líquidos · Sangrado de mucosas · Somnolencia o irritabilidad · Hipotensión postural · Hepatomegalia > 2 cm · Aumento progresivo del hematocrito | Sí | **Sí** |
+| Diarrea · Hipotermia · Caída de plaquetas < 100.000 | Sí | **No** |
+| Disminución de la diuresis | Sí | **No** — pero baja a B1, porque «micción normal en las últimas 6 horas» es requisito del grupo A |
+
+Los cuatro que no definen B2 se siguen registrando, se siguen notificando y levantan un aviso que pide control seriado y explica por qué no movieron la categoría — para que el médico no lea una contradicción entre las dos clasificaciones.
+
+Sobre el recuento plaquetario, la guía OPS 2016 es explícita: *«Si bien la trombocitopenia no determina el choque, el descenso progresivo del número de plaquetas es un excelente marcador de la evolución negativa»*. Marcador de seguimiento, no criterio de grupo. Coinciden cinco fuentes: OPS 2016 (guías e instrumento de arbovirosis), MinSalud 2019, OPS/CDE 2020 y OPS 2022.
+
+## Gestación
+
+El embarazo **no complicado** es condición asociada: lleva como mínimo a **B1**. El embarazo **complicado** es, por sí mismo, criterio de hospitalización, con independencia de la categoría de dengue.
+
+**La dosis de líquidos no se reduce por la gestación** en los grupos A, B1 ni B2 — *«el tratamiento […] de la mujer embarazada es semejante al de las no embarazadas […] se usará siempre la solución lactato de Ringer […] en las dosis establecidas»* (OPS 2016). La única excepción es el bolo del **grupo C**, que sí baja de 20 a 10 ml/kg. Hasta la v3.3 la aplicación recortaba también la carga de B2, lo que dejaba a la gestante con la mitad del volumen indicado.
+
+La app pide además la **edad gestacional**: una gestante de 8 semanas y una de 34 no son comparables hemodinámicamente.
 
 ## Vigencia del contenido clínico
 
