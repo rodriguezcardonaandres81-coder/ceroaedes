@@ -769,7 +769,7 @@ footer b{color:var(--text)}
 
 /* === ENGINE START === */
 
-var APP_VERSION = '3.6.1';   /* fuente única: pie de página, Word y service worker */
+var APP_VERSION = '3.6.2';   /* fuente única: pie de página, Word y service worker */
 
 /* ==================================================================
    SELLO DE REVISIÓN CLÍNICA
@@ -1659,12 +1659,25 @@ function evaluacionHemodinamica(S){
     H.push('"Shock por dengue" está marcado como manifestación grave.');
   }
 
-  /* ¿Se midió realmente la hemodinamia? La ausencia de datos no es estabilidad. */
-  var registrada = (S.pas !== '' && S.pas !== undefined && S.pad !== '' && S.pad !== undefined) ||
-                   !!S.llenado || !!S.pulso || (S.fc !== '' && S.fc !== undefined);
+  /* ¿Se midió realmente la hemodinamia? La ausencia de datos no es estabilidad.
+     Y no todos los parámetros pesan igual: sin tensión arterial no hay presión de
+     pulso, y la presión de pulso estrecha (≤ 20 mmHg) es el signo MÁS TEMPRANO de
+     choque en dengue — el que aparece mientras la sistólica todavía se sostiene.
+     Un informe salió diciendo «Sin hallazgos de choque en los parámetros
+     registrados» con la tensión arterial en blanco, apoyado solo en la frecuencia
+     cardiaca y el llenado capilar. Eso no es «no hay choque»: es «no se buscó». */
+  var hayTA = (S.pas !== '' && S.pas !== undefined && S.pas !== null &&
+               S.pad !== '' && S.pad !== undefined && S.pad !== null);
+  var registrada = hayTA || !!S.llenado || !!S.pulso || (S.fc !== '' && S.fc !== undefined);
+  var faltan = [];
+  if(!hayTA) faltan.push('tensión arterial');
+  if(S.fc === '' || S.fc === undefined || S.fc === null) faltan.push('frecuencia cardiaca');
+  if(!S.llenado) faltan.push('llenado capilar');
 
   var r = { hallazgos: H, hipotenso: hipotenso, registrada: registrada,
-            estable: (registrada && !hipotenso && !compensado && !shockMarcado),
+            hayTA: hayTA, faltan: faltan,
+            /* «Estable» exige la tensión arterial: es la que sostiene la conclusión. */
+            estable: (hayTA && !hipotenso && !compensado && !shockMarcado),
             nivel: 'estable', titulo: '', mensaje: '' };
 
   if(hipotenso){
@@ -1682,10 +1695,18 @@ function evaluacionHemodinamica(S){
     r.nivel = 'alerta';
     r.titulo = 'Hallazgos que exigen vigilancia estrecha';
     r.mensaje = 'No se cumplen los criterios plenos de choque con lo registrado, pero hay parámetros alterados. Reevalúe en poco tiempo.';
+  } else if(!hayTA){
+    r.nivel = 'incompleto';
+    r.titulo = 'Evaluación hemodinámica INCOMPLETA: falta la tensión arterial';
+    r.mensaje = 'Sin tensión arterial no hay presión de pulso, y la presión de pulso estrecha (≤ 20 mmHg) es el signo más temprano de choque en dengue: aparece cuando la sistólica todavía se sostiene y el paciente parece estable. ' +
+      'Lo registrado no permite decir que no hay choque; permite decir que no se ha buscado. ' +
+      'Tome la tensión arterial antes de decidir la conducta.' +
+      (faltan.length > 1 ? ' Falta además: ' + faltan.slice(1).join(' y ') + '.' : '');
   } else {
     r.nivel = 'estable';
     r.titulo = 'Sin hallazgos de choque en los parámetros registrados';
-    r.mensaje = 'Esto no descarta un deterioro posterior: en dengue el choque se instala en horas. Repita la evaluación hemodinámica según la categoría.';
+    r.mensaje = 'Esto no descarta un deterioro posterior: en dengue el choque se instala en horas. Repita la evaluación hemodinámica según la categoría.' +
+      (faltan.length ? ' Quedó sin registrar: ' + faltan.join(' y ') + '.' : '');
   }
   return r;
 }
@@ -1984,7 +2005,7 @@ function indiceHtoHb(S){
     return { valor:dec(v), chcm:chcm, tono:'ok', lectura:'Coherente con la regla de tres. CHCM ' + dec(chcm) + ' g/dL.' };
   if(v > 3.2)
     return { valor:dec(v), chcm:chcm, tono:'warn',
-      lectura:'Índice alto: equivale a una CHCM de ' + dec(chcm) + ' g/dL, es decir hipocromía. Oriente a ferropenia o rasgo talasémico, o a un problema de la muestra. No indica hemoconcentración.' };
+      lectura:'Índice alto: equivale a una CHCM de ' + dec(chcm) + ' g/dL, es decir hipocromía. Oriente a ferropenia o rasgo talasémico, o a un problema de la muestra. Este índice no sirve para detectar hemoconcentración —ni a favor ni en contra—: en la fuga de plasma el hematocrito y la hemoglobina suben juntos y el índice no se mueve. Léalo aparte del veredicto de arriba.' };
   return { valor:dec(v), chcm:chcm, tono:'warn',
     lectura:'Índice bajo: CHCM ' + dec(chcm) + ' g/dL. Revise la coherencia de las dos cifras antes de decidir sobre ellas.' };
 }
@@ -2040,15 +2061,24 @@ function veredictoHemograma(S){
                no:'No hay hemoconcentración', 'sin-referencia':'Falta la edad para interpretarlo',
                'sin-dato':'Registre el hematocrito' }[v.estado];
 
-  /* --- fichas de lectura rápida --- */
+  /* --- fichas de lectura rápida ---
+     La ficha del hematocrito se DERIVA del veredicto, no se recalcula. Cuando
+     tenía su propio umbral, un hematocrito de 50 % en una adolescente salía
+     rotulado «Normal» en la tabla mientras el encabezado de la misma sección
+     decía HEMOCONCENTRACIÓN SUGESTIVA y el párrafo de abajo decía «supera el
+     límite superior de referencia». Tres lecturas distintas del mismo número en
+     media página. Ahora solo hay una. */
   if(!isNaN(act)){
-    var alto = ref ? (act > Math.max(HCT_ALTO_OMS, ref.alto)) : (act > HCT_ALTO_OMS), bajo = (ref && act < ref.bajo);
-    /* Sin referencia no se puede afirmar "Normal": decirlo era una conclusión sin
-       respaldo, y además contradecía al veredicto de arriba. */
-    var sinRef = (!ref && d === null);
+    var bajo = (ref && act < ref.bajo);
+    var rotulo = { si:'Alto', sugestivo:'En el límite alto', 'sin-referencia':'Sin referencia',
+                   'sin-dato':'Sin referencia' }[v.estado] || (bajo ? 'Bajo' : 'Normal');
+    var tonoHto = { si:'danger', sugestivo:'warn', 'sin-referencia':'neutro',
+                    'sin-dato':'neutro' }[v.estado] || (bajo ? 'warn' : 'ok');
+    if(v.estado === 'no' && bajo){ rotulo = 'Bajo'; tonoHto = 'warn'; }
     v.tiles.push({ k:'hto', etiqueta:'Hematocrito', valor: dec(act) + ' %',
-      estado: alto ? 'Alto' : (bajo ? 'Bajo' : (sinRef ? 'Sin referencia' : 'Normal')),
-      tono: alto ? 'danger' : (bajo ? 'warn' : (sinRef ? 'neutro' : 'ok')) });
+      estado: rotulo, tono: tonoHto,
+      nota: (act > HCT_ALTO_OMS && v.estado !== 'si')
+        ? 'Supera además el umbral de 50 % de la OMS: repita el control y busque el basal del propio paciente.' : null });
   }
   /* La hemoglobina se digita y gobierna el índice hematocrito/hemoglobina, pero
      hasta la v3.5 no aparecía en ninguna tabla: el reporte afirmaba «índice 2,5,
@@ -2227,7 +2257,11 @@ function interpretarHematocrito(S){
       r.titulo = 'Hematocrito por encima de lo esperado para la edad y el sexo: sugiere hemoconcentración';
       r.mensaje = base + (act > HCT_ALTO_OMS ? 'Supera el 50 % que la OMS usa como umbral de hematocrito alto. ' : (porEncima ? 'Supera el límite superior de referencia. ' : '')) +
         'En un caso probable de dengue esto orienta a extravasación de plasma. ' + aviso;
-      r.acciones.push('Valorar "Aumento del hematocrito" como signo de alarma junto con la clínica: si lo marca, el paciente pasa a categoría B2.');
+      /* Anunciar «pasa a B2» a un paciente que YA está en B2 es la misma falla de
+         siempre: una frase escrita para un caso, impresa en otro. */
+      r.acciones.push(clasificar(S) === 'B2' || clasificar(S) === 'C'
+        ? 'Valorar "Aumento del hematocrito" como signo de alarma junto con la clínica. El paciente ya está en ' + clasificar(S) + ', así que marcarlo no cambia la categoría: sirve para dejar constancia y para la notificación.'
+        : 'Valorar "Aumento del hematocrito" como signo de alarma junto con la clínica: si lo marca, el paciente pasa a categoría B2.');
       r.acciones.push('Repetir el hemograma en 12 a 24 horas para confirmar la tendencia, que es lo que realmente decide.');
       if(inestable) r.acciones.push('Con inestabilidad hemodinámica, trate como fuga activa mientras confirma.');
     } else if(act < ref.bajo){
@@ -2538,6 +2572,15 @@ function construirReporte(S){
       texto:'No se registró hematocrito y el paciente es categoría ' + cat + '. ' +
         'TOME HEMOGRAMA AHORA, antes de iniciar los líquidos: es el valor de referencia con el que se van a leer todos los controles siguientes. ' +
         'No espere el resultado para hidratar — inicie la reposición y registre el hematocrito en cuanto lo tenga.' });
+  /* La tensión arterial no es opcional en B2 y C: el esquema de estas categorías
+     se sostiene sobre reevaluar la hemodinamia cada hora, y sin tensión arterial
+     no hay presión de pulso con qué reevaluarla. */
+  if((cat === 'B2' || cat === 'C') && !m.hemo.hayTA)
+    m.avisos.push({ tono:'danger',
+      texto:'No se registró la TENSIÓN ARTERIAL y el paciente es categoría ' + cat + '. ' +
+        'TÓMELA AHORA: sin ella no hay presión de pulso, y la presión de pulso estrecha (≤ 20 mmHg) es el signo más temprano de choque — ' +
+        'el que aparece mientras la sistólica todavía se sostiene. El esquema de ' + cat + ' se controla reevaluando la hemodinamia cada hora, ' +
+        'y esa reevaluación no se puede hacer sin la cifra. No espere para hidratar: inicie la reposición y tome la tensión en paralelo.' });
   m.noHacer = NO_HACER;
   m.criterios = (cat === 'A' || cat === 'B1')
     ? { titulo:'Criterios de referencia al hospital', items: REFERENCIA }
@@ -3039,7 +3082,7 @@ function renderAutoCond(){
       '</div><div style="margin-top:8px">Con cualquiera de estas, el paciente sin signos de alarma es como mínimo <b>categoría B1</b>.</div></div>' : '';
 }
 
-var TONO_HEMO = { hipotenso:'danger', compensado:'danger', alerta:'warn', estable:'ok' };
+var TONO_HEMO = { hipotenso:'danger', compensado:'danger', alerta:'warn', incompleto:'warn', estable:'ok' };
 
 function calcPP(){
   var pp = presionPulso(S), pm = pam(S), o = $('pp-out'), h = evaluacionHemodinamica(S);
@@ -3171,7 +3214,10 @@ function evaluar(){
           '<div class="flaglist">' + h.items.map(function(x){ return '<span>' + x + '</span>'; }).join('') + '</div></div>';
       }).join('') + '</div>');
   }
-  o.push('<div class="card"><div class="sec-title">Signos vitales y estado hemodinámico</div>' + '<details class="acc"' + (m.hemo.nivel === 'hipotenso' || m.hemo.nivel === 'compensado' ? ' open' : '') +
+  o.push('<div class="card"><div class="sec-title">Signos vitales y estado hemodinámico</div>' + /* El bloque se abre solo cuando hay algo que mirar — y una evaluación
+   incompleta lo es: si queda plegado, el médico no se entera de que falta
+   la tensión arterial hasta que alguien audite la historia. */
+    '<details class="acc"' + (['hipotenso','compensado','incompleto'].indexOf(m.hemo.nivel) >= 0 ? ' open' : '') +
       '><summary>Signos vitales y estado hemodinámico</summary><div class="acc-body"><table class="t">' +
       m.vitales.map(function(f){ return '<tr><td class="k">' + f[0] + '</td><td class="v">' + f[1] + '</td></tr>'; }).join('') +
       '</table><div class="note ' + TONO_HEMO[m.hemo.nivel] + '" style="margin:12px 0 0"><b>' + m.hemo.titulo + '.</b>' +

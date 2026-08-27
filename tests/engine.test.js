@@ -565,8 +565,13 @@ t('Índice 3 se lee como coherente con la regla de tres',
 t('El índice deriva la CHCM', ctx.indiceHtoHb(P({ hctActual: '45', hb: '15' })).chcm, 33.3);
 t('Índice alto se interpreta como hipocromía, no como hemoconcentración',
   /hipocromía/.test(ctx.indiceHtoHb(P({ hctActual: '45', hb: '12.5' })).lectura), 'true');
-t('Y lo dice explícitamente',
-  /No indica hemoconcentración/.test(ctx.indiceHtoHb(P({ hctActual: '45', hb: '12.5' })).lectura), 'true');
+/* «No indica hemoconcentración», impreso justo debajo de un encabezado que dice
+   HEMOCONCENTRACIÓN SUGESTIVA, se lee como si el informe se desdijera. El índice
+   no es prueba ni a favor ni en contra: hay que decirlo así. */
+t('Y aclara que no sirve ni a favor ni en contra',
+  /ni a favor ni en contra/.test(ctx.indiceHtoHb(P({ hctActual: '45', hb: '12.5' })).lectura), 'true');
+t('...y manda leerlo aparte del veredicto',
+  /aparte del veredicto/.test(ctx.indiceHtoHb(P({ hctActual: '45', hb: '12.5' })).lectura), 'true');
 t('Sin hemoglobina no calcula índice', ctx.indiceHtoHb(P({ hctActual: '45', hb: '' })), null);
 t('Hemoglobina cero no divide por cero', ctx.indiceHtoHb(P({ hctActual: '45', hb: '0' })), null);
 
@@ -1256,6 +1261,99 @@ t('En B1 tampoco',
 t('En C sí',
   ctx.construirReporte(P({ edad:'34', peso:70, grave:['shock'] }))
     .avisos.some(a => /TOME HEMOGRAMA AHORA/.test(a.texto)), 'true');
+
+console.log('\n── El informe no puede desdecirse a sí mismo ──────');
+
+/* Un hematocrito de 50 % en una adolescente salía rotulado «Normal» en la tabla
+   mientras el encabezado de la misma sección decía HEMOCONCENTRACIÓN SUGESTIVA y
+   el párrafo de abajo decía «supera el límite superior de referencia». Tres
+   lecturas del mismo número en media página: la ficha tenía su propio umbral. */
+const hto = x => {
+  const v = ctx.veredictoHemograma(P({ edad:'15', sexo:'F', hctActual:String(x) }));
+  return { verdicto: v.estado, ficha: (v.tiles.find(y => y.k === 'hto') || {}).estado };
+};
+t('50 % ya no sale «Normal» junto a un veredicto sugestivo', hto(50).ficha, 'En el límite alto');
+t('...y el veredicto sigue siendo el mismo', hto(50).verdicto, 'sugestivo');
+t('52 % es alto en las dos lecturas', hto(52).ficha, 'Alto');
+t('41 % es normal en las dos', hto(41).ficha, 'Normal');
+t('30 % es bajo en las dos', hto(30).ficha, 'Bajo');
+/* La garantía estructural: la ficha se deriva del veredicto, así que no existe
+   ningún valor en el que puedan contradecirse. */
+const pares = [];
+for (let x = 20; x <= 70; x += 0.5) {
+  const r = hto(x);
+  const choca = (r.verdicto === 'si' && r.ficha !== 'Alto') ||
+                (r.verdicto === 'sugestivo' && r.ficha !== 'En el límite alto') ||
+                (r.verdicto === 'no' && ['Alto','En el límite alto'].indexOf(r.ficha) >= 0);
+  if (choca) pares.push(x + '% → ' + r.verdicto + '/' + r.ficha);
+}
+t('Ningún hematocrito entre 20 y 70 % produce lecturas que se contradigan',
+  pares.join(', ') || 'ninguno', 'ninguno');
+/* En un hombre adulto la referencia llega a 53 %, así que 51 % queda sugestivo y
+   todavía dentro del rango: es justo el caso en que hay que nombrar el 50 % de la
+   OMS, porque la referencia por sí sola no lo delata. */
+t('Sugestivo por encima de 50 % añade el umbral de la OMS',
+  /umbral de 50 % de la OMS/.test(
+    (ctx.veredictoHemograma(P({ edad:'34', sexo:'M', hctActual:'51' })).tiles.find(y => y.k === 'hto') || {}).nota || ''), 'true');
+t('...y cuando ya es «alto» no hace falta repetirlo',
+  (ctx.veredictoHemograma(P({ edad:'15', sexo:'F', hctActual:'51' })).tiles.find(y => y.k === 'hto') || {}).nota, 'null');
+
+/* «Si lo marca, el paciente pasa a categoría B2», impreso en un paciente que ya
+   está en B2: la misma frase escrita para un caso e impresa en otro. */
+const accHct = o => ctx.interpretarHematocrito(P(Object.assign({ edad:'15', sexo:'F', peso:50, hctActual:'50' }, o))).acciones.join(' ');
+t('En un paciente que ya es B2 no se anuncia que pasará a B2',
+  /pasa a categoría B2/.test(accHct({ alarma:['mucosas'] })), 'false');
+t('...sino que marcarlo sirve para la constancia',
+  /no cambia la categoría/.test(accHct({ alarma:['mucosas'] })), 'true');
+t('En un paciente A sí se anuncia el cambio',
+  /pasa a categoría B2/.test(accHct({})), 'true');
+
+console.log('\n── Sin tensión arterial no se puede decir «sin choque» ──');
+
+/* Un informe salió diciendo «Sin hallazgos de choque en los parámetros
+   registrados» con la tensión arterial en blanco, sostenido solo por la
+   frecuencia cardiaca y el llenado capilar. Sin tensión no hay presión de pulso,
+   y la presión de pulso estrecha es el signo más temprano de choque en dengue. */
+const hemo = o => ctx.evaluacionHemodinamica(P(Object.assign({ edad:'15', peso:50 }, o)));
+
+t('Sin tensión arterial la evaluación queda incompleta',
+  hemo({ fc:'86', llenado:'< 2 segundos' }).nivel, 'incompleto');
+t('...y lo dice en el título', 
+  /falta la tensión arterial/i.test(hemo({ fc:'86', llenado:'< 2 segundos' }).titulo), 'true');
+t('...explicando por qué importa la presión de pulso',
+  /signo más temprano de choque/.test(hemo({ fc:'86', llenado:'< 2 segundos' }).mensaje), 'true');
+t('...y distinguiendo «no se buscó» de «no hay»',
+  /no se ha buscado/.test(hemo({ fc:'86', llenado:'< 2 segundos' }).mensaje), 'true');
+t('Sin tensión arterial el paciente NO se declara estable',
+  hemo({ fc:'86', llenado:'< 2 segundos' }).estable, 'false');
+t('Con tensión arterial normal sí',
+  hemo({ pas:'110', pad:'70', fc:'86', llenado:'< 2 segundos' }).estable, 'true');
+t('...y el título vuelve a ser el de siempre',
+  hemo({ pas:'110', pad:'70', fc:'86', llenado:'< 2 segundos' }).nivel, 'estable');
+t('Lo que quedó sin registrar se nombra',
+  /Quedó sin registrar: llenado capilar/.test(hemo({ pas:'110', pad:'70', fc:'86' }).mensaje), 'true');
+/* Un hallazgo real pesa más que el dato faltante: no se degrada a «incompleto». */
+t('Con hipotensión el veredicto no se ablanda por faltar otro dato',
+  hemo({ pas:'70', pad:'40' }).nivel, 'hipotenso');
+t('Con presión de pulso estrecha tampoco',
+  hemo({ pas:'100', pad:'85' }).nivel, 'compensado');
+
+/* Y en B2 o C la tensión arterial se reclama en rojo, como el hemograma. */
+const repSinTA = ctx.construirReporte(P({ edad:'15', peso:50, alarma:['mucosas'], fc:'86',
+  llenado:'< 2 segundos', hctActual:'50' }));
+t('En B2 sin tensión arterial el informe la reclama en rojo',
+  repSinTA.avisos.some(a => /TÓMELA AHORA/.test(a.texto) && a.tono === 'danger'), 'true');
+t('...sin frenar la hidratación',
+  repSinTA.avisos.some(a => /No espere para hidratar/.test(a.texto)), 'true');
+t('Con tensión registrada no molesta',
+  ctx.construirReporte(P({ edad:'15', peso:50, alarma:['mucosas'], pas:'100', pad:'70', hctActual:'50' }))
+    .avisos.some(a => /TÓMELA AHORA/.test(a.texto)), 'false');
+t('En grupo A no se reclama en rojo',
+  ctx.construirReporte(P({ edad:'15', peso:50, fc:'86' }))
+    .avisos.some(a => /TÓMELA AHORA/.test(a.texto)), 'false');
+/* La barrera de siempre: esto avisa, no reclasifica ni cambia volúmenes. */
+t('El aviso no mueve la categoría',
+  ctx.clasificar(P({ edad:'15', peso:50, alarma:['mucosas'], fc:'86' })), 'B2');
 
 console.log('\n── Las seis manifestaciones de la definición de caso ──');
 

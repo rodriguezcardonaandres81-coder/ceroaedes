@@ -1172,6 +1172,45 @@ fs.mkdirSync(TMP, { recursive: true });
   await shot('27-torniquete-limite');
   console.log('  OK   │ Caso 26: el torniquete positivo al límite avisa en vez de dejar perder el caso');
 
+  // ====== Caso 27: sin tensión arterial no se declara «sin choque» ======
+  /* Salió de un informe real: «Sin hallazgos de choque en los parámetros
+     registrados» con la tensión arterial en blanco, sostenido solo por la
+     frecuencia cardiaca y el llenado capilar, en una paciente B2 en fase crítica. */
+  await definicionCaso();
+  await llenarPaciente({ edad: '15', peso: '50',
+    vitales: { fc: '86', fr: '20', temp: '38,5', sato2: '96' },
+    lab: { hct: '50', hb: '14,2', plaquetas: '39.000', leucocitos: '3.200' } });
+  await page.click('#seg-sexo button[data-v="F"]');
+  await avanzar(2); await avanzar(3);
+  await marcar('alarma', 6);                     // hemorragia en mucosas
+  await avanzar(4);
+  await ninguno('grave'); await avanzar(5);
+  await responderCasa();
+  await page.click('#s6 button:has-text("Clasificar y calcular manejo")');
+  await page.waitForSelector('#s7.active');
+
+  const c27 = await page.locator('#s7').innerText();
+  if (/sin hallazgos de choque/i.test(c27))
+    throw new Error('Sin tensión arterial no puede afirmarse que no hay hallazgos de choque');
+  if (!/evaluación hemodinámica incompleta/i.test(c27))
+    throw new Error('Debe declarar la evaluación incompleta');
+  if (!/signo más temprano de choque/i.test(c27))
+    throw new Error('Debe explicar por qué pesa la presión de pulso');
+  if (!/tómela ahora/i.test(c27))
+    throw new Error('En B2 la tensión arterial debe reclamarse en rojo');
+  if (!/no espere para hidratar/i.test(c27))
+    throw new Error('Reclamar la tensión no puede frenar la hidratación');
+  /* Y el hematocrito de 50 % no puede salir «Normal» junto a un veredicto
+     que dice hemoconcentración sugestiva. */
+  if (/hemoconcentración sugestiva/i.test(c27) && /\bNormal\b/.test(c27.split('Plaquetas')[0]))
+    throw new Error('La ficha del hematocrito contradice al veredicto');
+  if (!/en el límite alto/i.test(c27))
+    throw new Error('El hematocrito de 50 % debe rotularse en el límite alto');
+  if (!/500 ml en 1 hora/.test(c27))
+    throw new Error('La conducta de B2 no puede haber cambiado');
+  await shot('28-sin-tension-arterial');
+  console.log('  OK   │ Caso 27: sin tensión arterial la app dice «no se buscó», no «no hay»');
+
   await browser.close();
   console.log('\n  Todos los recorridos de interfaz pasaron. Capturas en shots/\n');
 })().catch(e => { console.error('\n FALLA │ ' + e.message + '\n'); process.exit(1); });

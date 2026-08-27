@@ -166,9 +166,9 @@ La función `construirReporte()` produce un único modelo de datos del que se de
 ## Pruebas
 
 ```bash
-npm test                                  # 593 pruebas del motor clínico (sin navegador)
+npm test                                  # 620 pruebas del motor clínico (sin navegador)
 npm i -D playwright
-npm run test:ui                           # 38 recorridos de interfaz en Chromium real
+npm run test:ui                           # 39 recorridos de interfaz en Chromium real
 npm run test:docx                         # 63 comprobaciones del .docx exportado
 npm run test:all                          # las tres suites
 ```
@@ -218,6 +218,20 @@ La app **cuenta por el INS**. El torniquete se realiza, se registra y se imprime
 La **leucopenia sí cuenta**, y como el leucograma ya está digitado, la app la reconoce sola —umbral < 4.000 /mm³— en vez de pedir que se marque una casilla más. Va rotulada con su origen: *«Leucopenia — tomada de leucocitos 3.200 /mm³»*, para que quien lea la historia clínica vea de dónde salió. Una manifestación marcada a mano no se cuenta dos veces.
 
 **Nada de esto toca el grupo de manejo.** Las manifestaciones alimentan la clasificación para el SIVIGILA; el grupo A/B1/B2/C lo deciden los signos de alarma, las manifestaciones graves y las condiciones asociadas. Dos pruebas lo verifican comparando `clasificar()` y `planLiquidos()` con y sin las manifestaciones deducidas.
+
+## Sin tensión arterial no se dice «sin choque»
+
+Un informe real salió con **«Sin hallazgos de choque en los parámetros registrados»** y la tensión arterial en blanco — la conclusión se sostenía sobre la frecuencia cardiaca y el llenado capilar, en una paciente B2 en fase crítica.
+
+Sin tensión arterial no hay **presión de pulso**, y la presión de pulso estrecha (≤ 20 mmHg) es el signo más temprano de choque en dengue: el que aparece mientras la sistólica todavía se sostiene y el paciente parece estable. Lo registrado no permitía decir que no había choque; permitía decir que **no se había buscado**.
+
+Desde la v3.6.2 esa situación tiene su propio veredicto —*«Evaluación hemodinámica INCOMPLETA: falta la tensión arterial»*—, el bloque se despliega solo en vez de quedar plegado, y el paciente **no se declara estable** sin ella: eso importa porque `interpretarHematocrito()` usa esa bandera para decidir si un hematocrito en descenso significa «reabsorción, reduzca los líquidos». En **B2 y C** la tensión se reclama en rojo, como el hemograma, y sin frenar la hidratación. Un hallazgo real —hipotensión, presión de pulso estrecha— pesa más que el dato faltante y no se ablanda a «incompleta».
+
+## El informe no puede desdecirse a sí mismo
+
+Un hematocrito de 50 % en una adolescente salía rotulado **«Normal»** en la tabla, mientras el encabezado de la misma sección decía **HEMOCONCENTRACIÓN SUGESTIVA** y el párrafo de abajo decía **«supera el límite superior de referencia»**. Tres lecturas del mismo número en media página, porque la ficha tenía su propio umbral (el 50 % de la OMS) y el veredicto usaba otro (la referencia por edad y sexo).
+
+Ahora la ficha **se deriva** del veredicto en vez de recalcularse, de modo que no existe ningún valor en que puedan contradecirse — hay una prueba que recorre de 20 a 70 % en pasos de medio punto verificando exactamente eso. En el mismo informe se corrigieron otras dos frases escritas para un caso e impresas en otro: *«si lo marca, el paciente pasa a categoría B2»* en un paciente que **ya** estaba en B2, y *«no indica hemoconcentración»* —dicho del índice Hto/Hb— impreso justo debajo del encabezado que anunciaba hemoconcentración.
 
 ## Respuestas que se contradicen
 
