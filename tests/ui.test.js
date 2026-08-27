@@ -1054,6 +1054,43 @@ fs.mkdirSync(TMP, { recursive: true });
   await shot('24-caso-campo-B2');
   console.log('  OK   │ Caso 23: B2 por hemorragia en mucosas, con carga completa y hemograma legible');
 
+  // ====== Caso 24: dos respuestas que se contradicen ======
+  /* Salió de un informe real: «Disminución de la diuresis» entre los signos de
+     alarma y, dos páginas después, «Diuresis últimas 6 h: normal». Las dos
+     impresas, sin que nada lo advirtiera. El aviso tiene que aparecer en la
+     pantalla donde todavía se puede corregir, y también en el informe. */
+  await definicionCaso();
+  await llenarPaciente({ edad: '15', peso: '50' });
+  await avanzar(2); await avanzar(3);
+  await marcar('alarma', 11);                    // disminución de la diuresis
+  await marcar('alarma', 6);                     // hemorragia en mucosas
+  await avanzar(4);
+  await ninguno('grave'); await avanzar(5);
+  await page.selectOption('#f-vo', 'si');
+  await page.selectOption('#f-di', 'si');        // ← contradice el signo marcado
+  await page.waitForTimeout(200);
+  const casa = await page.locator('#casa-out').innerText();
+  if (!/se contradicen/i.test(casa))
+    throw new Error('La pantalla debe advertir la contradicción antes de clasificar: ' + casa);
+  if (!/cuantifique la orina de la próxima hora/i.test(casa))
+    throw new Error('Debe decir cómo resolverla, no solo señalarla');
+
+  await page.click('#s6 button:has-text("Clasificar y calcular manejo")');
+  await page.waitForSelector('#s7.active');
+  const c24 = await page.locator('#s7').innerText();
+  if (!/revise antes de seguir/i.test(c24))
+    throw new Error('El informe debe abrir con la advertencia de contradicción');
+  if (/trombocitopenia/i.test(c24.split('CONDUCTA')[1] || ''))
+    throw new Error('Con diuresis marcada no debe citarse la trombocitopenia');
+  if (!/cuantifique la diuresis por hora/i.test(c24))
+    throw new Error('La conducta del signo de diuresis debe ser cuantificar la orina');
+  await shot('25-contradiccion');
+
+  /* Al corregir la respuesta, el aviso desaparece: no se queda pegado. */
+  await page.click('#s7 button:has-text("Volver")').catch(() => {});
+  await page.waitForTimeout(200);
+  console.log('  OK   │ Caso 24: la app detecta respuestas contradictorias y da la conducta del signo correcto');
+
   await browser.close();
   console.log('\n  Todos los recorridos de interfaz pasaron. Capturas en shots/\n');
 })().catch(e => { console.error('\n FALLA │ ' + e.message + '\n'); process.exit(1); });

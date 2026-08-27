@@ -1234,6 +1234,81 @@ t('En C sí',
   ctx.construirReporte(P({ edad:'34', peso:70, grave:['shock'] }))
     .avisos.some(a => /TOME HEMOGRAMA AHORA/.test(a.texto)), 'true');
 
+console.log('\n── Cada signo no-OPS con su propia conducta ───────');
+
+/* El aviso nombraba bien el signo marcado y a continuación citaba SIEMPRE la
+   trombocitopenia y ordenaba SIEMPRE hemograma seriado. A un paciente con la
+   diuresis en descenso se le respondía con una cita sobre plaquetas. */
+const noOps = a => ctx.avisoAlarmaNoOPS(P({ alarma: a })).texto;
+
+t('Con diuresis no se cita la trombocitopenia', /trombocitopenia/.test(noOps(['diuresis'])), 'false');
+t('...y la conducta es cuantificar la orina', /Cuantifique la diuresis por hora/.test(noOps(['diuresis'])), 'true');
+t('...sin ordenar hemograma seriado', /control seriado de hemograma/.test(noOps(['diuresis'])), 'false');
+/* La diuresis baja no define B2, pero sí lleva a B1: decir «no cambia la
+   categoría» sería falso. */
+t('...y se aclara que sí obliga a manejo supervisado en B1',
+  /sí obliga a manejo supervisado en B1/.test(noOps(['diuresis'])), 'true');
+t('...con concordancia de número', /de modo que no lleva a B2/.test(noOps(['diuresis'])), 'true');
+t('Y la clasificación lo respalda: diuresis baja sola da B1',
+  ctx.clasificar(P({ edad:'34', peso:70, alarma:['diuresis'] })), 'B1');
+
+t('Con plaquetas sí se cita la trombocitopenia', /trombocitopenia no determina el choque/.test(noOps(['plaquetas'])), 'true');
+t('...y la conducta sí es el hemograma seriado', /control seriado de hemograma/.test(noOps(['plaquetas'])), 'true');
+t('Con diarrea se habla de pérdida de líquidos', /pérdida de líquidos/.test(noOps(['diarrea'])), 'true');
+t('...y se manda a cuantificar y reponer', /Cuantifique las pérdidas y repóngalas/.test(noOps(['diarrea'])), 'true');
+t('Con hipotermia se remite a la hemodinamia', /Reevalúe la hemodinamia completa/.test(noOps(['hipotermia'])), 'true');
+t('Dos signos juntos traen sus dos conductas',
+  /Cuantifique las pérdidas/.test(noOps(['diarrea','plaquetas'])) &&
+  /control seriado de hemograma/.test(noOps(['diarrea','plaquetas'])), 'true');
+t('...y concuerdan en plural', /Cuentan para la notificación/.test(noOps(['diarrea','plaquetas'])), 'true');
+t('Con un signo OPS presente, la categoría la determinan los otros',
+  /la categoría la determinan los otros signos/.test(noOps(['diuresis','mucosas'])), 'true');
+
+console.log('\n── Respuestas que se contradicen entre sí ─────────');
+
+/* Caso real: «Disminución de la diuresis» entre los signos de alarma y, dos
+   páginas después, «Diuresis últimas 6 h: normal». Las dos, impresas. */
+const contra = o => ctx.contradicciones(P(o)).map(c => c.clave);
+t('Diuresis: signo de alarma contra interrogatorio normal',
+  contra({ alarma:['diuresis'], diuresisOk:'si' }).join(), 'diuresis');
+t('Vómito persistente contra tolerancia oral conservada',
+  contra({ alarma:['vomito'], toleraVO:'si' }).join(), 'vomito');
+t('Coherente: diuresis marcada y respondida como ausente', 
+  contra({ alarma:['diuresis'], diuresisOk:'no' }).length, 0);
+t('Coherente: sin el signo marcado no hay contradicción',
+  contra({ diuresisOk:'si', toleraVO:'si' }).length, 0);
+t('Sin interrogar no es contradicción: es un pendiente',
+  contra({ alarma:['diuresis'], diuresisOk:'' }).length, 0);
+t('Las dos a la vez se detectan las dos',
+  contra({ alarma:['diuresis','vomito'], diuresisOk:'si', toleraVO:'si' }).length, 2);
+
+const repContra = ctx.construirReporte(P({ edad:'15', sexo:'F', peso:50,
+  alarma:['diuresis','mucosas'], diuresisOk:'si' }));
+t('El informe abre con la advertencia, antes que cualquier otro aviso',
+  /^REVISE ANTES DE SEGUIR/.test(repContra.avisos[0].texto), 'true');
+t('...en tono de alerta', repContra.avisos[0].tono, 'danger');
+t('...nombrando las dos respuestas', /no pueden ser ciertas/.test(repContra.avisos[0].texto), 'true');
+t('Sin contradicción el informe no la inventa',
+  ctx.construirReporte(P({ edad:'15', sexo:'F', peso:50, alarma:['mucosas'] }))
+    .avisos.some(a => /REVISE ANTES DE SEGUIR/.test(a.texto)), 'false');
+/* La contradicción avisa, no reclasifica: el signo de alarma sigue pesando. */
+t('La advertencia no cambia la categoría',
+  ctx.clasificar(P({ edad:'15', peso:50, alarma:['diuresis'], diuresisOk:'si' })), 'B1');
+
+console.log('\n── La edad gestacional no se pide dos veces ───────');
+
+const gestCon = ctx.estadoGestacion(P({ embarazo:true, semanasGest:10.5 }));
+t('Con edad gestacional registrada, ya no se pide',
+  /registre la edad gestacional|regístrela/i.test(gestCon.texto), 'false');
+t('...y sí se imprime, con coma', /Edad gestacional: 10,5 semanas/.test(gestCon.texto), 'true');
+const gestSin = ctx.estadoGestacion(P({ embarazo:true, embarazoComplicado:true, semanasGest:'' }));
+t('Sin registrar, se pide expresamente', /NO registrada: regístrela/.test(gestSin.texto), 'true');
+t('...y se explica por qué importa', /8 semanas y una de 34 no son comparables/.test(gestSin.texto), 'true');
+t('El embarazo complicado conserva su criterio propio de hospitalización',
+  /criterio de hospitalización por sí mismo/.test(gestSin.texto), 'true');
+t('Y ninguno de los dos toca la dosis',
+  /NO se reduce por la gestación/.test(gestCon.texto) && /NO se reduce por la gestación/.test(gestSin.texto), 'true');
+
 console.log('\n── Lo que el segundo caso de campo dejó ver ───────');
 
 /* Gestante de 15 años, 50 kg, día 4, hemorragia en mucosas + plaquetas bajas.

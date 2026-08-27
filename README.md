@@ -166,9 +166,9 @@ La función `construirReporte()` produce un único modelo de datos del que se de
 ## Pruebas
 
 ```bash
-npm test                                  # 533 pruebas del motor clínico (sin navegador)
+npm test                                  # 564 pruebas del motor clínico (sin navegador)
 npm i -D playwright
-npm run test:ui                           # 35 recorridos de interfaz en Chromium real
+npm run test:ui                           # 36 recorridos de interfaz en Chromium real
 npm run test:docx                         # 63 comprobaciones del .docx exportado
 npm run test:all                          # las tres suites
 ```
@@ -200,6 +200,18 @@ La aplicación **no es un instrumento de auditoría de historia clínica**: est�
 | 31–56 Manejo | Sí | Plan de líquidos por fase, antipirético, contraindicaciones y monitoreo |
 
 **Deliberadamente fuera de alcance**, por ser datos administrativos o de auditoría institucional: ítem 9 (conciliación medicamentosa), 25–30 (remisión, tiempos, IPS destino), 57–65 (nivel de apropiación de la IPS), y los campos de afiliación, aseguradora, desenlace, autopsia y evaluador.
+
+## Respuestas que se contradicen
+
+Dos pantallas distintas preguntan por lo mismo con otras palabras. Un informe real salió con **«Disminución de la diuresis»** entre los signos de alarma y, dos páginas después, **«Diuresis últimas 6 h: normal»** — las dos impresas, sin que nada lo advirtiera. No es indiferente cuál de las dos es cierta: el signo de alarma mueve la categoría a B1, y la respuesta del interrogatorio es la que queda firmada en la historia clínica.
+
+Desde la v3.5.3 la aplicación coteja dos pares —diuresis disminuida frente a diuresis normal, y vómito persistente frente a tolerancia oral conservada— y **avisa en la pantalla donde todavía se puede corregir**, no solo en el informe. El aviso no reclasifica ni bloquea: dice cuál es la consecuencia de cada respuesta y cómo resolver la duda (*«cuantifique la orina de la próxima hora antes de decidir»*). La decisión sigue siendo del médico.
+
+## Cada signo de alarma con su propia conducta
+
+Los cuatro signos que notifica el SIVIGILA pero no clasifican en B2 —diarrea, hipotermia, plaquetas y diuresis— compartían un solo texto explicativo. El aviso nombraba bien el signo marcado y a continuación citaba **siempre** la trombocitopenia y ordenaba **siempre** hemograma seriado: a un paciente con la diuresis en descenso se le respondía con una cita sobre plaquetas y una orden de laboratorio, en lugar de mandar a cuantificar la orina.
+
+Es el mismo defecto que originó toda esta revisión —texto escrito para un caso, impreso en otro—, así que ahora la justificación y la conducta viajan con el signo. La diuresis además corrige una afirmación falsa: no define B2, pero **sí lleva a B1**, y el aviso lo dice.
 
 ## Lo que el documento dice de sí mismo
 

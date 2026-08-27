@@ -762,7 +762,7 @@ footer b{color:var(--text)}
 
 /* === ENGINE START === */
 
-var APP_VERSION = '3.5.2';   /* fuente única: pie de página, Word y service worker */
+var APP_VERSION = '3.5.3';   /* fuente única: pie de página, Word y service worker */
 
 /* ==================================================================
    SELLO DE REVISIÓN CLÍNICA
@@ -876,19 +876,56 @@ function alarmaOPS(S){
 /* Explica por qué un hallazgo marcado como signo de alarma puede no mover la
    categoría de intervención. Sin esto, el médico ve «dengue con signos de alarma»
    en la notificación y «categoría B1» en la conducta, y cree que es un error. */
+/* Cada uno de los cuatro tiene su propio motivo y su propia conducta. Hasta la
+   v3.5.2 el aviso nombraba bien el signo marcado y a continuación citaba SIEMPRE
+   la trombocitopenia y ordenaba SIEMPRE hemograma seriado: a un paciente con la
+   diuresis en descenso se le respondía con una cita sobre plaquetas y una orden
+   de laboratorio, en lugar de mandar a cuantificar la orina. Es el mismo defecto
+   que originó toda esta revisión —texto escrito para un caso, impreso en otro—
+   así que la justificación y la conducta viajan ahora con el signo. */
+var NO_OPS = {
+  plaquetas: {
+    porque: 'La OPS lo dice del recuento plaquetario: «la trombocitopenia no determina el choque», es un marcador de evolución.',
+    haga: 'Haga control seriado de hemograma: lo que importa es el descenso progresivo, no una cifra aislada.',
+    b1: false },
+  diuresis: {
+    porque: 'La diuresis no clasifica, pero es la principal medida de respuesta al tratamiento: el algoritmo la usa como meta —0,5 a 1 ml/kg/h— y no como criterio de grupo.',
+    haga: 'Cuantifique la diuresis por hora, no por impresión. Si está por debajo de la meta y hay signos de mala perfusión, la conducta es reponer volumen, no restringirlo.',
+    b1: true },
+  diarrea: {
+    porque: 'La diarrea está en la ficha de notificación, pero en el algoritmo de tratamiento cuenta como pérdida de líquidos, no como signo que defina el grupo.',
+    haga: 'Cuantifique las pérdidas y repóngalas: en dengue la diarrea suma a la hipovolemia de la extravasación. Vigile además que el vómito o la deposición no sean sangrado.',
+    b1: false },
+  hipotermia: {
+    porque: 'La hipotermia está en la ficha, pero no entre los ocho del algoritmo; en un paciente en fase crítica puede ser una manifestación de mala perfusión más que un signo aislado.',
+    haga: 'Reevalúe la hemodinamia completa —pulso, llenado capilar, presión de pulso y diuresis— antes de atribuirla al ambiente.',
+    b1: false }
+};
 function avisoAlarmaNoOPS(S){
   var solo = alarmaSoloFicha(S);
   if(!solo.length) return null;
   var nombres = solo.map(function(k){ return nombreDe(ALARMA, k); });
   var hayOPS = alarmaOPS(S).length > 0;
+  /* Alguno de los cuatro SÍ mueve de grupo aunque no defina B2: la diuresis baja
+     lleva a B1. Decir «por sí solo no cambia la categoría» sería falso ahí. */
+  var mueveB1 = solo.some(function(k){ return NO_OPS[k] && NO_OPS[k].b1; });
+  var porques = [], hagas = [];
+  solo.forEach(function(k){
+    if(!NO_OPS[k]) return;
+    if(porques.indexOf(NO_OPS[k].porque) < 0) porques.push(NO_OPS[k].porque);
+    if(hagas.indexOf(NO_OPS[k].haga) < 0) hagas.push(NO_OPS[k].haga);
+  });
   return {
     tono: 'warn',
     lista: nombres,
     texto: (nombres.length === 1 ? 'Registró «' + nombres[0] + '»' : 'Registró ' + nombres.join(', ')) +
-      '. Cuenta para la notificación al SIVIGILA, pero NO está entre los ocho signos que definen el grupo B2 en el algoritmo de tratamiento' +
-      (hayOPS ? ', de modo que la categoría la determinan los otros signos que sí marcó.' : ', de modo que por sí solo no cambia la categoría de intervención.') +
-      ' La OPS lo dice del recuento plaquetario: «la trombocitopenia no determina el choque», es un marcador de evolución. ' +
-      'Haga control seriado de hemograma y reevalúe: si aparece cualquiera de los ocho, el paciente pasa a B2. Su criterio clínico está por encima de esta regla.'
+      '. ' + (nombres.length === 1 ? 'Cuenta' : 'Cuentan') + ' para la notificación al SIVIGILA, pero NO ' +
+      (nombres.length === 1 ? 'está' : 'están') + ' entre los ocho signos que definen el grupo B2 en el algoritmo de tratamiento' +
+      (hayOPS ? ', de modo que la categoría la determinan los otros signos que sí marcó.'
+              : (mueveB1 ? ', de modo que no ' + (nombres.length === 1 ? 'lleva' : 'llevan') + ' a B2 — aunque la diuresis disminuida sí obliga a manejo supervisado en B1.'
+                         : ', de modo que por sí ' + (nombres.length === 1 ? 'solo no cambia' : 'solos no cambian') + ' la categoría de intervención.')) +
+      ' ' + porques.join(' ') + ' ' + hagas.join(' ') +
+      ' Reevalúe: si aparece cualquiera de los ocho, el paciente pasa a B2. Su criterio clínico está por encima de esta regla.'
   };
 }
 
@@ -961,6 +998,26 @@ function criteriosCasaPendientes(S){
   if(S.toleraVO === SIN_INTERROGAR) f.push('tolerancia a la vía oral');
   if(S.diuresisOk === SIN_INTERROGAR) f.push('diuresis en las últimas 6 horas');
   return f;
+}
+
+/* ---------- Respuestas que se contradicen entre sí ----------
+   Dos pantallas distintas preguntan por lo mismo con otras palabras, y el informe
+   imprimía las dos sin notarlo: en un caso real salió «Disminución de la diuresis»
+   entre los signos de alarma y, dos páginas después, «Diuresis últimas 6 h: normal».
+   Una de las dos está mal, y no es indiferente cuál: el signo de alarma mueve la
+   categoría a B1 y la respuesta del interrogatorio es la que queda firmada en la
+   historia clínica. La aplicación no puede decidir por el médico cuál corregir,
+   pero sí tiene que dejar de imprimir las dos como si nada. */
+var CONTRADICCIONES = [
+  { alarma:'diuresis', campo:'diuresisOk', valor:'si',
+    texto:'Marcó «Disminución de la diuresis» entre los signos de alarma y, al interrogar los criterios de manejo, respondió que la diuresis de las últimas 6 horas es normal. Las dos cosas no pueden ser ciertas. Defina cuál corresponde: el signo de alarma lleva el caso a manejo supervisado, y la respuesta del interrogatorio es la que queda firmada en la historia clínica. Si tiene duda, cuantifique la orina de la próxima hora antes de decidir.' },
+  { alarma:'vomito', campo:'toleraVO', valor:'si',
+    texto:'Marcó «Vómito persistente» entre los signos de alarma y, al interrogar los criterios de manejo, respondió que tolera la vía oral. Las dos cosas no pueden ser ciertas. El vómito persistente son tres o más episodios en una hora, o cuatro en seis horas: si es eso, el paciente no está tolerando la vía oral y necesita reposición supervisada.' }
+];
+function contradicciones(S){
+  return CONTRADICCIONES.filter(function(c){
+    return (S.alarma || []).indexOf(c.alarma) >= 0 && S[c.campo] === c.valor;
+  }).map(function(c){ return { tono:'danger', clave:c.alarma, texto:c.texto }; });
 }
 
 /* ---------- Ítem 8 del instrumento MinSalud: automedicación ---------- */
@@ -1122,21 +1179,27 @@ function autoCondiciones(S){
    establecidas» (OPS 2016). Solo el grupo C reduce el bolo a 10 ml/kg. */
 function estadoGestacion(S){
   if(!S.embarazo) return null;
+  /* La edad gestacional se pide solo si falta. El informe decía «registre la edad
+     gestacional» y dos renglones después la imprimía: pedir lo que ya se tiene le
+     enseña al lector a saltarse los avisos. */
+  var falta = (S.semanasGest === '' || S.semanasGest === null || S.semanasGest === undefined);
+  var eg = falta ? ' Edad gestacional NO registrada: regístrela — una gestante de 8 semanas y una de 34 no son comparables.'
+                 : ' Edad gestacional: ' + dec(S.semanasGest) + ' semanas.';
   if(S.embarazoComplicado) return {
-    complicado: true, tono: 'danger',
+    complicado: true, tono: 'danger', faltaEG: falta,
     titulo: 'Gestante con embarazo complicado',
     texto: 'El embarazo complicado es criterio de hospitalización por sí mismo, aparte de la categoría de dengue: ' +
       'defina el destino con obstetricia y no lo deduzca solo del grupo de manejo. ' +
-      'Valore el binomio madre/hijo, registre la edad gestacional y coordine el manejo conjunto. ' +
-      'La dosis de líquidos NO se reduce por la gestación: la OPS indica «las dosis establecidas».'
+      'Valore el binomio madre/hijo y coordine el manejo conjunto. ' +
+      'La dosis de líquidos NO se reduce por la gestación: la OPS indica «las dosis establecidas».' + eg
   };
   return {
-    complicado: false, tono: 'warn',
+    complicado: false, tono: 'warn', faltaEG: falta,
     titulo: 'Gestante — embarazo no complicado',
     texto: 'El embarazo es condición asociada: lleva como mínimo a categoría B1, manejo supervisado. ' +
-      'Valore el binomio madre/hijo y registre la edad gestacional. ' +
+      'Valore el binomio madre/hijo. ' +
       'La dosis de líquidos NO se reduce por la gestación: «el tratamiento […] de la mujer embarazada es semejante al de las no embarazadas» (OPS 2016). ' +
-      'La única excepción es el bolo del grupo C, que sí baja de 20 a 10 ml/kg.'
+      'La única excepción es el bolo del grupo C, que sí baja de 20 a 10 ml/kg.' + eg
   };
 }
 /* Comorbilidad en sentido estricto, para el esquema reducido del Grupo B2 */
@@ -2348,13 +2411,16 @@ function construirReporte(S){
 
   m.revision = estadoRevision(S.fecha);
   m.avisos = [];
+  /* Van de primeras: si dos respuestas se contradicen, todo lo que sigue está
+     construido sobre una de las dos y el médico tiene que saberlo antes de leerlo. */
+  m.contradicciones = contradicciones(S);
+  m.contradicciones.forEach(function(c){ m.avisos.push({ tono:c.tono, texto:'REVISE ANTES DE SEGUIR — ' + c.texto }); });
   if(!m.revision.vigente) m.avisos.push({ tono:'warn', texto: m.revision.texto });
 
   /* Gestación: condición asociada, y si es complicada, criterio de hospitalización. */
   m.gestacion = estadoGestacion(S);
   if(m.gestacion) m.avisos.push({ tono: m.gestacion.tono,
-    texto: m.gestacion.titulo + '. ' + m.gestacion.texto +
-      (S.semanasGest === '' ? ' Edad gestacional no registrada.' : ' Edad gestacional: ' + dec(S.semanasGest) + ' semanas.') });
+    texto: m.gestacion.titulo + '. ' + m.gestacion.texto });
 
   /* Por qué un signo marcado puede no haber movido la categoría. */
   m.alarmaNoOPS = avisoAlarmaNoOPS(S);
@@ -3657,6 +3723,15 @@ function syncCasa(){
   S.toleraVO = $('f-vo').value;
   S.diuresisOk = $('f-di').value;
   var box = $('casa-out'), pend = criteriosCasaPendientes(S);
+  /* La contradicción se avisa aquí, que es donde todavía se puede corregir: en el
+     informe ya es un hallazgo, en esta pantalla es una pregunta abierta. */
+  var contra = contradicciones(S);
+  if(contra.length){
+    box.className = 'note danger';
+    box.innerHTML = '<b>Estas dos respuestas se contradicen.</b> ' +
+      contra.map(function(c){ return esc(c.texto); }).join('<br><br>');
+    return;
+  }
   if(pend.length){
     box.className = 'note warn';
     box.innerHTML = '<b>Falta interrogar:</b> ' + esc(pend.join(' y ')) +
