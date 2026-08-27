@@ -1234,6 +1234,53 @@ t('En C sí',
   ctx.construirReporte(P({ edad:'34', peso:70, grave:['shock'] }))
     .avisos.some(a => /TOME HEMOGRAMA AHORA/.test(a.texto)), 'true');
 
+console.log('\n── Lo que el segundo caso de campo dejó ver ───────');
+
+/* Gestante de 15 años, 50 kg, día 4, hemorragia en mucosas + plaquetas bajas.
+   Nada de esto cambia una dosis: son cuatro sitios donde el documento decía algo
+   distinto de lo que el propio documento mostraba dos renglones más arriba. */
+
+t('La edad gestacional decimal se escribe con coma',
+  /Edad gestacional: 10,5 semanas/.test(JSON.stringify(ctx.construirReporte(
+    P({ edad:'15', sexo:'F', peso:50, embarazo:true, semanasGest:10.5 })))), 'true');
+
+/* La nota del patrón hematológico afirmaba «hemoconcentración o hematocrito alto»
+   dentro de un informe cuyo veredicto decía NO HAY HEMOCONCENTRACIÓN. */
+const sinHc = ctx.interpretarHematocrito(P({ edad:'15', sexo:'F', hctActual:'40',
+  hb:'12,5', plaquetas:'39000', leucocitos:'3200' }));
+t('Con hematocrito normal, la nota no afirma hemoconcentración',
+  sinHc.notas.some(n => /Patrón hematológico compatible con dengue: hematocrito alto/.test(n)), 'false');
+t('...pero sí reconoce el patrón por trombocitopenia y leucopenia',
+  sinHc.notas.some(n => /Trombocitopenia y leucopenia en la misma muestra/.test(n)), 'true');
+t('...y remite a la tendencia', sinHc.notas.some(n => /Lo que decide es la tendencia/.test(n)), 'true');
+const conHc = ctx.interpretarHematocrito(P({ edad:'34', sexo:'M', hctActual:'56',
+  plaquetas:'39000', leucocitos:'3200' }));
+t('Con hematocrito alto la nota sí lo nombra',
+  conHc.notas.some(n => /hematocrito alto, trombocitopenia y leucopenia/.test(n)), 'true');
+
+/* 25 ml de jarabe pediátrico a un adolescente de 50 kg es correcto en aritmética
+   y absurdo en la práctica. La cifra en miligramos no se toca. */
+const anti = p => ctx.antipiretico(P({ edad:'14', peso:p }));
+t('A 40 kg el jarabe sigue siendo lo práctico', /^Jarabe 150 mg\/5 ml/.test(anti(40).jarabe), 'true');
+t('A 50 kg se dispensa la tableta', /ya cabe la tableta de 500 mg/.test(anti(50).jarabe), 'true');
+t('...con el número de tabletas por dosis', /1 – 1,5 tabletas por dosis/.test(anti(50).jarabe), 'true');
+t('...sin dejar de nombrar el jarabe para quien no traga tabletas',
+  /Si no traga tabletas/.test(anti(50).jarabe), 'true');
+t('La dosis en miligramos no cambió', anti(50).dosis, '500 – 750 mg por dosis, cada 6 horas');
+t('Ni a 40 kg', anti(40).dosis, '400 – 600 mg por dosis, cada 6 horas');
+
+/* Decirle «la caída de la fiebre no es mejoría» a quien acaba de registrar
+   38,5 °C describe algo que todavía no ha pasado. */
+const faseT = (dia, temp) => ctx.faseDeLaEnfermedad(P({ edad:'15', dia, temp })).mensaje;
+t('En fase crítica todavía febril, avisa que la defervescencia no ocurrió',
+  /sigue febril \(38,5 °C\): la defervescencia todavía no ocurrió/.test(faseT('4', '38,5')), 'true');
+t('Ya afebril, avisa que es el momento de mayor riesgo',
+  /ya está afebril \(36 °C\)/.test(faseT('5', '36')), 'true');
+t('Sin temperatura registrada no inventa nada',
+  /febril|afebril/.test(faseT('4', '')), 'false');
+t('La fase sigue definiéndose por el día, no por la temperatura',
+  ctx.faseDeLaEnfermedad(P({ edad:'15', dia:'4', temp:'38,5' })).fase, 'critica');
+
 console.log('\n── La coma decimal también en lo que la app calcula ──');
 
 /* La entrada ya respetaba la coma; la SALIDA no. En un reporte que a dos

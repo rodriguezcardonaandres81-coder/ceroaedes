@@ -166,7 +166,7 @@ La función `construirReporte()` produce un único modelo de datos del que se de
 ## Pruebas
 
 ```bash
-npm test                                  # 518 pruebas del motor clínico (sin navegador)
+npm test                                  # 533 pruebas del motor clínico (sin navegador)
 npm i -D playwright
 npm run test:ui                           # 35 recorridos de interfaz en Chromium real
 npm run test:docx                         # 63 comprobaciones del .docx exportado
@@ -200,6 +200,14 @@ La aplicación **no es un instrumento de auditoría de historia clínica**: est�
 | 31–56 Manejo | Sí | Plan de líquidos por fase, antipirético, contraindicaciones y monitoreo |
 
 **Deliberadamente fuera de alcance**, por ser datos administrativos o de auditoría institucional: ítem 9 (conciliación medicamentosa), 25–30 (remisión, tiempos, IPS destino), 57–65 (nivel de apropiación de la IPS), y los campos de afiliación, aseguradora, desenlace, autopsia y evaluador.
+
+## Lo que el documento dice de sí mismo
+
+Un informe clínico se lee de arriba abajo y sus partes tienen que sostenerse entre sí. Tres correcciones de la v3.5.2 salieron de casos reales en los que el documento se contradecía a sí mismo a dos renglones de distancia:
+
+- La nota del patrón hematológico afirmaba *«hemoconcentración o hematocrito alto, trombocitopenia y leucopenia»* dentro de un informe cuyo veredicto impreso decía **NO HAY HEMOCONCENTRACIÓN** y cuyo hematocrito salía rotulado como normal. Ahora la nota describe lo que la muestra muestra, y remite a la tendencia.
+- En fase crítica el informe advertía *«la caída de la fiebre no es mejoría»* a un médico que acababa de registrar 38,5 °C. La fase se sigue definiendo por el día —así lo hacen las guías— pero con la temperatura a la vista la frase se vuelve una instrucción de **cuándo** mirar: si sigue febril, la defervescencia todavía no ocurrió; si ya está afebril, este es el momento de mayor riesgo.
+- El antipirético ofrecía **25 ml de jarabe pediátrico** a un adolescente de 50 kg: correcto en aritmética, absurdo en la práctica. Desde que la tableta de 500 mg cabe dentro del rango calculado, es lo que se dispensa, con el jarabe nombrado para quien no traga tabletas. **La cifra en miligramos no cambió.**
 
 ## Notación numérica
 

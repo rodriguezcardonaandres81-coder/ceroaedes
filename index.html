@@ -762,7 +762,7 @@ footer b{color:var(--text)}
 
 /* === ENGINE START === */
 
-var APP_VERSION = '3.5.1';   /* fuente única: pie de página, Word y service worker */
+var APP_VERSION = '3.5.2';   /* fuente única: pie de página, Word y service worker */
 
 /* ==================================================================
    SELLO DE REVISIÓN CLÍNICA
@@ -1380,9 +1380,17 @@ function antipiretico(S){
     var topado = (15*p > 1000);
     return { titulo:'Acetaminofén (paciente pediátrico)', dosis: dmin + ' – ' + dmax + ' mg por dosis, cada 6 horas',
       base: topado ? '10 – 15 mg/kg/dosis, topado en 1 g por dosis (techo del adulto)' : '10 – 15 mg/kg/dosis',
-      /* El jarabe deja de ser práctico por encima de unos 25 ml por toma. */
-      jarabe: (dmax <= 750 ? 'Jarabe 150 mg/5 ml → ' + dec(Math.round(dmin/30*10)/10) + ' – ' + dec(Math.round(dmax/30*10)/10) + ' ml por dosis'
-                           : 'Por el peso, use tableta de 500 mg: el jarabe exigiría más de 25 ml por toma.'),
+      /* Presentación práctica, no dosis: la cifra en miligramos ya está calculada
+         arriba y no se toca. En cuanto la tableta de 500 mg cabe dentro del rango
+         —desde unos 50 kg— es lo que se dispensa; ofrecer 25 ml de jarabe
+         pediátrico a un adolescente de 50 kg es correcto en aritmética y absurdo
+         en la práctica. El jarabe queda nombrado para quien no traga tabletas. */
+      jarabe: (dmin >= 500
+        ? 'Por el peso ya cabe la tableta de 500 mg: ' + dec(Math.round(dmin/250)/2) + ' – ' + dec(Math.round(dmax/250)/2) +
+          ' tabletas por dosis. Si no traga tabletas, el jarabe de 150 mg/5 ml exigiría ' +
+          dec(Math.round(dmin/30*10)/10) + ' – ' + dec(Math.round(dmax/30*10)/10) + ' ml por toma.'
+        : (dmax <= 750 ? 'Jarabe 150 mg/5 ml → ' + dec(Math.round(dmin/30*10)/10) + ' – ' + dec(Math.round(dmax/30*10)/10) + ' ml por dosis'
+                       : 'Por el peso, use tableta de 500 mg: el jarabe exigiría más de 25 ml por toma.')),
       max:'Máximo 4 dosis en 24 horas (' + r0(diario) + ' mg/día). No exceder 60 mg/kg/día ni 4 g al día.' };
   }
   return { titulo:'Acetaminofén (adulto)', dosis:'500 mg cada 6 horas', base:'Vía oral', jarabe:'', max:'Nunca más de 4 g al día.' };
@@ -2106,7 +2114,14 @@ function interpretarHematocrito(S){
       r.acciones.push('Repetir el hemograma en 12 a 24 horas, o antes si aparecen signos de alarma.');
     }
 
-    if(triada) r.notas.push('Patrón hematológico compatible con dengue: hemoconcentración o hematocrito alto, trombocitopenia y leucopenia en la misma muestra.');
+    /* La nota se redactaba siempre igual —«hemoconcentración o hematocrito alto,
+       trombocitopenia y leucopenia»— incluso cuando el veredicto impreso dos
+       renglones arriba decía NO HAY HEMOCONCENTRACIÓN y el hematocrito salía
+       rotulado como normal. El texto tiene que decir lo que la muestra muestra. */
+    if(triada) r.notas.push(
+      (r.nivel === 'fuga' || r.nivel === 'sugestivo')
+        ? 'Patrón hematológico compatible con dengue: hematocrito alto, trombocitopenia y leucopenia en la misma muestra.'
+        : 'Trombocitopenia y leucopenia en la misma muestra: el patrón hematológico es compatible con dengue aunque el hematocrito todavía no muestre hemoconcentración. Lo que decide es la tendencia — repita el hemograma.');
     return r;
   }
 
@@ -2272,8 +2287,19 @@ function faseDeLaEnfermedad(S){
   } else if(d <= fin){
     r.fase = 'critica'; r.tono = 'danger';
     r.titulo = 'Fase crítica — día ' + d;
+    /* La fase se define por el día —así lo hacen las guías— pero el momento de
+       riesgo lo marca la defervescencia. Decirle «la caída de la fiebre no es
+       mejoría» a un médico que acaba de registrar 38,5 °C describe algo que aún
+       no ha pasado; con la temperatura a la vista, la frase se vuelve una
+       instrucción de cuándo mirar. */
+    var tAhora = parseFloat(numDec(S.temp));   /* tolera la coma decimal digitada */
     r.mensaje = 'Ventana de extravasación de plasma. La caída de la fiebre no es mejoría: es el momento de mayor riesgo de choque. ' +
-      'Busque signos de alarma de forma dirigida y controle hematocrito y plaquetas.';
+      'Busque signos de alarma de forma dirigida y controle hematocrito y plaquetas.' +
+      (isNaN(tAhora) ? '' : (tAhora >= 38
+        ? ' El paciente sigue febril (' + dec(tAhora) + ' °C): la defervescencia todavía no ocurrió, y es justo cuando ocurra cuando hay que reevaluarlo.'
+        : (tAhora < 37.5
+           ? ' El paciente ya está afebril (' + dec(tAhora) + ' °C): si la fiebre acaba de ceder, este es el momento de mayor riesgo, no el de dar de alta.'
+           : '')));
   } else {
     r.fase = 'recuperacion'; r.tono = 'ok';
     r.titulo = 'Fase de recuperación — día ' + d;
@@ -2328,7 +2354,7 @@ function construirReporte(S){
   m.gestacion = estadoGestacion(S);
   if(m.gestacion) m.avisos.push({ tono: m.gestacion.tono,
     texto: m.gestacion.titulo + '. ' + m.gestacion.texto +
-      (S.semanasGest === '' ? ' Edad gestacional no registrada.' : ' Edad gestacional: ' + S.semanasGest + ' semanas.') });
+      (S.semanasGest === '' ? ' Edad gestacional no registrada.' : ' Edad gestacional: ' + dec(S.semanasGest) + ' semanas.') });
 
   /* Por qué un signo marcado puede no haber movido la categoría. */
   m.alarmaNoOPS = avisoAlarmaNoOPS(S);
