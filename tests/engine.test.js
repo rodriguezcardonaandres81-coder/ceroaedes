@@ -496,17 +496,23 @@ const vHay = ctx.veredictoHemograma(P({ edad: '34', sexo: 'M', hctActual: '55', 
                                         plaquetas: '82000', leucocitos: '3100' }));
 t('Hematocrito 55 % en hombre adulto → hay hemoconcentración', vHay.estado, 'si');
 t('El veredicto se enuncia sin rodeos', vHay.titulo, 'Hay hemoconcentración');
-t('Tres fichas: hematocrito, plaquetas y leucocitos', vHay.tiles.length, 3);
+/* Las fichas se buscan por clave y no por posición: cuando se añadió la de
+   hemoglobina, tres pruebas que indexaban por número empezaron a leer la ficha
+   equivocada y a afirmar que las plaquetas estaban «Altas». */
+const ficha = (v, k) => (v.tiles.find(x => x.k === k) || {}).estado;
+t('Cuatro fichas: hematocrito, hemoglobina, plaquetas y leucocitos', vHay.tiles.length, 4);
 t('La ficha de plaquetas marca el signo de alarma',
-  vHay.tiles[1].estado, 'Bajas · signo de alarma');
-t('La ficha de leucocitos marca la leucopenia', vHay.tiles[2].estado, 'Leucopenia');
-t('La ficha de hematocrito lo marca como alto', vHay.tiles[0].estado, 'Alto');
+  ficha(vHay, 'plq'), 'Bajas · signo de alarma');
+t('La ficha de leucocitos marca la leucopenia', ficha(vHay, 'leu'), 'Leucopenia');
+t('La ficha de hematocrito lo marca como alto', ficha(vHay, 'hto'), 'Alto');
+t('La hemoglobina que gobierna el índice ahora sí se muestra',
+  (vHay.tiles.find(x => x.k === 'hb') || {}).valor, '18 g/dL');
 
 const vNo = ctx.veredictoHemograma(P({ edad: '34', sexo: 'M', hctActual: '44', hb: '14.5',
                                        plaquetas: '210000', leucocitos: '6200' }));
 t('Hematocrito 44 % en hombre adulto → no hay hemoconcentración', vNo.estado, 'no');
-t('Y las tres fichas quedan normales',
-  vNo.tiles.filter(x => /Normal/.test(x.estado)).length, 3);
+t('Y las cuatro fichas quedan normales',
+  vNo.tiles.filter(x => /Normal/.test(x.estado)).length, 4);
 
 t('Zona intermedia se marca como sugestiva',
   ctx.veredictoHemograma(P({ edad: '34', sexo: 'F', hctActual: '45.5' })).estado, 'sugestivo');
@@ -1227,6 +1233,86 @@ t('En B1 tampoco',
 t('En C sí',
   ctx.construirReporte(P({ edad:'34', peso:70, grave:['shock'] }))
     .avisos.some(a => /TOME HEMOGRAMA AHORA/.test(a.texto)), 'true');
+
+console.log('\n── La coma decimal también en lo que la app calcula ──');
+
+/* La entrada ya respetaba la coma; la SALIDA no. En un reporte que a dos
+   renglones escribe "0,1 – 0,5 mg/kg", la furosemida decía "5.8 mg". */
+t('dec() cambia el punto por coma', ctx.dec(5.8), '5,8');
+t('dec() deja quietos los enteros', ctx.dec(29), '29');
+t('dec() tolera el vacío', ctx.dec(''), '');
+t('dec() no inventa nada si no es número', ctx.dec('Condicional'), 'Condicional');
+
+const S58 = P({ edad:'15', sexo:'F', peso:58, alarma:['mucosas'] });
+t('La furosemida sale con coma', ctx.furosemida(S58).dosis, '5,8 – 29 mg por dosis, una o dos veces al día');
+t('...y también su infusión continua',
+  /5,8 mg\/hora/.test(ctx.furosemida(S58).infusion), 'true');
+t('El índice hematocrito/hemoglobina sale con coma',
+  ctx.indiceHtoHb(P({ hctActual:'30', hb:'12' })).valor, '2,5');
+t('La desviación frente a la referencia sale con coma',
+  /-26,8 %/.test(ctx.interpretarHematocrito(P({ edad:'15', sexo:'F', hctActual:'30' })).mensaje), 'true');
+t('El peso decimal se escribe como se digitó',
+  /70,5 kg/.test(JSON.stringify(ctx.construirReporte(P({ edad:'34', peso:70.5 })))), 'true');
+/* Rastreo completo: ninguna cifra calculada puede salir con punto decimal.
+   Se excluyen los miles (100.000), la versión (3.5.0) y el ítem 4.1 del
+   instrumento y las secciones 4.x, que son numeración y no cantidades. */
+const textos = [];
+(function walk(o){ if(o == null) return;
+  if(typeof o === 'string'){ textos.push(o); return; }
+  if(typeof o === 'object') for(const k in o) walk(o[k]); })(
+  [58, 70.5, 12.5, 3.5].flatMap(peso =>
+    ['4','6','9'].flatMap(dia =>
+      [[], ['plaquetas'], ['mucosas','abdominal']].flatMap(alarma =>
+        [[], ['shock']].map(grave => ctx.construirReporte(P({
+          edad:'15', sexo:'F', peso, dia, alarma, grave, embarazo:true,
+          hctActual:'44,5', hb:'14,8', plaquetas:'85000', leucocitos:'3200' })))))));
+const sueltos = [];
+textos.forEach(txt => (txt.match(/\d+(?:\.\d+)+/g) || []).forEach(x => {
+  if (/^\d{1,3}(\.\d{3})+$/.test(x)) return;          // miles
+  if (/^\d+\.\d+\.\d+$/.test(x)) return;              // versión
+  if (/^4\.\d$/.test(x)) return;  // numeración de sección o de ítem                            // ítem del instrumento
+  if (sueltos.indexOf(x) < 0) sueltos.push(x);
+}));
+t('Ninguna cifra calculada queda con punto decimal', sueltos.join(', ') || 'ninguna', 'ninguna');
+
+console.log('\n── Hemodilución fisiológica del embarazo ──────────');
+
+const gestHct = ctx.interpretarHematocrito(P({ edad:'15', sexo:'F', embarazo:true, hctActual:'30' }));
+t('En gestante se advierte la hemodilución del embarazo',
+  gestHct.notas.some(n => /hemodilución fisiológica del embarazo/.test(n)), 'true');
+t('...y se dice que la referencia es de mujer no gestante',
+  gestHct.notas.some(n => /referencia usada aquí es la de mujer no gestante/.test(n)), 'true');
+t('...pero la referencia numérica NO se movió',
+  ctx.refEfectiva(P({ edad:'15', sexo:'F', embarazo:true })).bajo, 36);
+t('...ni cambió el veredicto',
+  ctx.veredictoHemograma(P({ edad:'15', sexo:'F', embarazo:true, hctActual:'30' })).estado,
+  ctx.veredictoHemograma(P({ edad:'15', sexo:'F', embarazo:false, hctActual:'30' })).estado);
+t('Con basal propio la nota cambia: esa comparación sí es válida',
+  ctx.interpretarHematocrito(P({ edad:'15', sexo:'F', embarazo:true, hctBasal:'33', hctActual:'40' }))
+    .notas.some(n => /no requiere corrección/.test(n)), 'true');
+t('Sin embarazo no aparece la nota',
+  ctx.interpretarHematocrito(P({ edad:'15', sexo:'F', hctActual:'30' }))
+    .notas.some(n => /hemodilución/.test(n)), 'false');
+
+console.log('\n── Rótulos del registro para historia clínica ─────');
+
+/* Al quitar el antecedente de vacuna la numeración se corrió, pero los rótulos
+   de bloque se quedaron con los rangos viejos: decían "ítems 8 a 13" sobre una
+   lista que empieza en el 10. En un instrumento de auditoría el número ES el
+   dato, así que el rótulo se deriva de los ítems y no se escribe a mano. */
+const bloques = ctx.auditoria(P({ edad:'34', peso:70 }));
+const numero = it => parseFloat(it.item);
+bloques.forEach(b => {
+  const ns = b.items.map(numero);
+  const rango = b.bloque.match(/ítems (\d+) a (\d+)/);
+  t('El rótulo «' + b.bloque + '» coincide con sus ítems',
+    rango ? rango[1] + '–' + rango[2] : 'sin rango',
+    Math.floor(Math.min(...ns)) + '–' + Math.floor(Math.max(...ns)));
+});
+t('La numeración de los ítems no tiene repetidos',
+  (() => { const n = bloques.flatMap(b => b.items.map(numero)); return new Set(n).size === n.length; })(), 'true');
+t('El registro llega hasta el ítem 19',
+  Math.max(...bloques.flatMap(b => b.items.map(numero))), 19);
 
 console.log('\n───────────────────────────────────────────────────');
 console.log(`  ${pass} pruebas correctas, ${fail} fallidas`);

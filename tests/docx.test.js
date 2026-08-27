@@ -166,6 +166,34 @@ function t(nombre, real, esperado) {
   t('El Word corrige la ingesta de solo agua', /NO reponen los electrolitos/.test(doc), 'true');
   t('El Word ordena suspender el AINE', /SUSPENDER de inmediato/.test(doc), 'true');
 
+  console.log('\n── Documento Word: notación colombiana ───────────');
+
+  /* El texto visible del documento, sin etiquetas: es lo que el médico lee. */
+  const texto = doc.replace(/<w:tab\/>/g, ' ').replace(/<[^>]+>/g, '')
+                   .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+
+  t('El peso decimal se imprime con coma', /70,5 kg/.test(texto), 'true');
+  t('...y nunca con punto', /70\.5/.test(texto), 'false');
+  /* Barrido: ninguna cantidad puede salir con punto decimal en un documento que a
+     dos renglones escribe "solución salina 0,9 %". Se excluyen los miles (82.000),
+     la versión (3.5.0) y los 4.x, que son numeración de sección y de ítem. */
+  const sueltos = [...new Set((texto.match(/\d+(?:\.\d+)+/g) || []).filter(x =>
+    !/^\d{1,3}(\.\d{3})+$/.test(x) && !/^\d+\.\d+\.\d+$/.test(x) && !/^4\.\d$/.test(x)))];
+  t('Ninguna cifra calculada sale con punto decimal', sueltos.join(', ') || 'ninguna', 'ninguna');
+
+  console.log('\n── Documento Word: hemograma y auditoría ─────────');
+
+  t('El Word muestra la hemoglobina que gobierna el índice', /Hemoglobina/.test(texto), 'true');
+  t('...junto al índice hematocrito/hemoglobina', /Índice hematocrito\/hemoglobina/.test(texto), 'true');
+  /* Los rótulos de bloque se quedaron con la numeración vieja al retirar el
+     antecedente de vacuna: decían "ítems 8 a 13" sobre una lista que empieza en 10. */
+  t('El bloque de examen físico rotula sus ítems reales', /Examen físico \(ítems 10 a 15\)/.test(texto), 'true');
+  t('El bloque de laboratorio también', /Laboratorio e imágenes diagnósticas \(ítems 16 a 19\)/.test(texto), 'true');
+  t('La introducción del registro llega hasta el 19', /Ítems 1 a 19 del Instrumento/.test(texto), 'true');
+  t('Ya no queda el rótulo viejo «ítems 8 a 13»', /ítems 8 a 13/.test(texto), 'false');
+  t('La orden de laboratorio no arrastra la referencia interna de auditoría',
+    /fuga vascular — documentan ascitis y derrame pleural \(instrumento/.test(texto), 'false');
+
   console.log('\n── Documento Word: apertura real ─────────────────');
 
   let paginas = 0;

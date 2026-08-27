@@ -166,18 +166,18 @@ La función `construirReporte()` produce un único modelo de datos del que se de
 ## Pruebas
 
 ```bash
-npm test                                  # 496 pruebas del motor clínico (sin navegador)
+npm test                                  # 518 pruebas del motor clínico (sin navegador)
 npm i -D playwright
-npm run test:ui                           # 34 recorridos de interfaz en Chromium real
-npm run test:docx                         # 53 comprobaciones del .docx exportado
+npm run test:ui                           # 35 recorridos de interfaz en Chromium real
+npm run test:docx                         # 63 comprobaciones del .docx exportado
 npm run test:all                          # las tres suites
 ```
 
 **Motor clínico** — definición operativa de caso, clasificación en los cuatro grupos, volúmenes de cada fase para adulto y pediátrico, dosis reducidas en gestación y adulto mayor, ajuste por peso ideal, conversiones a goteo, selección de laboratorios por día de enfermedad, lectura del hematocrito y válvulas de seguridad de la infusión.
 
-**Interfaz** — los recorridos completos, incluidos los casos que antes fallaban: notación decimal colombiana, rangos de plausibilidad, operación con teclado y persistencia de las decisiones del médico.
+**Interfaz** — los recorridos completos, incluidos los casos que antes fallaban: notación decimal colombiana, rangos de plausibilidad, operación con teclado y persistencia de las decisiones del médico. Dos de esos recorridos son casos reales de campo, fijados como regresión permanente: la gestante que **no** debe pasar a B2 por plaquetas bajas, y la que **sí** debe pasar a B2 por hemorragia en mucosas, con la carga completa.
 
-**Documento Word** — descarga el `.docx` real desde el navegador, comprueba la integridad del ZIP y del CRC de cada miembro, valida cada parte XML contra el esquema **ISO/IEC 29500-4**, verifica el escapado del texto de origen humano, la justificación y la negrita del cuerpo, la ausencia de grises ilegibles, y lo abre con LibreOffice para confirmar que no pide reparación.
+**Documento Word** — descarga el `.docx` real desde el navegador, comprueba la integridad del ZIP y del CRC de cada miembro, valida cada parte XML contra el esquema **ISO/IEC 29500-4**, verifica el escapado del texto de origen humano, la justificación y la negrita del cuerpo, la ausencia de grises ilegibles, la notación decimal de **toda** cifra impresa, y lo abre con LibreOffice para confirmar que no pide reparación.
 
 ## Cobertura del instrumento de MinSalud
 
@@ -200,6 +200,12 @@ La aplicación **no es un instrumento de auditoría de historia clínica**: est�
 | 31–56 Manejo | Sí | Plan de líquidos por fase, antipirético, contraindicaciones y monitoreo |
 
 **Deliberadamente fuera de alcance**, por ser datos administrativos o de auditoría institucional: ítem 9 (conciliación medicamentosa), 25–30 (remisión, tiempos, IPS destino), 57–65 (nivel de apropiación de la IPS), y los campos de afiliación, aseguradora, desenlace, autopsia y evaluador.
+
+## Notación numérica
+
+En Colombia la coma es el separador decimal y el punto el de miles. Eso ya se respetaba en la **entrada** —los campos clínicos son de texto y pasan por `numDec`/`numCount`, porque un `<input type="number">` descartaba la coma en silencio y `70,5` kg se convertía en una carga de 7.050 ml—. Desde la v3.5.1 se respeta también en la **salida**: toda cifra que la aplicación calcula pasa por `dec()` antes de imprimirse.
+
+No es un detalle de estilo. El documento escribía «furosemida 5.8 mg» y «peso 70.5 kg» a dos renglones de «solución salina 0,9 %»; en una orden médica, un punto leído como separador de miles cambia la dosis de escala. `dec()` solo cambia cómo se escribe el número — nunca su valor — y una prueba de barrido recorre el reporte completo de más de mil casos sintéticos verificando que no quede ninguna cifra con punto decimal.
 
 ## Un solo archivo para todas las pantallas
 
@@ -240,6 +246,8 @@ El embarazo **no complicado** es condición asociada: lleva como mínimo a **B1*
 **La dosis de líquidos no se reduce por la gestación** en los grupos A, B1 ni B2 — *«el tratamiento […] de la mujer embarazada es semejante al de las no embarazadas […] se usará siempre la solución lactato de Ringer […] en las dosis establecidas»* (OPS 2016). La única excepción es el bolo del **grupo C**, que sí baja de 20 a 10 ml/kg. Hasta la v3.3 la aplicación recortaba también la carga de B2, lo que dejaba a la gestante con la mitad del volumen indicado.
 
 La app pide además la **edad gestacional**: una gestante de 8 semanas y una de 34 no son comparables hemodinámicamente.
+
+Al leer el hematocrito de una gestante, el informe advierte la **hemodilución fisiológica del embarazo**: el volumen plasmático crece más que la masa eritrocitaria, de modo que un hematocrito «dentro del rango» puede ya representar hemoconcentración y uno «bajo» puede ser fisiológico. La referencia numérica **no se corrige** —moverla cambiaría el veredicto y con él la conducta—: se entrega la advertencia y se recuerda que un hemograma previo del propio embarazo pesa más que cualquier referencia poblacional.
 
 ## Recomendaciones para la casa
 

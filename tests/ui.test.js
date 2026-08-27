@@ -212,7 +212,7 @@ fs.mkdirSync(TMP, { recursive: true });
     throw new Error('Holliday-Segar puro para 33 kg debe dar 1760 ml, no otro valor');
   if (out2.includes('1850 ml')) throw new Error('No debe aplicar el 5 % de déficit en categoría A');
   if (!/100 ml\/kg los primeros 10 kg/.test(out2)) throw new Error('No explica la fórmula de Holliday-Segar');
-  for (const e of ['330 – 495 mg por dosis', '11 – 16.5 ml por dosis'])
+  for (const e of ['330 – 495 mg por dosis', '11 – 16,5 ml por dosis'])
     if (!out2.includes(e)) throw new Error('Falta dosis pediátrica: ' + e);
   await shot('08-resultado-A-33kg');
   console.log('  OK   │ Caso 2: escolar 33 kg ambulatorio → 1.760 ml/24 h (Holliday-Segar sin déficit)');
@@ -395,7 +395,7 @@ fs.mkdirSync(TMP, { recursive: true });
     lab: { hct: '48', 'hct-basal': '38', hb: '16', plaquetas: '85000' }
   });
   const bloqueHct = await page.locator('#veredicto-box').innerText();
-  for (const e of ['Hay hemoconcentración', '+26.3 % sobre el basal', '85.000', 'Bajas · signo de alarma'])
+  for (const e of ['Hay hemoconcentración', '+26,3 % sobre el basal', '85.000', 'Bajas · signo de alarma'])
     if (!bloqueHct.includes(e)) throw new Error('Falta en el veredicto del hemograma: ' + e);
   if (!(await page.locator('#veredicto-box .veredicto.si').count()))
     throw new Error('El veredicto no quedó marcado como hemoconcentración');
@@ -1000,6 +1000,60 @@ fs.mkdirSync(TMP, { recursive: true });
     if (!casaTxt.includes(e)) throw new Error('Falta en las recomendaciones para la casa: ' + e);
   await shot('22-recomendaciones-casa');
   console.log('  OK   │ Caso 22: las recomendaciones para la casa se arman según el grupo y la fase');
+  // ====== Caso 23: el segundo caso de campo — B2 por hemorragia en mucosas ======
+  /* Misma gestante de 15 años, ahora en día 6 y con hemorragia en mucosas además
+     de las plaquetas bajas. Aquí SÍ debe dar B2 —mucosas es uno de los ocho
+     signos del algoritmo— pero la carga tiene que salir completa: 10 ml/kg. El
+     riesgo que vigila esta prueba es el inverso del Caso 19: que la corrección de
+     las plaquetas hubiera dejado de reconocer los signos que sí clasifican. */
+  await definicionCaso();
+  await llenarPaciente({ edad: '15', peso: '58', inicio: '2026-08-21', consulta: '2026-08-26',
+    vitales: { temp: '36' }, lab: { hct: '30', hb: '12', plaquetas: '39.000', leucocitos: '8.000' } });
+  await page.click('#seg-sexo button[data-v="F"]');
+  await page.waitForTimeout(150);
+  await page.locator('#f-embarazo').click();
+  await page.waitForTimeout(150);
+  await page.selectOption('#f-emb-estado', 'si');
+  await page.fill('#f-emb-semanas', '10');
+  await page.waitForTimeout(150);
+
+  await avanzar(2); await avanzar(3);
+  await marcar('alarma', 9);                     // caída de plaquetas < 100.000
+  await marcar('alarma', 4);                     // hemorragia en mucosas
+  await avanzar(4);
+  await ninguno('grave'); await avanzar(5);
+  await responderCasa();
+  await page.click('#s6 button:has-text("Clasificar y calcular manejo")');
+  await page.waitForSelector('#s7.active');
+
+  const c23 = await page.locator('#s7').innerText();
+  if (!/categoría de intervención b2/i.test(c23))
+    throw new Error('Con hemorragia en mucosas la categoría debe ser B2');
+  if (!/580 ml en 1 hora/.test(c23))
+    throw new Error('La carga de B2 debe salir completa (10 ml/kg = 580 ml), sin reducir por gestación');
+  if (!/no se reduce por la gestación/i.test(c23))
+    throw new Error('Debe sustentar que la gestación no reduce la dosis');
+  if (!/no determina el choque/i.test(c23))
+    throw new Error('Debe seguir explicando que las plaquetas no son las que clasifican');
+  if (!/hemoglobina/i.test(c23))
+    throw new Error('La hemoglobina que gobierna el índice debe aparecer en el hemograma');
+  if (!/hemodilución fisiológica del embarazo/i.test(c23))
+    throw new Error('En gestante debe advertir la hemodilución al leer el hematocrito');
+  if (/\d\.\d\d? (ml|mg|kg|%|g\/dL)/.test(c23))
+    throw new Error('Quedó una cifra con punto decimal en pantalla: ' +
+      (c23.match(/\d\.\d\d? (ml|mg|kg|%|g\/dL)/) || [])[0]);
+  /* El registro de auditoría va plegado y en versalitas: hay que abrirlo y leer sin
+     distinguir mayúsculas, porque text-transform cambia el innerText. */
+  await page.locator('#s7 details.acc', { hasText: 'Registro para historia clínica' }).first()
+    .evaluate(e => e.open = true);
+  const reg23 = await page.locator('#s7 details.acc', { hasText: 'Registro para historia clínica' })
+    .first().innerText();
+  if (!/ítems 10 a 15/i.test(reg23) || !/ítems 16 a 19/i.test(reg23))
+    throw new Error('Los rótulos del registro para historia clínica siguen con la numeración vieja: ' +
+      (reg23.match(/ítems \d+ a \d+/gi) || []).join(' / '));
+  await shot('24-caso-campo-B2');
+  console.log('  OK   │ Caso 23: B2 por hemorragia en mucosas, con carga completa y hemograma legible');
+
   await browser.close();
   console.log('\n  Todos los recorridos de interfaz pasaron. Capturas en shots/\n');
 })().catch(e => { console.error('\n FALLA │ ' + e.message + '\n'); process.exit(1); });

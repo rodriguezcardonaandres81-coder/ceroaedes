@@ -762,7 +762,7 @@ footer b{color:var(--text)}
 
 /* === ENGINE START === */
 
-var APP_VERSION = '3.5.0';   /* fuente única: pie de página, Word y service worker */
+var APP_VERSION = '3.5.1';   /* fuente única: pie de página, Word y service worker */
 
 /* ==================================================================
    SELLO DE REVISIÓN CLÍNICA
@@ -1013,6 +1013,19 @@ function numDec(v){
   if(!/^-?\d*\.?\d*$/.test(s)) return '';
   var n = parseFloat(s);
   return isNaN(n) ? '' : n;
+}
+/* Salida numérica con la misma notación con que se digita.
+   La entrada ya respeta la coma decimal, pero las cifras que la aplicación
+   CALCULA salían del motor en notación inglesa: la furosemida decía "5.8 mg" y
+   el índice hematocrito/hemoglobina "2.5" dentro de un documento que a dos
+   renglones escribe "0,1 – 0,5 mg/kg". En una orden de líquidos esa mezcla no
+   es un detalle de estilo: un punto leído como separador de miles cambia la
+   dosis de escala. Solo cambia cómo se escribe el número, nunca su valor. */
+function dec(n){
+  if(n === null || n === undefined || n === '') return '';
+  var x = (typeof n === 'number') ? n : parseFloat(n);
+  if(isNaN(x)) return String(n);
+  return String(x).replace('.', ',');
 }
 /* Conteos celulares: "85.000", "85,000" y "85000" son todos ochenta y cinco mil. */
 function numCount(v){
@@ -1311,7 +1324,7 @@ function planLiquidos(S){
       nota:'Tomar hematocrito ANTES de iniciar (no esperar el resultado para hidratar). Cristaloide: Lactato de Ringer o SSN 0,9 %.', hora:t, tipo:'carga' });
     plan.fases.push({ n:'Repetir carga (hasta 2 veces más)', rate: r0(10*p) + ' ml en 1 hora', mlkg:'10 ml/kg', dur:'1 hora c/u',
       goteoMin: goteo(10*p), goteoMax: goteo(10*p), vol: r0(10*p) + ' ml',
-      nota:'Solo si persisten los signos de alarma Y la diuresis es menor de ' + (Math.round(p*10)/10) + ' ml/h (1 ml/kg/h). Si hay deterioro o aumento rápido del hematocrito, tratar como categoría C.',
+      nota:'Solo si persisten los signos de alarma Y la diuresis es menor de ' + dec(Math.round(p*10)/10) + ' ml/h (1 ml/kg/h). Si hay deterioro o aumento rápido del hematocrito, tratar como categoría C.',
       hora:'condicional', tipo:'cond' });
     t = addMin(t,60);
     plan.fases.push({ n:'Fase 2 — con mejoría', rate: rango(p,5,7) + ' ml/h', mlkg:'5 – 7 ml/kg/h', dur:'2 – 4 horas',
@@ -1368,7 +1381,7 @@ function antipiretico(S){
     return { titulo:'Acetaminofén (paciente pediátrico)', dosis: dmin + ' – ' + dmax + ' mg por dosis, cada 6 horas',
       base: topado ? '10 – 15 mg/kg/dosis, topado en 1 g por dosis (techo del adulto)' : '10 – 15 mg/kg/dosis',
       /* El jarabe deja de ser práctico por encima de unos 25 ml por toma. */
-      jarabe: (dmax <= 750 ? 'Jarabe 150 mg/5 ml → ' + (Math.round(dmin/30*10)/10) + ' – ' + (Math.round(dmax/30*10)/10) + ' ml por dosis'
+      jarabe: (dmax <= 750 ? 'Jarabe 150 mg/5 ml → ' + dec(Math.round(dmin/30*10)/10) + ' – ' + dec(Math.round(dmax/30*10)/10) + ' ml por dosis'
                            : 'Por el peso, use tableta de 500 mg: el jarabe exigiría más de 25 ml por toma.'),
       max:'Máximo 4 dosis en 24 horas (' + r0(diario) + ' mg/día). No exceder 60 mg/kg/día ni 4 g al día.' };
   }
@@ -1402,7 +1415,8 @@ function laboratorio(S){
   L.push(pruebaConfirmatoria(S.dia));
   L.push(NS1_NEGATIVO);
   L.push(siguientePaso(S.dia));
-  L.push('Ecografía abdominal y radiografía de tórax ante hallazgos clínicos sugestivos de fuga vascular — documentan ascitis y derrame pleural (instrumento de auditoría, ítem 17).');
+  /* Ítem 17 del instrumento de auditoría; la referencia interna no se imprime. */
+  L.push('Ecografía abdominal y radiografía de tórax ante hallazgos clínicos sugestivos de fuga vascular — documentan ascitis y derrame pleural.');
 
   if(cat === 'A'){
     L.push('Hemograma completo al menos cada 48 horas.');
@@ -1542,7 +1556,7 @@ function vitalesTabla(S){
   F.push(['Presión de pulso', pp !== null ? (pp + ' mmHg' + (pp <= 20 ? ' — ≤ 20 mmHg: choque compensado' : '')) : 'Sin registrar']);
   F.push(['Frecuencia cardiaca', S.fc ? S.fc + ' lpm' : 'Sin registrar']);
   F.push(['Frecuencia respiratoria', S.fr ? S.fr + ' rpm' : 'Sin registrar']);
-  F.push(['Temperatura', S.temp ? S.temp + ' °C' : 'Sin registrar']);
+  F.push(['Temperatura', S.temp ? dec(S.temp) + ' °C' : 'Sin registrar']);
   F.push(['Saturación de oxígeno', S.sato2 ? S.sato2 + ' %' : 'Sin registrar']);
   F.push(['Llenado capilar', S.llenado || 'Sin registrar']);
   F.push(['Estado de conciencia', S.conciencia || 'Sin registrar']);
@@ -1551,7 +1565,7 @@ function vitalesTabla(S){
 
 var TORNIQUETE = { nr:'No realizada', neg:'Negativa', pos:'Positiva (10 o más petequias en 2,5 × 2,5 cm)' };
 
-/* ---------- Registro para historia clínica (instrumento de auditoría, ítems 1–17) ---------- */
+/* ---------- Registro para historia clínica (instrumento de auditoría, ítems 1–19) ---------- */
 function auditoria(S){
   var reg = function(txt, valor){ return { item: txt, valor: valor || null }; };
   var lista = function(arr){ return arr.length ? arr.join('; ') : null; };
@@ -1567,7 +1581,7 @@ function auditoria(S){
     { bloque:'A. Anamnesis (ítems 1 a 8)', items: [
       reg('1. Fiebre caracterizada: fecha de inicio, intensidad en °C y patrón de evolución.',
         (S.fiebre ? 'Fiebre presente' : 'Sin fiebre') + (S.dia && S.dia !== '0' ? ' · día ' + S.dia + ' de evolución' : '') +
-        (S.temp ? ' · ' + S.temp + ' °C' : '') + '. Complete fecha de inicio y patrón: '),
+        (S.temp ? ' · ' + dec(S.temp) + ' °C' : '') + '. Complete fecha de inicio y patrón: '),
       reg('2. Interrogatorio que permite construir la definición de caso.', lista(manifs)),
       reg('3. Nexo epidemiológico para arbovirosis y otras infecciones tropicales (tiempo, lugar y persona).',
         (S.endemica ? 'Procedente de área endémica. ' : 'NO procedente de área endémica. ') +
@@ -1587,11 +1601,11 @@ function auditoria(S){
         auto ? 'REFIERE: ' + auto.tomados.join('; ') + '. Conducta: ' + auto.acciones.join(' ')
              : (S.sinAutomed ? 'Interrogada dirigidamente: no se automedicó.' : 'Sin interrogar. Pregunte por antipiréticos, AINE, aspirina, antibióticos y medicina tradicional: '))
     ]},
-    { bloque:'B. Examen físico (ítems 8 a 13)', items: [
+    { bloque:'B. Examen físico (ítems 10 a 15)', items: [
       reg('10. Frecuencia cardiaca, frecuencia respiratoria, temperatura, saturación de oxígeno, peso y nivel de conciencia.',
         [S.fc ? 'FC ' + S.fc + ' lpm' : null, S.fr ? 'FR ' + S.fr + ' rpm' : null,
-         S.temp ? 'T ' + S.temp + ' °C' : null, S.sato2 ? 'SatO₂ ' + S.sato2 + ' %' : null,
-         S.peso ? 'Peso ' + S.peso + ' kg' : null, S.conciencia || null].filter(Boolean).join(' · ') || null),
+         S.temp ? 'T ' + dec(S.temp) + ' °C' : null, S.sato2 ? 'SatO₂ ' + dec(S.sato2) + ' %' : null,
+         S.peso ? 'Peso ' + dec(S.peso) + ' kg' : null, S.conciencia || null].filter(Boolean).join(' · ') || null),
       reg('11. Estado de hidratación: mucosas, edema palpebral, de pared abdominal y extremidades, fontanela anterior en lactantes.', null),
       reg('12. Estado hemodinámico: TA, PAM, presión de pulso, llenado capilar, estado de la piel y calidad del pulso, con pruebas dinámicas para hipotensión ortostática.',
         [(S.pas && S.pad) ? 'TA ' + S.pas + '/' + S.pad + ' mmHg' : null, pm !== null ? 'PAM ' + pm + ' mmHg' : null,
@@ -1608,7 +1622,7 @@ function auditoria(S){
          S.alarma.indexOf('hepatomegalia') >= 0 ? 'Hepatomegalia dolorosa > 2 cm' : null,
          S.alarma.indexOf('liquidos') >= 0 ? 'Acumulación de líquidos' : null].filter(Boolean).join(' · ') || 'Complete: ')
     ]},
-    { bloque:'C. Laboratorio e imágenes diagnósticas (ítems 14 a 17)', items: [
+    { bloque:'C. Laboratorio e imágenes diagnósticas (ítems 16 a 19)', items: [
       reg('16. Hemograma completo solicitado e interpretado.',
         clasificar(S) === 'A' ? 'Solicitar; control al menos cada 48 horas.' : 'Solicitar ANTES de iniciar líquidos intravenosos.'),
       reg('17. Ecografía abdominal y radiografía de tórax ante hallazgos clínicos sugestivos de fuga vascular.',
@@ -1658,7 +1672,7 @@ function recomendacionesCasa(S){
   /* ---- Hidratación: la cifra concreta, no «tome líquidos» ---- */
   var hidrata = [];
   if(ped){
-    hidrata.push('Líquidos por vía oral en abundancia. Meta para ' + p + ' kg: ' +
+    hidrata.push('Líquidos por vía oral en abundancia. Meta para ' + dec(p) + ' kg: ' +
       (plan.oral ? plan.oral.principal : r0(holliday(p)) + ' ml en 24 h') + '.');
     hidrata.push('Ofrézcalos en tomas pequeñas y frecuentes, no de una sola vez.');
   } else {
@@ -1736,7 +1750,7 @@ function monitoreo(S){
     M.push('Uso de mosquitero durante la fase febril y educación sobre signos de alarma.');
   } else if(cat === 'B2'){
     M.push('Signos vitales y perfusión periférica: cada 1 a 4 horas.');
-    M.push('Gasto urinario: cada 4 a 6 horas. Meta mínima ' + dmin + ' ml/h (0,5 ml/kg/h); la carga se repite si es < ' + (Math.round(p*10)/10) + ' ml/h.');
+    M.push('Gasto urinario: cada 4 a 6 horas. Meta mínima ' + dec(dmin) + ' ml/h (0,5 ml/kg/h); la carga se repite si es < ' + dec(Math.round(p*10)/10) + ' ml/h.');
     M.push('Hematocrito y función de otros órganos: cada 12 horas.');
     M.push('Vigilar la elevación progresiva del hematocrito junto con la caída del recuento plaquetario en tiempo corto.');
   } else {
@@ -1826,17 +1840,18 @@ function indiceHtoHb(S){
   if(isNaN(hto) || isNaN(hb) || hb <= 0 || hto <= 0) return null;
   var v = Math.round((hto/hb)*100)/100, chcm = Math.round((hb/hto)*1000)/10;
   if(v >= 2.8 && v <= 3.2)
-    return { valor:v, chcm:chcm, tono:'ok', lectura:'Coherente con la regla de tres. CHCM ' + chcm + ' g/dL.' };
+    return { valor:dec(v), chcm:chcm, tono:'ok', lectura:'Coherente con la regla de tres. CHCM ' + dec(chcm) + ' g/dL.' };
   if(v > 3.2)
-    return { valor:v, chcm:chcm, tono:'warn',
-      lectura:'Índice alto: equivale a una CHCM de ' + chcm + ' g/dL, es decir hipocromía. Oriente a ferropenia o rasgo talasémico, o a un problema de la muestra. No indica hemoconcentración.' };
-  return { valor:v, chcm:chcm, tono:'warn',
-    lectura:'Índice bajo: CHCM ' + chcm + ' g/dL. Revise la coherencia de las dos cifras antes de decidir sobre ellas.' };
+    return { valor:dec(v), chcm:chcm, tono:'warn',
+      lectura:'Índice alto: equivale a una CHCM de ' + dec(chcm) + ' g/dL, es decir hipocromía. Oriente a ferropenia o rasgo talasémico, o a un problema de la muestra. No indica hemoconcentración.' };
+  return { valor:dec(v), chcm:chcm, tono:'warn',
+    lectura:'Índice bajo: CHCM ' + dec(chcm) + ' g/dL. Revise la coherencia de las dos cifras antes de decidir sobre ellas.' };
 }
 
 /* Veredicto directo: hay o no hay hemoconcentración */
 function veredictoHemograma(S){
   var act = parseFloat(S.hctActual), plq = parseFloat(S.plaquetas), leu = parseFloat(S.leucocitos);
+  var hb = parseFloat(S.hb);
   var d = deltaHematocrito(S.hctBasal, S.hctActual), ref = refEfectiva(S);
   var v = { estado:'sin-dato', titulo:'', detalle:'', tiles:[], indice: indiceHtoHb(S) };
 
@@ -1849,34 +1864,34 @@ function veredictoHemograma(S){
     if(d === null && !ref){
       if(act > HCT_ALTO_OMS){
         v.estado = 'sugestivo';
-        v.detalle = 'Hematocrito ' + act + ' %, por encima del umbral de 50 % de la OMS. ' +
+        v.detalle = 'Hematocrito ' + dec(act) + ' %, por encima del umbral de 50 % de la OMS. ' +
           'Escriba la edad y el sexo para compararlo con la referencia poblacional, o el hematocrito basal del propio paciente si lo tiene: ' +
           'la OMS prefiere el de la fase febril temprana.';
       } else {
         v.estado = 'sin-referencia';
-        v.detalle = 'Hematocrito ' + act + ' % registrado. Falta la edad y el sexo para compararlo con la referencia poblacional. ' +
+        v.detalle = 'Hematocrito ' + dec(act) + ' % registrado. Falta la edad y el sexo para compararlo con la referencia poblacional. ' +
           'Si tiene el hematocrito basal del paciente —el de la fase febril temprana— escríbalo en «Ajustes: hemograma previo»: es la comparación que prefiere la OMS.';
       }
     } else if(d !== null){
-      if(d >= 20){ v.estado = 'si'; v.detalle = 'Hematocrito ' + act + ' %, +' + d + ' % sobre el basal del paciente. El ascenso del 20 % o más es el marcador de extravasación de plasma.'; }
-      else if(d >= 10){ v.estado = 'sugestivo'; v.detalle = 'Hematocrito ' + act + ' %, +' + d + ' % sobre el basal. Todavía no alcanza el 20 %, pero la tendencia va en ascenso.'; }
-      else if(d < 0){ v.estado = 'no'; v.detalle = 'Hematocrito ' + act + ' %, ' + d + ' % respecto al basal. No hay hemoconcentración; interprete la caída junto con la hemodinamia.'; }
-      else { v.estado = 'no'; v.detalle = 'Hematocrito ' + act + ' %, +' + d + ' % sobre el basal. Sin hemoconcentración significativa.'; }
+      if(d >= 20){ v.estado = 'si'; v.detalle = 'Hematocrito ' + dec(act) + ' %, +' + dec(d) + ' % sobre el basal del paciente. El ascenso del 20 % o más es el marcador de extravasación de plasma.'; }
+      else if(d >= 10){ v.estado = 'sugestivo'; v.detalle = 'Hematocrito ' + dec(act) + ' %, +' + dec(d) + ' % sobre el basal. Todavía no alcanza el 20 %, pero la tendencia va en ascenso.'; }
+      else if(d < 0){ v.estado = 'no'; v.detalle = 'Hematocrito ' + dec(act) + ' %, ' + dec(d) + ' % respecto al basal. No hay hemoconcentración; interprete la caída junto con la hemodinamia.'; }
+      else { v.estado = 'no'; v.detalle = 'Hematocrito ' + dec(act) + ' %, +' + dec(d) + ' % sobre el basal. Sin hemoconcentración significativa.'; }
     } else if(ref){
       var dr = Math.round(((act - ref.medio)/ref.medio)*1000)/10;
       /* El umbral OMS del 50 % nunca puede quedar por debajo del rango normal del
          propio grupo etario: un recién nacido con 55 % está sano, no hemoconcentrado. */
       if(act > Math.max(HCT_ALTO_OMS, ref.alto)){
         v.estado = 'si';
-        v.detalle = 'Hematocrito ' + act + ' %, por encima del límite superior de referencia (' + ref.alto + ' %) para ' + ref.etiqueta + '.' +
+        v.detalle = 'Hematocrito ' + dec(act) + ' %, por encima del límite superior de referencia (' + dec(ref.alto) + ' %) para ' + ref.etiqueta + '.' +
           (act > HCT_ALTO_OMS ? ' Supera también el umbral de 50 % de la OMS.' : '');
       } else if(dr >= 10 || (act > HCT_ALTO_OMS && ref.alto <= HCT_ALTO_OMS + 5)){
         v.estado = 'sugestivo';
-        v.detalle = 'Hematocrito ' + act + ' %, +' + dr + ' % sobre el punto medio de referencia para ' + ref.etiqueta + ' (' + ref.medio + ' %). Dentro del rango, pero en su parte alta.' +
+        v.detalle = 'Hematocrito ' + dec(act) + ' %, +' + dec(dr) + ' % sobre el punto medio de referencia para ' + ref.etiqueta + ' (' + dec(ref.medio) + ' %). Dentro del rango, pero en su parte alta.' +
           (act > HCT_ALTO_OMS ? ' Supera además el umbral de 50 % de la OMS, que en un contexto de dengue obliga a repetir el control y a buscar el basal del propio paciente.' : '');
       } else {
         v.estado = 'no';
-        v.detalle = 'Hematocrito ' + act + ' % frente a la referencia para ' + ref.etiqueta + ' (' + ref.bajo + ' – ' + ref.alto + ' %).';
+        v.detalle = 'Hematocrito ' + dec(act) + ' % frente a la referencia para ' + ref.etiqueta + ' (' + dec(ref.bajo) + ' – ' + dec(ref.alto) + ' %).';
       }
     }
   }
@@ -1890,9 +1905,21 @@ function veredictoHemograma(S){
     /* Sin referencia no se puede afirmar "Normal": decirlo era una conclusión sin
        respaldo, y además contradecía al veredicto de arriba. */
     var sinRef = (!ref && d === null);
-    v.tiles.push({ k:'hto', etiqueta:'Hematocrito', valor: act + ' %',
+    v.tiles.push({ k:'hto', etiqueta:'Hematocrito', valor: dec(act) + ' %',
       estado: alto ? 'Alto' : (bajo ? 'Bajo' : (sinRef ? 'Sin referencia' : 'Normal')),
       tono: alto ? 'danger' : (bajo ? 'warn' : (sinRef ? 'neutro' : 'ok')) });
+  }
+  /* La hemoglobina se digita y gobierna el índice hematocrito/hemoglobina, pero
+     hasta la v3.5 no aparecía en ninguna tabla: el reporte afirmaba «índice 2,5,
+     revise la coherencia de las dos cifras» sin mostrar una de las dos. Quien lo
+     leyera en la historia clínica no tenía cómo verificar la lectura. */
+  if(!isNaN(hb)){
+    var hbRef = ref ? { bajo: Math.round(ref.bajo/3*10)/10, alto: Math.round(ref.alto/3*10)/10 } : null;
+    var hbBaja = hbRef && hb < hbRef.bajo, hbAlta = hbRef && hb > hbRef.alto;
+    v.tiles.push({ k:'hb', etiqueta:'Hemoglobina', valor: dec(hb) + ' g/dL',
+      estado: hbAlta ? 'Alta' : (hbBaja ? 'Baja' : (hbRef ? 'Normal' : 'Sin referencia')),
+      tono: hbAlta ? 'danger' : (hbBaja ? 'warn' : (hbRef ? 'ok' : 'neutro')),
+      nota: hbRef ? 'Referencia estimada ' + dec(hbRef.bajo) + ' – ' + dec(hbRef.alto) + ' g/dL, derivada del hematocrito por la regla de tres. Prevalece el rango del laboratorio.' : null });
   }
   if(!isNaN(plq)){
     var pbaja = plq < 100000;
@@ -1955,8 +1982,22 @@ function interpretarHematocrito(S){
     var esperado = hb*3;
     if(Math.abs(act - esperado) > 6)
       r.notas.push('Comprobación de coherencia: el hematocrito suele aproximarse a tres veces la hemoglobina (' +
-        Math.round(esperado) + ' % esperado frente a ' + act + ' % informado). Una diferencia grande sugiere error de laboratorio o una condición hematológica de base; confirme antes de decidir sobre esa cifra.');
+        Math.round(esperado) + ' % esperado frente a ' + dec(act) + ' % informado). Una diferencia grande sugiere error de laboratorio o una condición hematológica de base; confirme antes de decidir sobre esa cifra.');
   }
+  /* Hemodilución fisiológica del embarazo.
+     El volumen plasmático aumenta más que la masa eritrocitaria, de modo que la
+     gestante parte de un hematocrito más bajo que la referencia por edad y sexo.
+     Consecuencia práctica, y por eso se advierte: un hematocrito «normal» en una
+     gestante puede ya representar hemoconcentración, y uno «bajo» puede ser
+     fisiológico y no sangrado. La referencia NO se modifica —cambiarla movería
+     el veredicto y con él la conducta—; se le entrega al médico la advertencia
+     para que la lea con su propio criterio y con el basal de la paciente. */
+  if(S.embarazo && !isNaN(act)){
+    r.notas.push(dBasal !== null
+      ? 'Paciente gestante: la hemodilución fisiológica del embarazo baja el hematocrito de partida. La comparación contra su propio basal sigue siendo válida — es la que la OMS prefiere — y no requiere corrección.'
+      : 'Paciente gestante: la hemodilución fisiológica del embarazo baja el hematocrito de partida, y la referencia usada aquí es la de mujer no gestante. Léala con esa reserva: un hematocrito dentro del rango puede ya representar hemoconcentración, y uno por debajo puede ser fisiológico. Si tiene un hemograma previo del embarazo, úselo como basal: pesa más que cualquier referencia poblacional.');
+  }
+
   var triada = (!isNaN(plq) && plq < 100000) && (!isNaN(leu) && leu < 4000);
 
   /* --- 1. Con basal propio: es el modo preferido --- */
@@ -1964,7 +2005,7 @@ function interpretarHematocrito(S){
     r.modo = 'basal';
     if(dBasal >= 20){
       r.nivel = 'fuga';
-      r.titulo = 'Hemoconcentración significativa: hematocrito +' + dBasal + ' % sobre el basal del paciente';
+      r.titulo = 'Hemoconcentración significativa: hematocrito +' + dec(dBasal) + ' % sobre el basal del paciente';
       r.mensaje = 'Un ascenso del 20 % o más es el marcador clásico de extravasación de plasma. ' +
         (inestable
           ? 'Con inestabilidad hemodinámica indica fuga activa: administre la carga de cristaloide de la categoría y repita el hematocrito después.'
@@ -1974,7 +2015,7 @@ function interpretarHematocrito(S){
       if(inestable) r.acciones.push('Si además hay choque o dificultad respiratoria, es extravasación grave de plasma: categoría C.');
     } else if(dBasal > 0){
       r.nivel = 'ascenso';
-      r.titulo = 'Hematocrito en ascenso: +' + dBasal + ' % sobre el basal';
+      r.titulo = 'Hematocrito en ascenso: +' + dec(dBasal) + ' % sobre el basal';
       r.mensaje = 'El ascenso del hematocrito precede a los cambios de tensión arterial y de volumen del pulso: es un aviso temprano. ' +
         'Aún no alcanza el 20 % que marca extravasación significativa, pero un ascenso progresivo junto con caída rápida de plaquetas es signo de alarma.';
       r.acciones.push('Repetir el control en 12 a 24 horas, o antes si aparecen signos de alarma.');
@@ -1993,7 +2034,7 @@ function interpretarHematocrito(S){
       r.acciones.push('Vigilar signos de sobrecarga durante las siguientes 48 a 72 horas de reabsorción.');
     } else if(dBasal < 0){
       r.nivel = 'descenso';
-      r.titulo = 'Hematocrito en descenso: ' + dBasal + ' %';
+      r.titulo = 'Hematocrito en descenso: ' + dec(dBasal) + ' %';
       r.mensaje = 'Interprete siempre junto con la hemodinamia: con buen volumen de pulso indica reabsorción y es momento de reducir líquidos; con inestabilidad indica sangrado.' +
         (h.registrada ? '' : ' NO hay signos vitales registrados: no puede concluirse reabsorción ni suspender la infusión sin tomar la tensión arterial, el volumen del pulso y el llenado capilar.');
       if(!h.registrada) r.acciones.push('Tomar signos vitales antes de modificar los líquidos: tensión arterial, presión de pulso, llenado capilar y diuresis.');
@@ -2011,8 +2052,8 @@ function interpretarHematocrito(S){
     r.deltaRef = Math.round(((act - ref.medio)/ref.medio)*1000)/10;
     var porEncima = act > ref.alto;
     var base = 'Comparado con la referencia para ' + ref.etiqueta + ' (' +
-      (ref.manual ? ref.medio + ' %' : ref.bajo + ' – ' + ref.alto + ' %, punto medio ' + ref.medio + ' %') + '), ' +
-      'el hematocrito de ' + act + ' % está ' + (r.deltaRef >= 0 ? '+' : '') + r.deltaRef + ' % respecto al punto medio. ';
+      (ref.manual ? dec(ref.medio) + ' %' : dec(ref.bajo) + ' – ' + dec(ref.alto) + ' %, punto medio ' + dec(ref.medio) + ' %') + '), ' +
+      'el hematocrito de ' + dec(act) + ' % está ' + (r.deltaRef >= 0 ? '+' : '') + dec(r.deltaRef) + ' % respecto al punto medio. ';
     var aviso = 'Esta lectura es un sustituto: la OMS prefiere el hematocrito de la fase febril temprana del propio paciente. ' +
       'Guarde este valor como basal para los controles siguientes.';
 
@@ -2021,7 +2062,7 @@ function interpretarHematocrito(S){
     /* La OMS da reglas absolutas que no necesitan basal */
     if(inestable && act < uBajo){
       r.nivel = 'sangrado';
-      r.titulo = 'Hematocrito ' + act + ' % con inestabilidad hemodinámica: indica sangrado';
+      r.titulo = 'Hematocrito ' + dec(act) + ' % con inestabilidad hemodinámica: indica sangrado';
       r.mensaje = 'La OMS lo fija sin necesidad de basal: en choque, un hematocrito por debajo de ' + uBajo + ' % ' +
         '(< 40 % en niños y mujeres adultas, < 45 % en hombres adultos) señala hemorragia. ' + aviso;
       r.acciones.push('Buscar el foco de sangrado: digestivo, ginecológico, retroperitoneal o del sistema nervioso central.');
@@ -2031,7 +2072,7 @@ function interpretarHematocrito(S){
     }
     if(act > HCT_ALTO_OMS && inestable){
       r.nivel = 'fuga';
-      r.titulo = 'Hematocrito ' + act + ' % (> 50 %) con inestabilidad: fuga de plasma persistente';
+      r.titulo = 'Hematocrito ' + dec(act) + ' % (> 50 %) con inestabilidad: fuga de plasma persistente';
       r.mensaje = 'La OMS usa el umbral de 50 % en el manejo del choque: hematocrito alto o en ascenso tras el primer bolo ' +
         'indica que la extravasación continúa y justifica repetir la carga de cristaloide. ' + aviso;
       r.acciones.push('Repetir carga de cristaloide según la categoría y volver a medir el hematocrito.');
@@ -2085,9 +2126,9 @@ function furosemida(S){
   if(!p) return null;
   var r1 = Math.round(0.1*p*10)/10, r2 = Math.round(0.5*p*10)/10;
   return {
-    dosis: r1 + ' – ' + r2 + ' mg por dosis, una o dos veces al día',
+    dosis: dec(r1) + ' – ' + dec(r2) + ' mg por dosis, una o dos veces al día',
     base: '0,1 – 0,5 mg/kg/dosis, por vía oral o intravenosa',
-    infusion: 'Infusión continua: ' + r1 + ' mg/hora (0,1 mg/kg/hora)'
+    infusion: 'Infusión continua: ' + dec(r1) + ' mg/hora (0,1 mg/kg/hora)'
   };
 }
 
@@ -2154,10 +2195,10 @@ function moduloSeguridad(S){
   M.push({
     id:'renal',
     titulo:'Oliguria o anuria',
-    disparo:'Diuresis por debajo de ' + metaMin + ' ml/hora (0,5 ml/kg/h) o ausencia de micción.',
+    disparo:'Diuresis por debajo de ' + dec(metaMin) + ' ml/hora (0,5 ml/kg/h) o ausencia de micción.',
     conducta: [
       'En dengue, la causa más frecuente de oliguria es la hipovolemia por extravasación, no la falla renal intrínseca. Con signos de mala perfusión, la conducta es reponer volumen, no restringirlo.',
-      'Categoría B2: si persisten los signos de alarma y la diuresis es menor de ' + meta1 + ' ml/hora (1 ml/kg/h), repita la carga hasta dos veces más.',
+      'Categoría B2: si persisten los signos de alarma y la diuresis es menor de ' + dec(meta1) + ' ml/hora (1 ml/kg/h), repita la carga hasta dos veces más.',
       'Si la diuresis no responde después de una reposición adecuada y la hemodinamia ya está corregida, sospeche lesión renal aguda: solicite creatinina, nitrógeno ureico, electrolitos y gases o lactato.',
       'La insuficiencia renal aguda es criterio de hospitalización y obliga a individualizar el volumen: a partir de ahí, cada bolo adicional se decide por respuesta clínica y no por esquema fijo.'
     ],
@@ -2250,7 +2291,7 @@ function construirReporte(S){
   m.paciente = [
     ['Nombre', S.nombre || '—'],
     ['Edad', S.edad ? (S.edad + (S.edadU === 'm' ? ' meses' : ' años') + (esPediatrico(S) ? ' · pediátrico' : ' · adulto')) : '—'],
-    ['Peso', (S.peso || '—') + ' kg' + (S.usarPesoIdeal && pesoCalculo(S) !== S.peso ? ' (cálculos con peso ideal ' + pesoCalculo(S) + ' kg)' : '')],
+    ['Peso', (S.peso ? dec(S.peso) : '—') + ' kg' + (S.usarPesoIdeal && pesoCalculo(S) !== S.peso ? ' (cálculos con peso ideal ' + dec(pesoCalculo(S)) + ' kg)' : '')],
     ['Día de enfermedad', S.dia ? (S.dia === '0' ? 'Afebril / no precisa' : 'Día ' + S.dia) : '—'],
     ['Fecha y hora', (S.fecha ? S.fecha.split('-').reverse().join('/') : '—') + (S.hora ? ' · ' + S.hora : '')]
   ];
@@ -2354,7 +2395,7 @@ function construirReporte(S){
   L.push('Evaluación hemodinámica: ' + m.hemo.titulo +
     (m.hemo.hallazgos.length ? ' — ' + m.hemo.hallazgos.join('; ') : '') + '.');
   L.push('');
-  L.push('REPOSICIÓN HÍDRICA (peso de cálculo ' + plan.peso + ' kg) — ' + (plan.via === 'oral' ? 'vía oral' : 'vía intravenosa'));
+  L.push('REPOSICIÓN HÍDRICA (peso de cálculo ' + dec(plan.peso) + ' kg) — ' + (plan.via === 'oral' ? 'vía oral' : 'vía intravenosa'));
   if(plan.oral) L.push('· ' + plan.oral.titulo + ': ' + plan.oral.principal + ' (' + plan.oral.horaria + '; ' + plan.oral.vasos + '). ' + plan.oral.que);
   plan.fases.forEach(function(f){
     L.push('· ' + f.n + ': ' + f.rate + ' (' + f.mlkg + ', ' + f.dur + ')' +
@@ -2493,7 +2534,7 @@ function renderRefSugerida(){
   var ref = referenciaHematocrito(S), box = $('ref-sugerida');
   if(!box) return;
   box.innerHTML = ref
-    ? 'Referencia poblacional para <b>' + ref.etiqueta + '</b>: <b>' + ref.bajo + ' – ' + ref.alto + ' %</b> (punto medio ' + ref.medio + ' %). ' +
+    ? 'Referencia poblacional para <b>' + ref.etiqueta + '</b>: <b>' + dec(ref.bajo) + ' – ' + dec(ref.alto) + ' %</b> (punto medio ' + dec(ref.medio) + ' %). ' +
       'Es orientativa: si su laboratorio maneja otro rango, escríbalo arriba y la app usará ese.'
     : 'Registre la edad y el sexo para sugerir la referencia poblacional.';
 }
@@ -2970,7 +3011,7 @@ function evaluar(){
       '<input type="time" id="f-hora" value="' + esc(S.hora || '') + '" onchange="cambiarHora(this.value)">' +
       '<div class="note info" style="margin:-4px 0 12px">Ajústela a la hora real en que va a iniciar: las horas de cada fase se recalculan a partir de ella.</div>');
   }
-  o.push('<div class="note info" style="margin-bottom:12px">Calculado para <b>' + plan.peso + ' kg</b>. Cristaloides: Lactato de Ringer o solución salina 0,9 %.</div>');
+  o.push('<div class="note info" style="margin-bottom:12px">Calculado para <b>' + dec(plan.peso) + ' kg</b>. Cristaloides: Lactato de Ringer o solución salina 0,9 %.</div>');
   if(plan.oral){
     o.push('<div class="phase"><div class="phase-head"><div class="phase-n">' + plan.oral.titulo + '</div></div>' +
       '<div class="phase-rate">' + plan.oral.principal + '</div>' +
@@ -3017,7 +3058,7 @@ function evaluar(){
     }).join('') + '</div>');
 
   o.push('<details class="acc"><summary>Registro para historia clínica — instrumento de auditoría</summary><div class="acc-body">' +
-    '<div class="note info" style="margin:0 0 10px">Ítems 1 a 17 del <i>Instrumento de seguimiento y evaluación de casos de dengue</i>. ' +
+    '<div class="note info" style="margin:0 0 10px">Ítems 1 a 19 del <i>Instrumento de seguimiento y evaluación de casos de dengue</i>. ' +
     'Lo que la app ya registró va marcado; lo demás queda como campo para completar en la historia clínica. Todo esto se incluye en el documento Word.</div>' +
     m.auditoria.map(function(b){
       return '<div style="font-size:.76rem;font-weight:800;color:var(--primary);margin:12px 0 6px;text-transform:uppercase;letter-spacing:.5px">' + b.bloque + '</div>' +
@@ -3277,7 +3318,7 @@ function documentoXml(m){
   var idLinea = [];
   if(S.nombre) idLinea.push(S.nombre);
   if(S.edad) idLinea.push(S.edad + (S.edadU === 'm' ? ' meses' : ' años'));
-  if(S.peso) idLinea.push(S.peso + ' kg');
+  if(S.peso) idLinea.push(dec(S.peso) + ' kg');
   if(S.fecha) idLinea.push(S.fecha.split('-').reverse().join('/'));
   b.push(wP(wR(idLinea.join('   ·   ') || 'Sin datos de identificación', { sz:18, color:'6B6B78' }), { after:160 }));
 
@@ -3361,7 +3402,7 @@ function documentoXml(m){
   b.push(wCaja(wP(wR('CONDUCTA', { b:true, sz:26, color:'FFFFFF' }), { align:'center', after:0 }), '1B6B5A'));
 
   b.push(wH1('Reposición hídrica — ' + (m.plan.via === 'oral' ? 'vía oral' : 'vía intravenosa'), '4.1'));
-  b.push(wP(wR('Peso de cálculo: ' + m.plan.peso + ' kg. Cristaloides: Lactato de Ringer o solución salina 0,9 %.',
+  b.push(wP(wR('Peso de cálculo: ' + dec(m.plan.peso) + ' kg. Cristaloides: Lactato de Ringer o solución salina 0,9 %.',
     { sz:18, i:true, color:'6B6B78' }), { after:100 }));
   if(m.plan.oral){
     b.push(wTabla([
@@ -3458,7 +3499,7 @@ function documentoXml(m){
 
   /* ===== 6. Registro para historia clínica ===== */
   b.push(wH1('Registro para historia clínica', '6'));
-  b.push(wP(wR('Ítems 1 a 17 del Instrumento de seguimiento y evaluación de casos de dengue. Lo registrado por la aplicación aparece en negrilla; los campos con línea deben completarse en la historia clínica.',
+  b.push(wP(wR('Ítems 1 a 19 del Instrumento de seguimiento y evaluación de casos de dengue. Lo registrado por la aplicación aparece en negrilla; los campos con línea deben completarse en la historia clínica.',
     { sz:17, i:true, color:'6B6B78' }), { after:120 }));
   m.auditoria.forEach(function(bl){
     b.push(wH2(bl.bloque));
