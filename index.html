@@ -515,9 +515,6 @@ footer b{color:var(--text)}
       <div><label>Inicio de síntomas</label><input type="date" id="f-inicio" onchange="syncFechas()"></div>
       <div><label>Fecha de consulta</label><input type="date" id="f-fecha" onchange="syncFechas()"></div>
     </div>
-    <label>Hora de inicio de líquidos</label>
-    <input type="time" id="f-hora">
-
     <div id="dia-calc"></div>
 
 
@@ -579,11 +576,14 @@ footer b{color:var(--text)}
     <div id="pp-out" class="note info" style="margin-bottom:0">Presión de pulso = PAS − PAD. Un valor <b>≤ 20 mmHg</b> indica choque. La PAM se calcula sola.</div>
   </div>
 
-  <div class="card">
-    <div class="sec-title">Hemograma y hemoconcentración</div>
+  <div class="card tight">
+    <details class="acc" id="acc-hemograma">
+      <summary>Hemograma y hemoconcentración — ábralo si ya tiene el resultado</summary>
+      <div class="acc-body">
     <div class="note info" style="margin-bottom:12px">
-      <b>Tómelo antes de hidratar.</b> La OMS lo indica así: <i>«Obtain reference HCT before fluid therapy»</i>.
-      Ese valor queda como basal del paciente para todos los controles siguientes.
+      <b>No hace falta para clasificar.</b> En los grupos A y B1 el hemograma es de control —cada 48 horas, o dentro de los primeros tres días— y puede seguir sin él.
+      Si el paciente resulta <b>B2 o C</b>, la OMS sí lo exige antes de hidratar: <i>«Obtain reference HCT before fluid therapy»</i>, y ese valor queda como basal de todos los controles.
+      <b>No contar con él nunca debe retrasar la hidratación.</b>
     </div>
 
     <div class="row g2">
@@ -603,7 +603,7 @@ footer b{color:var(--text)}
       Registre el hematocrito para evaluar la hemoconcentración.
     </div>
 
-    <details class="acc" style="margin-bottom:0">
+    <details class="acc" id="acc-hct-ajustes" style="margin-bottom:0">
       <summary>Ajustes: hemograma previo y referencia</summary>
       <div class="acc-body">
         <label>Hematocrito previo o basal (%) <span style="text-transform:none;font-weight:400">· opcional</span></label>
@@ -616,6 +616,8 @@ footer b{color:var(--text)}
         <label>Referencia de hematocrito para este paciente (%) <span style="text-transform:none;font-weight:400">· opcional</span></label>
         <input type="text" inputmode="decimal" id="f-hct-ref" placeholder="Punto medio de su laboratorio" oninput="syncLab()">
         <div id="ref-sugerida" class="note warn" style="font-size:.76rem;margin-bottom:0"></div>
+      </div>
+    </details>
       </div>
     </details>
   </div>
@@ -760,7 +762,7 @@ footer b{color:var(--text)}
 
 /* === ENGINE START === */
 
-var APP_VERSION = '3.4.0';   /* fuente única: pie de página, Word y service worker */
+var APP_VERSION = '3.5.0';   /* fuente única: pie de página, Word y service worker */
 
 /* ==================================================================
    SELLO DE REVISIÓN CLÍNICA
@@ -1621,6 +1623,107 @@ function auditoria(S){
   ];
 }
 
+/* ============================================================================
+   RECOMENDACIONES PARA LLEVAR A CASA
+   Se arman solas a partir de tres cosas: el grupo de manejo, la fase del curso
+   clínico y el peso. Están pensadas para que el médico las copie tal cual en la
+   epicrisis o se las entregue por escrito al paciente — que es justamente lo que
+   pide el instrumento: «Se entregaron las órdenes y recomendaciones por escrito».
+
+   Fuentes: OPS, «Dengue: guías para la atención de enfermos en la Región de las
+   Américas», 2.ª ed., 2016; OPS, «Instrumento para el diagnóstico y la atención a
+   pacientes con sospecha de arbovirosis», 2016; OMS 2009.
+   ============================================================================ */
+function recomendacionesCasa(S){
+  var cat = clasificar(S), p = pesoCalculo(S), ped = esPediatrico(S);
+  var fase = faseDeLaEnfermedad(S), anti = antipiretico(S), plan = planLiquidos(S);
+  var r = { cat: cat, fase: fase.fase, aplica: true, titulo: '', encabezado: '', bloques: [] };
+
+  /* En fase crítica el paciente no se va a casa: la hoja cambia de sentido. */
+  /* El título de la sección no cambia: así el médico la encuentra siempre en el
+     mismo lugar del informe. Lo que cambia es el aviso de arriba. */
+  r.titulo = (cat === 'A' || cat === 'B1') ? 'Recomendaciones para la casa' : 'Recomendaciones para el egreso';
+  if(fase.fase === 'critica' && (cat === 'B2' || cat === 'C')){
+    r.aplica = false;
+    r.encabezado = 'TODAVÍA NO ES MOMENTO DEL ALTA: el paciente está en fase crítica y en categoría ' + cat + '. ' +
+      'Estas recomendaciones son para el egreso — entréguelas cuando cumpla los criterios de alta, no ahora.';
+  } else {
+    r.encabezado = (cat === 'A')
+      ? 'Manejo en el hogar por la familia, con evaluación por personal de salud cada 24 a 48 horas. Entregue estas indicaciones POR ESCRITO.'
+      : (cat === 'B1')
+        ? 'Cuidados supervisados por personal de salud mientras dure la fiebre y hasta 48 horas después de que ceda. Entregue estas indicaciones POR ESCRITO.'
+        : 'Al cumplir los criterios de alta, entregue estas indicaciones POR ESCRITO y asegure la cita de control.';
+  }
+
+  /* ---- Hidratación: la cifra concreta, no «tome líquidos» ---- */
+  var hidrata = [];
+  if(ped){
+    hidrata.push('Líquidos por vía oral en abundancia. Meta para ' + p + ' kg: ' +
+      (plan.oral ? plan.oral.principal : r0(holliday(p)) + ' ml en 24 h') + '.');
+    hidrata.push('Ofrézcalos en tomas pequeñas y frecuentes, no de una sola vez.');
+  } else {
+    hidrata.push('Adultos: al menos 5 vasos de 250 ml al día, y de preferencia 2.000 a 3.000 ml en 24 horas.');
+  }
+  hidrata.push('Qué sirve: sales de rehidratación oral, sopas, caldos, jugos de fruta (no cítricos), leche o agua de arroz.');
+  hidrata.push('El AGUA SOLA no repone los electrolitos que se pierden: no basta como única bebida.');
+  hidrata.push('No bebidas oscuras (gaseosa de cola, chocolate, remolacha): confunden el vómito o la deposición con sangrado.');
+  r.bloques.push({ titulo: 'Hidratación en casa', tono: 'ok', items: hidrata });
+
+  /* ---- Reposo y control del vector, según la fase ---- */
+  var reposo = ['Reposo en cama mientras dure la fiebre.'];
+  if(fase.fase === 'febril' || fase.fase === 'sin-dato'){
+    reposo.push('USO ESTRICTO DE MOSQUITERO mientras haya fiebre: el paciente es fuente de infección para el mosquito y para el resto de la casa mientras hay virus en sangre.');
+    reposo.push('Medios físicos para la fiebre: paños de agua tibia. No alcohol, no agua helada.');
+    reposo.push('Ojo con el día en que baja la fiebre: NO es mejoría, es el momento de mayor riesgo. Vigile los signos de alarma justo entonces.');
+  } else if(fase.fase === 'recuperacion'){
+    reposo.push('Puede aparecer picazón o brote en la piel al recuperarse: es esperable y cede solo.');
+    reposo.push('Reanude la alimentación normal de forma progresiva; el apetito vuelve con la mejoría.');
+    reposo.push('Vigile signos de exceso de líquidos: dificultad para respirar, hinchazón o tos, sobre todo si estuvo hospitalizado.');
+  }
+  reposo.push('Elimine criaderos en la casa: lave y tape los recipientes de agua cada ocho días.');
+  r.bloques.push({ titulo: 'Reposo y cuidados del entorno', tono: 'info', items: reposo });
+
+  /* ---- Qué tomar y qué no ---- */
+  var meds = [anti.titulo + ': ' + anti.dosis + '. ' + anti.max];
+  if(anti.jarabe) meds.push(anti.jarabe);
+  meds.push('NO dar aspirina ni antiinflamatorios (ibuprofeno, diclofenaco, naproxeno): aumentan el riesgo de sangrado.');
+  meds.push('NO dar corticoides ni antibióticos: no sirven para el dengue.');
+  meds.push('NO aplicar inyecciones intramusculares ni medicamentos por vía rectal.');
+  meds.push('No tome remedios caseros ni infusiones sin consultar: algunas plantas afectan la coagulación o el hígado.');
+  r.bloques.push({ titulo: 'Medicamentos', tono: 'warn', items: meds });
+
+  /* ---- Cuándo volver de inmediato ---- */
+  r.bloques.push({ titulo: 'Vuelva de INMEDIATO al servicio de salud si aparece', tono: 'danger', items: [
+    'Dolor de barriga fuerte y que no cede.',
+    'Vómito repetido, o no logra tomar líquidos.',
+    'Sangrado por encías, nariz, orina, heces negras, vómito con sangre, o sangrado vaginal fuera de la regla.',
+    'Somnolencia, confusión, irritabilidad o decaimiento marcado.',
+    'Mareo o desmayo al ponerse de pie.',
+    'Dificultad para respirar.',
+    'Manos y pies fríos, piel pálida o húmeda.',
+    'No orina en seis horas o más.',
+    'Se siente peor justo cuando le baja la fiebre.'
+  ]});
+
+  /* ---- Cita de control, según el grupo ---- */
+  var control = [];
+  if(cat === 'A'){
+    control.push('Control cada 48 horas mientras dure la fiebre y hasta 48 horas después de que ceda sin antipirético.');
+    control.push('Lleve HEMOGRAMA de control a cada cita: hematocrito, plaquetas y leucocitos.');
+  } else if(cat === 'B1'){
+    control.push('Control cada 24 a 48 horas: es un paciente con condición asociada o riesgo social y requiere supervisión.');
+    control.push('Hemograma de control cada 24 a 48 horas, y los laboratorios que exija la condición de base.');
+    control.push('Continúe el manejo de su enfermedad de base sin suspenderlo por su cuenta.');
+  } else {
+    control.push('Control clínico a las 24 a 48 horas del egreso, con hemograma.');
+    control.push('Criterios que debían cumplirse para el alta: sin fiebre por 48 horas sin antipiréticos, mejoría clínica, buen apetito, diuresis normal, sin dificultad respiratoria, sin sangrado, plaquetas en ascenso y hematocrito estable.');
+  }
+  control.push('Si no puede volver o vive lejos, avise ahora para organizar el seguimiento antes de irse.');
+  r.bloques.push({ titulo: 'Cita de control', tono: 'info', items: control });
+
+  return r;
+}
+
 function monitoreo(S){
   var cat = clasificar(S), p = pesoCalculo(S), M = [], dmin = Math.round(0.5*p*10)/10;
   if(cat === 'A'){
@@ -2212,6 +2315,16 @@ function construirReporte(S){
   m.auditoria = auditoria(S);
   m.laboratorio = laboratorio(S);
   m.monitoreo = monitoreo(S);
+  m.casa = recomendacionesCasa(S);
+
+  /* El hemograma no hace falta para clasificar, pero en B2 y C es prerrequisito
+     del tratamiento: la OMS pide el hematocrito de referencia ANTES de hidratar.
+     Si no se registró, el informe lo reclama — sin frenar la hidratación. */
+  if((cat === 'B2' || cat === 'C') && (S.hctActual === '' || S.hctActual === undefined))
+    m.avisos.push({ tono:'danger',
+      texto:'No se registró hematocrito y el paciente es categoría ' + cat + '. ' +
+        'TOME HEMOGRAMA AHORA, antes de iniciar los líquidos: es el valor de referencia con el que se van a leer todos los controles siguientes. ' +
+        'No espere el resultado para hidratar — inicie la reposición y registre el hematocrito en cuanto lo tenga.' });
   m.noHacer = NO_HACER;
   m.criterios = (cat === 'A' || cat === 'B1')
     ? { titulo:'Criterios de referencia al hospital', items: REFERENCIA }
@@ -2281,6 +2394,14 @@ function construirReporte(S){
   L.push('');
   L.push('MONITOREO');
   m.monitoreo.forEach(function(x){ L.push('· ' + x); });
+  L.push('');
+  L.push(m.casa.titulo.toUpperCase() + (m.casa.aplica ? '' : ' — AÚN NO'));
+  L.push(m.casa.encabezado);
+  m.casa.bloques.forEach(function(b){
+    L.push('');
+    L.push(b.titulo.toUpperCase());
+    b.items.forEach(function(x){ L.push('· ' + x); });
+  });
   L.push('');
   L.push(m.criterios.titulo.toUpperCase());
   m.criterios.items.forEach(function(x){ L.push('· ' + x); });
@@ -2529,6 +2650,14 @@ function updateManifCount(){
     : 'Falta: ' + falta.join(', ') + '.');
 }
 
+/* Cambiar la hora de inicio rehace el horario del plan sin tocar nada más. */
+function cambiarHora(v){
+  S.hora = v;
+  evaluar();
+  var el = $('f-hora');
+  if(el){ el.focus(); el.scrollIntoView({ behavior:'smooth', block:'center' }); }
+}
+
 function syncEmbarazo(){
   S.embarazoComplicado = $('f-emb-estado').value === 'si';
   S.semanasGest = numDec($('f-emb-semanas').value);
@@ -2735,7 +2864,7 @@ function next(n){
       ['plaq',S.plaquetas],['leuco',S.leucocitos]]
       .map(function(par){ return fueraDeRango(par[0], par[1]); }).filter(Boolean);
     if(bloqueo.length){ alert('Revise estos datos antes de continuar:\n\n· ' + bloqueo.join('\n\n· ')); return; }
-    S.nombre = $('f-nombre').value; S.hora = $('f-hora').value;
+    S.nombre = $('f-nombre').value;
   }
   if(n === 4 && !S.sinAlarma && S.alarma.length === 0){
     alert('Indique si el paciente tiene signos de alarma.\n\nSi los buscó y no encontró ninguno, marque "Ninguno": queda constancia del negativo en la historia clínica.');
@@ -2834,6 +2963,13 @@ function evaluar(){
 
   o.push('<div class="conducta-hdr">Conducta</div>');
   o.push('<div class="card"><div class="sec-title">1 · Reposición hídrica — ' + (plan.via === 'oral' ? 'vía oral' : 'vía intravenosa') + '</div>');
+  /* La hora se define aquí, no al abrir la app: es la hora real en que el médico
+     va a colgar los líquidos, y de ella cuelga todo el horario proyectado. */
+  if(plan.via === 'iv'){
+    o.push('<label for="f-hora">Hora de inicio de la reposición hídrica</label>' +
+      '<input type="time" id="f-hora" value="' + esc(S.hora || '') + '" onchange="cambiarHora(this.value)">' +
+      '<div class="note info" style="margin:-4px 0 12px">Ajústela a la hora real en que va a iniciar: las horas de cada fase se recalculan a partir de ella.</div>');
+  }
   o.push('<div class="note info" style="margin-bottom:12px">Calculado para <b>' + plan.peso + ' kg</b>. Cristaloides: Lactato de Ringer o solución salina 0,9 %.</div>');
   if(plan.oral){
     o.push('<div class="phase"><div class="phase-head"><div class="phase-n">' + plan.oral.titulo + '</div></div>' +
@@ -2869,6 +3005,16 @@ function evaluar(){
   o.push('<div class="card"><div class="sec-title">3 · Laboratorios sugeridos</div>' +
     '<ul class="clean">' + m.laboratorio.map(function(x){ return '<li>' + x + '</li>'; }).join('') + '</ul>' +
     '<div class="note info" style="margin:10px 0 0">No contar con hematocrito antes de hidratar no debe retrasar la hidratación.</div></div>');
+
+  /* ===== 4 · Recomendaciones para la casa ===== */
+  o.push('<div class="card"><div class="sec-title">4 · ' + m.casa.titulo + '</div>' +
+    '<div class="note ' + (m.casa.aplica ? 'info' : 'warn') + '" style="margin-bottom:12px">' +
+    (m.casa.aplica ? '' : '<b>' + esc(m.casa.titulo) + '.</b> ') + esc(m.casa.encabezado) + '</div>' +
+    m.casa.bloques.map(function(b){
+      return '<div class="note ' + b.tono + '" style="margin-bottom:10px"><b>' + esc(b.titulo) + '</b>' +
+        '<ul class="clean" style="margin:7px 0 0">' +
+        b.items.map(function(x){ return '<li>' + esc(x) + '</li>'; }).join('') + '</ul></div>';
+    }).join('') + '</div>');
 
   o.push('<details class="acc"><summary>Registro para historia clínica — instrumento de auditoría</summary><div class="acc-body">' +
     '<div class="note info" style="margin:0 0 10px">Ítems 1 a 17 del <i>Instrumento de seguimiento y evaluación de casos de dengue</i>. ' +
@@ -3300,8 +3446,18 @@ function documentoXml(m){
   b.push(wH1('Notificación y control vectorial', '4.7'));
   m.notificacion.forEach(function(x){ b.push(wBullet(x)); });
 
-  /* ===== 5. Registro para historia clínica ===== */
-  b.push(wH1('Registro para historia clínica', '5'));
+  /* ===== 5. Recomendaciones para la casa ===== */
+  b.push(wH1(m.casa.titulo, '5'));
+  b.push(wCaja(
+    wP(wR(m.casa.encabezado, { sz:18, color: m.casa.aplica ? '124A3E' : '7F1414' }), { after:0 }),
+    m.casa.aplica ? 'F2F9F4' : 'FDF3F3', m.casa.aplica ? 'BFE0D6' : 'EFCFCF'));
+  m.casa.bloques.forEach(function(bl){
+    b.push(wH2(bl.titulo, bl.tono === 'danger' ? 'B71C1C' : (bl.tono === 'warn' ? '8A6100' : '124A3E')));
+    bl.items.forEach(function(x){ b.push(wBullet(x, bl.tono === 'danger' ? '7F1414' : undefined)); });
+  });
+
+  /* ===== 6. Registro para historia clínica ===== */
+  b.push(wH1('Registro para historia clínica', '6'));
   b.push(wP(wR('Ítems 1 a 17 del Instrumento de seguimiento y evaluación de casos de dengue. Lo registrado por la aplicación aparece en negrilla; los campos con línea deben completarse en la historia clínica.',
     { sz:17, i:true, color:'6B6B78' }), { after:120 }));
   m.auditoria.forEach(function(bl){
@@ -3465,9 +3621,7 @@ function bindInv(id, cb){
   $('f-fecha').value = now.getFullYear() + '-' +
     String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
   S.fecha = $('f-fecha').value;
-  $('f-hora').value = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
-  S.hora = $('f-hora').value;
-  $('f-hora').addEventListener('change', function(){ S.hora = this.value; });
+  S.hora = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
   syncFechas();
 
   buildList('list-manif', MANIF, 'manif');

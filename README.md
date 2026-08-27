@@ -152,9 +152,9 @@ ceroaedes/
 ├── sw.js                   # Service worker (uso sin conexión)
 ├── assets/                 # Iconos
 ├── tests/
-│   ├── engine.test.js      # 466 pruebas del motor clínico
-│   ├── ui.test.js          # 31 recorridos en navegador real
-│   └── docx.test.js        # 49 comprobaciones del documento Word generado
+│   ├── engine.test.js      # 496 pruebas del motor clínico
+│   ├── ui.test.js          # 34 recorridos en navegador real
+│   └── docx.test.js        # 53 comprobaciones del documento Word generado
 ├── LICENSE
 └── README.md
 ```
@@ -166,10 +166,10 @@ La función `construirReporte()` produce un único modelo de datos del que se de
 ## Pruebas
 
 ```bash
-npm test                                  # 466 pruebas del motor clínico (sin navegador)
+npm test                                  # 496 pruebas del motor clínico (sin navegador)
 npm i -D playwright
-npm run test:ui                           # 31 recorridos de interfaz en Chromium real
-npm run test:docx                         # 49 comprobaciones del .docx exportado
+npm run test:ui                           # 34 recorridos de interfaz en Chromium real
+npm run test:docx                         # 53 comprobaciones del .docx exportado
 npm run test:all                          # las tres suites
 ```
 
@@ -240,6 +240,18 @@ El embarazo **no complicado** es condición asociada: lleva como mínimo a **B1*
 **La dosis de líquidos no se reduce por la gestación** en los grupos A, B1 ni B2 — *«el tratamiento […] de la mujer embarazada es semejante al de las no embarazadas […] se usará siempre la solución lactato de Ringer […] en las dosis establecidas»* (OPS 2016). La única excepción es el bolo del **grupo C**, que sí baja de 20 a 10 ml/kg. Hasta la v3.3 la aplicación recortaba también la carga de B2, lo que dejaba a la gestante con la mitad del volumen indicado.
 
 La app pide además la **edad gestacional**: una gestante de 8 semanas y una de 34 no son comparables hemodinámicamente.
+
+## Recomendaciones para la casa
+
+El informe cierra con una hoja de recomendaciones que se arma sola a partir de **tres cosas: el grupo de manejo, la fase del curso clínico y el peso**. Está pensada para copiarla en la epicrisis o entregarla impresa — el instrumento del MinSalud pide expresamente que las órdenes se entreguen por escrito.
+
+Qué cambia según el caso: las cantidades de líquido salen del peso (Holliday-Segar en pediatría, 5 vasos de 250 ml y 2–3 litros en adultos); el mosquitero y el aviso de que **la caída de la fiebre no es mejoría** solo aparecen en fase febril; en recuperación se vigila el exceso de líquidos y el brote; la cita de control es cada 48 h en A y cada 24–48 h en B1; y si el paciente está en fase crítica siendo B2 o C, la hoja encabeza con **«todavía no es momento del alta»** en vez de dar el alta.
+
+Los signos para volver de urgencia van en lenguaje de paciente —«dolor de barriga fuerte y que no cede»— no en lenguaje de ficha.
+
+## Cuándo se pide el hemograma
+
+El hemograma **no hace falta para clasificar** y por eso viene plegado en la pantalla del paciente. En los grupos A y B1 es de control —cada 48 horas, o dentro de los primeros tres días—. En **B2 y C** sí es prerrequisito del tratamiento: la OMS pide el hematocrito de referencia antes de hidratar. Si el caso resulta B2 o C y no se registró, el informe lo reclama en rojo, aclarando que **no se debe esperar el resultado para hidratar**.
 
 ## Vigencia del contenido clínico
 

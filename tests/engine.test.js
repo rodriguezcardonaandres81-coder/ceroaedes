@@ -111,8 +111,10 @@ t('Alarma + condición asociada → B2 (no B1)',
 t('Criterio de gravedad → C', ctx.clasificar(P({ edad: '34', peso: 70, grave: ['shock'] })), 'C');
 t('Gravedad domina sobre alarma → C',
   ctx.clasificar(P({ edad: '34', peso: 70, alarma: ['abdominal'], grave: ['organos'] })), 'C');
-t('Diuresis disminuida como signo de alarma → B2',
-  ctx.clasificar(P({ edad: '34', peso: 70, alarma: ['diuresis'] })), 'B2');
+/* La diuresis no está entre los ocho signos del algoritmo, pero «micción normal
+   en las últimas 6 horas» es requisito del grupo A: baja a B1, no sube a B2. */
+t('Diuresis disminuida lleva a B1, no a B2',
+  ctx.clasificar(P({ edad: '34', peso: 70, alarma: ['diuresis'] })), 'B1');
 
 t('Niño de 3 años se ofrece "menor de 5 años"', ctx.mostrarMenor5(P({ edad: '3', peso: 12 })), 'true');
 t('Niño de 3 años con "menor de 5 años" marcado → B1',
@@ -632,8 +634,16 @@ const b2Comorb = P({ edad: '40', peso: 70, alarma: ['abdominal'], cond: ['dm'] }
 t('Adulto sano con alarma conserva la carga de 10 ml/kg', ctx.b2Reducido(b2Normal), 'false');
 t('Adulto mayor con alarma usa el esquema reducido', ctx.b2Reducido(b2Mayor), 'true');
 t('Comorbilidad con alarma usa el esquema reducido', ctx.b2Reducido(b2Comorb), 'true');
-t('Gestante con alarma usa el esquema reducido',
-  ctx.b2Reducido(P({ edad: '28', sexo: 'F', peso: 60, embarazo: true, alarma: ['abdominal'] })), 'true');
+t('Gestante con alarma YA NO usa el esquema reducido de B2',
+  ctx.b2Reducido(P({ edad: '28', sexo: 'F', peso: 60, embarazo: true, alarma: ['abdominal'] })), 'false');
+t('...y recibe la carga completa de 10 ml/kg que indica el algoritmo',
+  ctx.planLiquidos(P({ edad: '28', sexo: 'F', peso: 60, embarazo: true, alarma: ['abdominal'] })).fases[0].mlkg, '10 ml/kg');
+t('La comorbilidad sí sigue reduciendo la carga de B2',
+  ctx.b2Reducido(P({ edad: '40', peso: 70, cond: ['dm'], alarma: ['abdominal'] })), 'true');
+t('El adulto mayor también',
+  ctx.b2Reducido(P({ edad: '70', peso: 70, alarma: ['abdominal'] })), 'true');
+t('Pero la gestante SÍ conserva el bolo reducido del grupo C (10 ml/kg, no 20)',
+  ctx.planLiquidos(P({ edad: '28', sexo: 'F', peso: 60, embarazo: true, grave: ['shock'] })).fases[0].mlkg, '10 ml/kg');
 t('"Menor de 5 años" no cuenta como comorbilidad',
   ctx.tieneComorbilidad(P({ edad: '3', cond: ['menor5'] })), 'false');
 
@@ -1022,23 +1032,201 @@ t('Hay fecha de revisión clínica', /^\d{4}-\d{2}-\d{2}$/.test(ctx.REVISION.fec
 t('La revisión nombra sus fuentes', ctx.REVISION.fuentes.length > 100, 'true');
 t('El mismo día de la revisión no ha pasado ningún mes',
   ctx.mesesDesdeRevision(ctx.REVISION.fecha), 0);
-t('Once meses después sigue vigente', ctx.estadoRevision('2027-07-20').vigente, 'true');
-t('A los doce meses deja de estar vigente', ctx.estadoRevision('2027-08-20').vigente, 'false');
-t('...y dice cuántos meses lleva', ctx.estadoRevision('2027-08-20').meses, 12);
+/* Relativo a REVISION.fecha, no a una fecha fija: así actualizar el contenido
+   clínico no rompe estas pruebas. */
+const masMeses = (iso, n) => {
+  const [a, m, d] = iso.split('-').map(Number);
+  const t2 = new Date(Date.UTC(a, m - 1 + n, d));
+  return t2.toISOString().slice(0, 10);
+};
+t('Once meses después sigue vigente',
+  ctx.estadoRevision(masMeses(ctx.REVISION.fecha, 11)).vigente, 'true');
+t('A los doce meses deja de estar vigente',
+  ctx.estadoRevision(masMeses(ctx.REVISION.fecha, 12)).vigente, 'false');
+t('...y dice cuántos meses lleva',
+  ctx.estadoRevision(masMeses(ctx.REVISION.fecha, 12)).meses, 12);
 t('Vencida, el aviso pide verificar antes de usarla con un paciente',
-  /Verifique que el algoritmo y las dosis sigan vigentes/.test(ctx.estadoRevision('2028-01-20').texto), 'true');
+  /Verifique que el algoritmo y las dosis sigan vigentes/.test(ctx.estadoRevision(masMeses(ctx.REVISION.fecha, 17)).texto), 'true');
 t('Una fecha anterior a la revisión no da meses negativos',
   ctx.mesesDesdeRevision('2020-01-01'), 0);
 t('La fecha se escribe en español legible',
-  ctx.fechaLarga('2026-08-20'), '20 de agosto de 2026');
+  ctx.fechaLarga('2026-08-26'), '26 de agosto de 2026');
 
-const repVig = ctx.construirReporte(P({ edad:'34', peso:70, fecha:'2026-08-21' }));
+const repVig = ctx.construirReporte(P({ edad:'34', peso:70, fecha: masMeses(ctx.REVISION.fecha, 1) }));
 t('El reporte trae el sello de revisión', repVig.revision.vigente, 'true');
 t('Vigente, no ensucia los avisos con la advertencia',
   repVig.avisos.some(a => /sin revisar|meses desde/.test(a.texto)), 'false');
-const repVenc = ctx.construirReporte(P({ edad:'34', peso:70, fecha:'2028-03-15' }));
+const repVenc = ctx.construirReporte(P({ edad:'34', peso:70, fecha: masMeses(ctx.REVISION.fecha, 19) }));
 t('Vencida, el reporte sí levanta la advertencia',
   repVenc.avisos.some(a => /han pasado \d+ meses desde la última revisión/.test(a.texto)), 'true');
+
+
+console.log('\n── Las dos listas de signos de alarma ────────────');
+
+/* La ficha SIVIGILA §6 lista doce hallazgos; el algoritmo de tratamiento define
+   el grupo B2 con ocho. Cinco fuentes coinciden en los ocho y en que las
+   plaquetas no están: OPS 2016 (guías y instrumento de arbovirosis), MinSalud
+   2019, OPS/CDE 2020 y OPS 2022. */
+t('La ficha aporta doce signos', ctx.ALARMA.length, 12);
+t('Solo ocho definen el grupo B2 en el algoritmo',
+  ctx.ALARMA.filter(x => x[4] === 'ops').length, 8);
+t('Los cuatro restantes se notifican pero no cambian el grupo',
+  ctx.ALARMA.filter(x => x[4] !== 'ops').map(x => x[0]).sort().join(','),
+  'diarrea,diuresis,hipotermia,plaquetas');
+
+const soloPlaq = P({ edad:'34', peso:70, alarma:['plaquetas'] });
+t('Plaquetas bajas AISLADAS ya no llevan a B2', ctx.clasificar(soloPlaq), 'A');
+t('...pero sí levantan un aviso que lo explica',
+  /no determina el choque/.test(ctx.avisoAlarmaNoOPS(soloPlaq).texto), 'true');
+t('...y el aviso pide control seriado',
+  /control seriado/.test(ctx.avisoAlarmaNoOPS(soloPlaq).texto), 'true');
+t('...y recuerda que el criterio médico manda',
+  /criterio clínico está por encima/.test(ctx.avisoAlarmaNoOPS(soloPlaq).texto), 'true');
+t('Hipotermia aislada tampoco lleva a B2',
+  ctx.clasificar(P({ edad:'34', peso:70, alarma:['hipotermia'] })), 'A');
+t('Diarrea aislada tampoco', ctx.clasificar(P({ edad:'34', peso:70, alarma:['diarrea'] })), 'A');
+t('Pero la notificación SIVIGILA sí los cuenta: sigue siendo caso con signos de alarma',
+  ctx.definicionCaso(P({ edad:'34', peso:70, alarma:['plaquetas'] })).clasificacion,
+  'Dengue con signos de alarma');
+t('Cada uno de los ocho sí lleva a B2',
+  ctx.ALARMA.filter(x => x[4] === 'ops')
+    .every(x => ctx.clasificar(P({ edad:'34', peso:70, alarma:[x[0]] })) === 'B2'), 'true');
+t('Sin signos que cuenten, no hay aviso de divergencia',
+  ctx.avisoAlarmaNoOPS(P({ edad:'34', peso:70, alarma:['abdominal'] })), null);
+
+console.log('\n── Definiciones operativas de las Directrices OPS 2022 ──');
+const desc = k => ctx.ALARMA.find(x => x[0] === k)[2];
+t('Vómitos trae el criterio numérico', /tres o más en una hora/i.test(desc('vomito')), 'true');
+t('El hematocrito exige dos mediciones consecutivas',
+  /dos mediciones consecutivas/i.test(desc('hematocrito')), 'true');
+t('El dolor abdominal se define como progresivo y sostenido',
+  /progresivo hasta ser continuo o sostenido/i.test(desc('abdominal')), 'true');
+t('Las plaquetas dicen que son marcador, no criterio',
+  /marcador de evolución, NO criterio de grupo/i.test(desc('plaquetas')), 'true');
+
+console.log('\n── Gestación: complicada frente a no complicada ──');
+const gest = P({ edad:'15', sexo:'F', peso:58, embarazo:true });
+t('El embarazo no complicado es condición asociada → B1', ctx.clasificar(gest), 'B1');
+t('No complicado: el aviso recuerda que la dosis no se reduce',
+  /NO se reduce por la gestación/.test(ctx.estadoGestacion(gest).texto), 'true');
+const gestC = Object.assign({}, gest, { embarazoComplicado: true });
+t('El embarazo complicado es criterio de hospitalización por sí mismo',
+  /criterio de hospitalización por sí mismo/.test(ctx.estadoGestacion(gestC).texto), 'true');
+t('...y se marca con el tono de mayor alerta', ctx.estadoGestacion(gestC).tono, 'danger');
+t('Sin embarazo no se genera nada', ctx.estadoGestacion(P({ edad:'34', peso:70 })), null);
+t('La condición asociada distingue los dos estados',
+  ctx.autoCondiciones(gestC)[0], 'Gestante — embarazo complicado');
+
+console.log('\n── Caso real de campo, 26/08/2026 ────────────────');
+
+/* Adolescente de 15 años y 58 kg, G1P0, aborto retenido de 8 semanas, día 3 de
+   enfermedad. Hemograma: Hto 33 (venía de 36, en DESCENSO), plaquetas 65.000
+   confirmadas por recuento manual, leucocitos 8.200. TA 100/62, FC 89, sin
+   choque. El equipo tratante la manejó como B1 con Lactato de Ringer a
+   116 cc/h — el extremo inferior de 2-4 ml/kg/h — y la hospitalizó por el
+   embarazo complicado. La app la subía a B2 y además le recortaba la carga a la
+   mitad por gestación. Esta prueba fija el comportamiento correcto. */
+const campo = P({
+  edad:'15', edadU:'a', sexo:'F', peso:58, embarazo:true, embarazoComplicado:true, semanasGest:8,
+  dia:'3', fecha:'2026-08-26', fechaInicio:'2026-08-24',
+  alarma:['plaquetas'], sinAlarma:false, grave:[], sinGrave:true,
+  social:['solo'], toleraVO:'si', diuresisOk:'si',
+  pas:100, pad:62, fc:89, temp:36.5, sato2:95, llenado:'< 2 segundos', conciencia:'Alerta',
+  hctBasal:36, hctActual:33, hb:11, plaquetas:65000, leucocitos:8200
+});
+t('Categoría de intervención: B1, no B2', ctx.clasificar(campo), 'B1');
+t('Se notifica igual como dengue con signos de alarma',
+  ctx.definicionCaso(campo).clasificacion, 'Dengue con signos de alarma');
+const planCampo = ctx.planLiquidos(campo);
+t('No hay carga intravenosa de B2', planCampo.fases.some(f => /Carga inicial/.test(f.n)), 'false');
+t('El esquema intravenoso es el de mantenimiento de B1',
+  planCampo.fases[0].mlkg, '2 – 4 ml/kg/h');
+t('Que sobre 58 kg son 116 – 232 ml/h — lo que ordenó el equipo tratante',
+  planCampo.fases[0].rate, '116 – 232 ml/h');
+const repCampo = ctx.construirReporte(campo);
+t('El informe explica por qué las plaquetas no cambiaron la categoría',
+  repCampo.avisos.some(a => /no determina el choque/.test(a.texto)), 'true');
+t('El informe exige definir el destino con obstetricia',
+  repCampo.avisos.some(a => /criterio de hospitalización por sí mismo/.test(a.texto)), 'true');
+t('El informe deja constancia de la edad gestacional',
+  repCampo.avisos.some(a => /8 semanas/.test(a.texto)), 'true');
+t('El hematocrito en descenso no se lee como hemoconcentración',
+  ctx.veredictoHemograma(campo).estado, 'no');
+
+
+console.log('\n── Recomendaciones para la casa ──────────────────');
+
+const casaA = ctx.recomendacionesCasa(P({ edad:'34', peso:70, dia:'2' }));
+t('El grupo A recibe hoja para la casa', casaA.aplica, 'true');
+t('...titulada como tal', casaA.titulo, 'Recomendaciones para la casa');
+t('...con cinco bloques', casaA.bloques.length, 5);
+t('...que piden entregarlas por escrito', /POR ESCRITO/.test(casaA.encabezado), 'true');
+const txtA = casaA.bloques.map(b => b.titulo + ' ' + b.items.join(' ')).join(' | ');
+t('Adultos: la cantidad concreta de líquidos', /5 vasos de 250 ml/.test(txtA), 'true');
+t('El agua sola no basta', /AGUA SOLA no repone/.test(txtA), 'true');
+t('Nada de bebidas oscuras, que se confunden con sangrado', /bebidas oscuras/.test(txtA), 'true');
+t('Control cada 48 horas con hemograma', /cada 48 horas/.test(txtA), 'true');
+t('Los signos para volver de urgencia van en lenguaje de paciente',
+  /Dolor de barriga fuerte/.test(txtA), 'true');
+t('Sin aspirina ni antiinflamatorios', /NO dar aspirina/.test(txtA), 'true');
+
+/* La fase manda sobre el contenido */
+t('En fase febril se exige mosquitero', /MOSQUITERO/.test(txtA), 'true');
+t('...y se avisa que la caída de la fiebre no es mejoría',
+  /NO es mejoría/.test(txtA), 'true');
+const casaRec = ctx.recomendacionesCasa(P({ edad:'34', peso:70, dia:'8' }));
+const txtRec = casaRec.bloques.map(b => b.items.join(' ')).join(' ');
+t('En recuperación ya no se insiste en el mosquitero', /MOSQUITERO/.test(txtRec), 'false');
+t('...y sí se vigila el exceso de líquidos', /exceso de líquidos/.test(txtRec), 'true');
+
+/* Pediátrico: la meta sale del peso, no de una frase genérica */
+const casaPed = ctx.recomendacionesCasa(P({ edad:'6', peso:20, dia:'2' }));
+t('En pediatría la meta de líquidos es la calculada por peso',
+  /1500 ml en 24 h/.test(casaPed.bloques[0].items[0]), 'true');
+t('...y se indica darlos en tomas pequeñas',
+  /tomas pequeñas y frecuentes/.test(casaPed.bloques[0].items.join(' ')), 'true');
+
+/* En plena fase crítica la hoja cambia de sentido */
+const casaCrit = ctx.recomendacionesCasa(P({ edad:'34', peso:70, dia:'5', alarma:['abdominal'] }));
+t('En fase crítica y B2 la hoja advierte que aún no es el alta', casaCrit.aplica, 'false');
+t('...y lo dice con todas las letras', /TODAVÍA NO ES MOMENTO DEL ALTA/.test(casaCrit.encabezado), 'true');
+t('...pero la sección conserva su nombre, para encontrarla siempre en el mismo sitio',
+  casaCrit.titulo, 'Recomendaciones para el egreso');
+
+/* B1 arrastra lo suyo */
+const casaB1 = ctx.recomendacionesCasa(P({ edad:'34', peso:70, dia:'2', cond:['dm'] }));
+t('B1 pide control cada 24 a 48 horas',
+  /cada 24 a 48 horas/.test(casaB1.bloques.map(b => b.items.join(' ')).join(' ')), 'true');
+t('...y recuerda no suspender el manejo de la enfermedad de base',
+  /enfermedad de base/.test(casaB1.bloques.map(b => b.items.join(' ')).join(' ')), 'true');
+
+/* Todo llega al texto que el médico pega */
+const repCasa = ctx.construirReporte(P({ edad:'34', peso:70, dia:'2' }));
+t('Las recomendaciones entran al reporte', repCasa.casa.bloques.length > 0, 'true');
+t('...y al texto para historia clínica',
+  /RECOMENDACIONES PARA LA CASA/.test(repCasa.conductaTexto), 'true');
+t('...incluidos los signos para volver de urgencia',
+  /VUELVA DE INMEDIATO/i.test(repCasa.conductaTexto), 'true');
+
+console.log('\n── El hemograma no bloquea, pero se reclama en B2 y C ──');
+
+const b2SinHct = ctx.construirReporte(P({ edad:'34', peso:70, alarma:['abdominal'] }));
+t('B2 sin hematocrito levanta alerta roja',
+  b2SinHct.avisos.some(a => /TOME HEMOGRAMA AHORA/.test(a.texto)), 'true');
+t('...pero dice expresamente que no espere el resultado para hidratar',
+  b2SinHct.avisos.some(a => /No espere el resultado para hidratar/.test(a.texto)), 'true');
+t('Con hematocrito registrado no molesta',
+  ctx.construirReporte(P({ edad:'34', peso:70, alarma:['abdominal'], hctActual:45 }))
+    .avisos.some(a => /TOME HEMOGRAMA AHORA/.test(a.texto)), 'false');
+t('En grupo A no se reclama: allí el hemograma es de control',
+  ctx.construirReporte(P({ edad:'34', peso:70 }))
+    .avisos.some(a => /TOME HEMOGRAMA AHORA/.test(a.texto)), 'false');
+t('En B1 tampoco',
+  ctx.construirReporte(P({ edad:'34', peso:70, cond:['dm'] }))
+    .avisos.some(a => /TOME HEMOGRAMA AHORA/.test(a.texto)), 'false');
+t('En C sí',
+  ctx.construirReporte(P({ edad:'34', peso:70, grave:['shock'] }))
+    .avisos.some(a => /TOME HEMOGRAMA AHORA/.test(a.texto)), 'true');
 
 console.log('\n───────────────────────────────────────────────────');
 console.log(`  ${pass} pruebas correctas, ${fail} fallidas`);

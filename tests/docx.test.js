@@ -53,6 +53,8 @@ function t(nombre, real, esperado) {
   await page.fill('#f-fecha', '2026-08-13');
   await page.fill('#f-pas', '80'); await page.fill('#f-pad', '60');
   await page.fill('#f-fc', '128'); await page.fill('#f-temp', '38,5');
+  /* Desde la v3.5 el hemograma viene plegado: no hace falta para clasificar. */
+  await page.locator('#acc-hemograma').evaluate(e => e.open = true);
   await page.fill('#f-hct', '52'); await page.fill('#f-hb', '17,2');
   await page.fill('#f-plaquetas', '82.000'); await page.fill('#f-leucocitos', '3.200');
   await page.click('#s2 button:has-text("Siguiente")');
@@ -149,6 +151,11 @@ function t(nombre, real, esperado) {
   t('La conducta lleva la velocidad de bomba', /Con bomba: /.test(doc), 'true');
   t('El Word conserva la lectura del hematocrito', /Lectura del hematocrito/.test(doc), 'true');
   t('El pie numera las páginas', /w:instr=" PAGE "/.test(pie), 'true');
+  t('El Word incluye las recomendaciones para la casa',
+    /Recomendaciones para (la casa|el egreso)/.test(doc), 'true');
+  t('...con la hidratación en cifras', /Hidratación en casa/.test(doc), 'true');
+  t('...con los signos para volver de urgencia', /Vuelva de INMEDIATO/.test(doc), 'true');
+  t('...y con la cita de control', /Cita de control/.test(doc), 'true');
   t('El Word lleva la fecha de revisión clínica',
     /Contenido clínico revisado el \d+ de \w+ de \d{4}/.test(doc), 'true');
 

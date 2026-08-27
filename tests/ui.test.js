@@ -45,7 +45,7 @@ fs.mkdirSync(TMP, { recursive: true });
 
   /* Paso 2 — paciente, fechas y signos vitales */
   async function llenarPaciente({ edad = '34', unidad = 'a', peso = '70', inicio = '2026-08-10',
-                                  consulta = '2026-08-13', hora = '08:00', nombre = '', vitales = null, lab = null } = {}) {
+                                  consulta = '2026-08-13', hora = null, nombre = '', vitales = null, lab = null } = {}) {
     await avanzar(1);
     if (nombre) await page.fill('#f-nombre', nombre);
     await page.fill('#f-edad', edad);
@@ -53,14 +53,16 @@ fs.mkdirSync(TMP, { recursive: true });
     await page.fill('#f-peso', peso);
     await page.fill('#f-inicio', inicio);
     await page.fill('#f-fecha', consulta);
-    await page.fill('#f-hora', hora);
-    if (vitales) for (const [campo, valor] of Object.entries(vitales)) {
+      if (vitales) for (const [campo, valor] of Object.entries(vitales)) {
       if (campo === 'llenado' || campo === 'conciencia') await page.selectOption('#f-' + campo, valor);
       else await page.fill('#f-' + campo, valor);
     }
+    /* Desde la v3.5 el hemograma está plegado —no hace falta para clasificar—,
+       así que las pruebas lo abren al entrar. */
+    await page.locator('#acc-hemograma').evaluate(e => e.open = true);
     if (lab) {
       if (lab['hct-basal'] !== undefined || lab['hct-ref'] !== undefined)
-        await page.locator('details:has-text("Ajustes: hemograma previo")').first().evaluate(e => e.open = true);
+        await page.locator('#acc-hct-ajustes').evaluate(e => e.open = true);
       for (const [campo, valor] of Object.entries(lab)) await page.fill('#f-' + campo, valor);
     }
   }
@@ -128,7 +130,8 @@ fs.mkdirSync(TMP, { recursive: true });
     throw new Error('La pantalla 4 no es la de signos de alarma');
   const nAlarma = await page.locator('#list-alarma .chk').count();
   if (nAlarma !== 12) throw new Error('Se esperaban 12 signos de alarma, hay ' + nAlarma);
-  await marcar('alarma', 2);                      // diarrea
+  await marcar('alarma', 0);                      // dolor abdominal — uno de los ocho del algoritmo
+  await marcar('alarma', 2);                      // diarrea — se notifica, pero no cambia el grupo
   await shot('04-alarma');
   await avanzar(4);
 
@@ -161,9 +164,14 @@ fs.mkdirSync(TMP, { recursive: true });
   if (salidaMin.indexOf('signos vitales y estado hemodinámico') > salidaMin.indexOf('1 · reposición'))
     throw new Error('Los signos vitales deben ir antes de la Conducta');
   for (const e of ['700 ml en 1 hora', '350 – 490 ml/h', '210 – 350 ml/h', '140 – 280 ml/h',
-                   '233 gotas/min', '500 mg cada 6 horas', 'Diarrea', 'torniquete: positiva']) {
+                   '233 gotas/min', '500 mg cada 6 horas', 'Diarrea', 'torniquete: positiva',
+                   'Dolor abdominal intenso y continuo']) {
     if (!salida.includes(e)) throw new Error('Falta en el resultado: ' + e);
   }
+  /* La diarrea se notifica pero no define el grupo: el informe debe explicarlo
+     para que el médico no lea una contradicción entre las dos clasificaciones. */
+  if (!/no está entre los ocho signos/i.test(salida))
+    throw new Error('No explica que la diarrea no cambia la categoría de intervención');
   await shot('07-resultado-B2');
   console.log('  OK   │ Caso 1: recorrido de 7 pasos → B2, día calculado por fechas, torniquete positivo');
 
@@ -507,7 +515,7 @@ fs.mkdirSync(TMP, { recursive: true });
     throw new Error('Un valor normal debe seguir pidiendo control');
 
   // Al agregar el basal, la app cambia de modo
-  await page.locator('details:has-text("Ajustes: hemograma previo")').first().evaluate(e => e.open = true);
+  await page.locator('#acc-hct-ajustes').evaluate(e => e.open = true);
   await page.fill('#f-hct-basal', '36');
   await page.waitForTimeout(150);
   const conBasal = await page.locator('#veredicto-box').innerText();
@@ -552,6 +560,7 @@ fs.mkdirSync(TMP, { recursive: true });
   await page.fill('#f-edad', '34');
   await page.fill('#f-peso', '70,5');
   await page.fill('#f-temp', '38,5');
+  await page.locator('#acc-hemograma').evaluate(e => e.open = true);
   await page.fill('#f-plaquetas', '85.000');
   await page.fill('#f-leucocitos', '3.200');
   await page.waitForTimeout(120);
@@ -886,6 +895,111 @@ fs.mkdirSync(TMP, { recursive: true });
   await ctx18b.close();
   await new Promise(r => servidor.close(r));
   console.log('  OK   │ Caso 18: el conteo sale al publicar por HTTP, no sale desde el disco, y si falla la app sigue');
+
+  // ====== Caso 19: el caso real de campo — gestante de 15 años, 26/08/2026 ======
+  /* Aborto retenido de 8 semanas, día 3, plaquetas 65.000 confirmadas por recuento
+     manual, hematocrito en descenso. Debe dar B1 con líquidos de mantenimiento,
+     no B2 con carga, y debe explicar las dos cosas. */
+  await definicionCaso();
+  await llenarPaciente({ edad: '15', peso: '58', inicio: '2026-08-24', consulta: '2026-08-26',
+    lab: { hct: '33', hb: '11', plaquetas: '65.000', leucocitos: '8.200', 'hct-basal': '36' } });
+  await page.click('#seg-sexo button[data-v="F"]');
+  await page.waitForTimeout(150);
+  await page.locator('#f-embarazo').click();
+  await page.waitForTimeout(150);
+  if (!(await page.locator('#wrap-emb-compl').isVisible()))
+    throw new Error('Al marcar gestante debe aparecer el estado del embarazo');
+  await page.selectOption('#f-emb-estado', 'si');
+  await page.fill('#f-emb-semanas', '8');
+  await page.waitForTimeout(150);
+  const emb = await page.locator('#emb-out').innerText();
+  if (!/criterio de hospitalización por sí mismo/i.test(emb))
+    throw new Error('No advierte que el embarazo complicado es criterio de hospitalización: ' + emb);
+  if (!/no se reduce por la gestación/i.test(emb))
+    throw new Error('No aclara que la dosis de líquidos no se reduce por gestación');
+
+  await avanzar(2); await avanzar(3);
+  await marcar('alarma', 9);                     // caída de plaquetas < 100.000
+  await avanzar(4);
+  await ninguno('grave'); await avanzar(5);
+  await responderCasa();
+  await page.click('#s6 button:has-text("Clasificar y calcular manejo")');
+  await page.waitForSelector('#s7.active');
+
+  const campo = await page.locator('#s7').innerText();
+  const campoMin = campo.toLowerCase();
+  if (!/categoría de intervención b1/.test(campoMin))
+    throw new Error('El caso real debe clasificar como B1, no como B2');
+  if (!/dengue con signos de alarma/i.test(campo))
+    throw new Error('La notificación SIVIGILA sí debe decir "con signos de alarma"');
+  if (!/116 – 232 ml\/h/.test(campo))
+    throw new Error('Debe indicar el mantenimiento de 2–4 ml/kg/h = 116–232 ml/h');
+  if (/carga inicial/i.test(campo))
+    throw new Error('No debe aparecer carga intravenosa de B2 en un paciente B1');
+  if (!/no determina el choque/i.test(campo))
+    throw new Error('Debe explicar por qué las plaquetas no cambiaron la categoría');
+  if (!/8 semanas/.test(campo))
+    throw new Error('Debe dejar constancia de la edad gestacional');
+  await shot('21-caso-campo-B1');
+  console.log('  OK   │ Caso 19: gestante de 15 años con plaquetas bajas → B1 y mantenimiento, no B2 con carga');
+
+  // ====== Caso 20: la hora de líquidos se fija al final, no al principio ======
+  await definicionCaso();
+  await llenarPaciente({ edad: '34', peso: '70' });
+  if (await page.locator('#f-hora').count())
+    throw new Error('La hora de inicio de líquidos ya no debe estar en la pantalla del paciente');
+  await avanzar(2); await avanzar(3);
+  await marcar('alarma', 0);                     // dolor abdominal → B2, vía intravenosa
+  await avanzar(4);
+  await ninguno('grave'); await avanzar(5);
+  await responderCasa();
+  await page.click('#s6 button:has-text("Clasificar y calcular manejo")');
+  await page.waitForSelector('#s7.active');
+  if (!(await page.locator('#f-hora').count()))
+    throw new Error('La hora debe aparecer junto a la reposición hídrica en el resultado');
+  await page.fill('#f-hora', '14:00');
+  await page.waitForTimeout(400);
+  const conHora = await page.locator('#s7').innerText();
+  if (!/14:00/.test(conHora)) throw new Error('No tomó la hora indicada');
+  if (!/15:00/.test(conHora)) throw new Error('No recalculó el horario de las fases desde la hora nueva');
+  console.log('  OK   │ Caso 20: la hora se fija al momento de iniciar los líquidos y recalcula el horario');
+
+  // ====== Caso 21: el hemograma no estorba, pero se reclama en B2 ======
+  if (!/TOME HEMOGRAMA AHORA/i.test(conHora))
+    throw new Error('En B2 sin hematocrito debe exigirlo antes de hidratar');
+  if (!/No espere el resultado para hidratar/i.test(conHora))
+    throw new Error('Debe aclarar que no se retrasa la hidratación por esperar el hemograma');
+
+  await page.goto(URL);
+  await page.click('#s0 button:has-text("Comenzar")');
+  await page.locator('#f-endemica').click();
+  await page.locator('#f-fiebre').click();
+  await marcar('manif', 0); await marcar('manif', 2);
+  await page.click('#s1 button:has-text("Siguiente")');
+  const acc = await page.locator('#acc-hemograma').evaluate(e => e.open);
+  if (acc) throw new Error('El hemograma debe venir plegado: no hace falta para clasificar');
+  const resumenAcc = await page.locator('#acc-hemograma > summary').innerText();
+  if (!/ábralo si ya tiene el resultado/i.test(resumenAcc))
+    throw new Error('El acordeón debe decir que es opcional: ' + resumenAcc);
+  console.log('  OK   │ Caso 21: el hemograma viene plegado y se exige solo cuando el grupo lo requiere');
+
+  // ====== Caso 22: recomendaciones para la casa, según grupo y fase ======
+  await page.fill('#f-edad', '34'); await page.fill('#f-peso', '70');
+  await page.fill('#f-inicio', '2026-08-25'); await page.fill('#f-fecha', '2026-08-26');
+  await avanzar(2); await avanzar(3);
+  await ninguno('alarma'); await avanzar(4);
+  await ninguno('grave'); await avanzar(5);
+  await responderCasa();
+  await page.click('#s6 button:has-text("Clasificar y calcular manejo")');
+  await page.waitForSelector('#s7.active');
+  /* innerText devuelve los títulos en mayúsculas por el text-transform del CSS */
+  const casaTxt = (await page.locator('#s7').innerText()).toLowerCase();
+  for (const e of ['recomendaciones para la casa', 'hidratación en casa', '5 vasos de 250 ml',
+                   'mosquitero', 'vuelva de inmediato', 'dolor de barriga fuerte',
+                   'no dar aspirina', 'cita de control', 'el agua sola no repone'])
+    if (!casaTxt.includes(e)) throw new Error('Falta en las recomendaciones para la casa: ' + e);
+  await shot('22-recomendaciones-casa');
+  console.log('  OK   │ Caso 22: las recomendaciones para la casa se arman según el grupo y la fase');
   await browser.close();
   console.log('\n  Todos los recorridos de interfaz pasaron. Capturas en shots/\n');
 })().catch(e => { console.error('\n FALLA │ ' + e.message + '\n'); process.exit(1); });
