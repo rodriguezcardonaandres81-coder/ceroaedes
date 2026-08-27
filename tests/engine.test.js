@@ -282,14 +282,37 @@ t('Confirmar ausencia no cambia la categoría de intervención',
 
 console.log('\n── Torniquete y signos vitales ────────────────────');
 
-t('Torniquete positivo entra en las manifestaciones del reporte',
+t('Torniquete positivo se registra en el reporte',
   ctx.construirReporte(P({ edad: '34', peso: 70, torniquete: 'pos' })).hallazgos[0].items
-    .some(x => /torniquete: positiva/.test(x)), 'true');
+    .some(x => /torniquete: positiva/i.test(x)), 'true');
+t('...advirtiendo que no cuenta para el INS',
+  ctx.construirReporte(P({ edad: '34', peso: 70, torniquete: 'pos' })).hallazgos[0].items
+    .some(x => /no cuenta para la definición del INS/.test(x)), 'true');
+t('Torniquete negativo se registra pero no se cuenta',
+  ctx.construirReporte(P({ edad: '34', peso: 70, manif: ['cefalea'], torniquete: 'neg' })).hallazgos[0].items
+    .some(x => /torniquete: negativa/.test(x)), 'true');
 t('Torniquete no realizado no ensucia el reporte',
   ctx.construirReporte(P({ edad: '34', peso: 70, torniquete: 'nr' })).hallazgos[0].items
     .some(x => /torniquete/.test(x)), 'false');
-t('El torniquete no altera la definición de caso',
+/* Dos definiciones que no dicen lo mismo, y solo una gobierna la notificación en
+   Colombia. La del INS v07 enumera «cefalea, dolor retroocular, mialgias,
+   artralgias, erupción cutánea, rash o leucopenia» — sin torniquete. La regional
+   de la OPS sí lo cuenta. La app obedece al INS y avisa de la diferencia: contar
+   el torniquete notificaría casos que el SIVIGILA no reconoce como tales. */
+t('El torniquete positivo NO completa la definición del INS',
   ctx.definicionCaso(P({ edad: '34', peso: 70, manif: ['cefalea'], torniquete: 'pos' })).cumple, 'false');
+t('...pero el caso a una manifestación de cumplir queda advertido',
+  /QUEDA A UNA MANIFESTACIÓN DE CUMPLIR/.test(
+    ctx.avisoTorniquete(P({ manif: ['cefalea'], torniquete: 'pos' })).texto), 'true');
+t('...nombrando que la OPS sí lo contaría',
+  /la OPS ya lo consideraría caso probable/.test(
+    ctx.avisoTorniquete(P({ manif: ['cefalea'], torniquete: 'pos' })).texto), 'true');
+t('Si el caso ya cumple, el aviso baja el tono',
+  ctx.avisoTorniquete(P({ manif: ['cefalea','mialgias'], torniquete: 'pos' })).tono, 'info');
+t('Con torniquete negativo no hay aviso',
+  ctx.avisoTorniquete(P({ manif: ['cefalea'], torniquete: 'neg' })), 'null');
+t('Sin realizar tampoco',
+  ctx.avisoTorniquete(P({ manif: ['cefalea'], torniquete: 'nr' })), 'null');
 
 t('PAM de 90/60 = 70 mmHg', ctx.pam(P({ pas: '90', pad: '60' })), 70);
 t('Presión de pulso de 95/78 = 17 mmHg', ctx.presionPulso(P({ pas: '95', pad: '78' })), 17);
@@ -1233,6 +1256,74 @@ t('En B1 tampoco',
 t('En C sí',
   ctx.construirReporte(P({ edad:'34', peso:70, grave:['shock'] }))
     .avisos.some(a => /TOME HEMOGRAMA AHORA/.test(a.texto)), 'true');
+
+console.log('\n── Las seis manifestaciones de la definición de caso ──');
+
+/* La que gobierna la notificación al SIVIGILA es la del INS, «Protocolo de
+   Vigilancia de Dengue» v07, 15 de julio de 2024:
+     «Enfermedad febril aguda de 2 a 7 días de evolución en la que se observan dos
+     o más de las siguientes manifestaciones: cefalea, dolor retroocular, mialgias,
+     artralgias, erupción cutánea, rash o LEUCOPENIA».
+   Seis, enumeradas por separado, sin prueba de torniquete: es exactamente la
+   sección 6 de la ficha 210/220/580 más la leucopenia. La app tenía el leucograma
+   digitado, sabía reconocer la leucopenia y se limitaba a decir «márquelo». */
+
+const dc = o => ctx.definicionCaso(P(Object.assign({ edad:'15', sexo:'F', peso:50 }, o)));
+
+t('Una manifestación sola no cumple', dc({ manif:['cefalea'] }).cumple, 'false');
+t('El torniquete positivo no la completa: el INS no lo enumera',
+  dc({ manif:['cefalea'], torniquete:'pos' }).cumple, 'false');
+t('Con leucocitos en 3.200, sí', dc({ manif:['cefalea'], leucocitos:'3200' }).cumple, 'true');
+t('Con leucocitos normales, no', dc({ manif:['cefalea'], leucocitos:'8000' }).cumple, 'false');
+t('El umbral de leucopenia es 4.000', dc({ manif:['cefalea'], leucocitos:'3999' }).cumple, 'true');
+t('...y 4.000 exactos no es leucopenia', dc({ manif:['cefalea'], leucocitos:'4000' }).cumple, 'false');
+t('Un leucograma en cero no se toma por leucopenia',
+  dc({ manif:['cefalea'], leucocitos:'0' }).cumple, 'false');
+t('Sin leucograma no se inventa nada', dc({ manif:['cefalea'], leucocitos:'' }).cumple, 'false');
+
+/* Marcar la leucopenia a mano y tenerla en el leucograma no puede contar dos veces. */
+t('La leucopenia no se cuenta dos veces',
+  ctx.manifCaso(P({ manif:['cefalea','leucopenia'], leucocitos:'3200' })).length, 2);
+t('El detalle informa el número real de manifestaciones',
+  /3 manifestaciones/.test(dc({ manif:['cefalea','mialgias'], leucocitos:'3200', alarma:['mucosas'] }).detalle), 'true');
+
+/* Trazabilidad: quien lea la historia clínica debe ver de dónde salió cada una. */
+const auto = ctx.manifAuto(P({ torniquete:'pos', leucocitos:'3200' }));
+t('Solo la leucopenia se deduce', auto.length, 1);
+t('...y nombra el leucograma que la produjo', auto[0].origen, 'leucocitos 3.200 /mm³');
+
+/* Las seis del INS, una por una, contra la sección 6 de la ficha. */
+const SEIS = ['cefalea','retroocular','mialgias','artralgias','rash','leucopenia'];
+t('La app tiene exactamente las seis manifestaciones del INS',
+  ctx.MANIF.map(x => x[0]).join(), SEIS.join());
+t('Cinco vienen de la casilla de la ficha',
+  ctx.MANIF.filter(x => x[3] === 'ficha').length, 5);
+t('...y la leucopenia, del protocolo',
+  ctx.MANIF.filter(x => x[3] === 'prot').map(x => x[0]).join(), 'leucopenia');
+/* La ficha las enumera por separado; la OPS agrupa cefalea/retroocular y
+   mialgia/artralgia. Se sigue la ficha, que es la que se diligencia. */
+t('Cefalea y dolor retroocular cuentan por separado, como en la ficha',
+  dc({ manif:['cefalea','retroocular'] }).cumple, 'true');
+t('Mialgias y artralgias también',
+  dc({ manif:['mialgias','artralgias'] }).cumple, 'true');
+
+/* La barrera que importa: esto es notificación, no tratamiento. */
+t('Ninguna manifestación mueve el grupo de manejo',
+  ctx.clasificar(P({ edad:'15', peso:50, manif:['cefalea'], torniquete:'pos', leucocitos:'3200' })),
+  ctx.clasificar(P({ edad:'15', peso:50, manif:['cefalea'] })));
+t('Ni cambia el plan de líquidos',
+  JSON.stringify(ctx.planLiquidos(P({ edad:'15', peso:50, manif:['cefalea'], torniquete:'pos', leucocitos:'3200' }))),
+  JSON.stringify(ctx.planLiquidos(P({ edad:'15', peso:50, manif:['cefalea'] }))));
+
+/* Los once signos de alarma y las cuatro manifestaciones graves de la sección 6,
+   cotejados casilla por casilla contra la ficha 210/220/580. */
+t('Los once signos de alarma de la ficha están, en su orden',
+  ctx.ALARMA.filter(x => x[3] === 'ficha').map(x => x[0]).join(),
+  'abdominal,vomito,diarrea,somnolencia,hipotension,hepatomegalia,mucosas,hipotermia,hematocrito,plaquetas,liquidos');
+t('...más la diuresis, que aporta el protocolo',
+  ctx.ALARMA.filter(x => x[3] === 'prot').map(x => x[0]).join(), 'diuresis');
+t('Las cuatro manifestaciones graves de la ficha están completas',
+  ctx.GRAVE.map(x => x[0]).join(), 'extravasacion,hemorragia,shock,organos');
 
 console.log('\n── Cada signo no-OPS con su propia conducta ───────');
 

@@ -166,9 +166,9 @@ La función `construirReporte()` produce un único modelo de datos del que se de
 ## Pruebas
 
 ```bash
-npm test                                  # 564 pruebas del motor clínico (sin navegador)
+npm test                                  # 593 pruebas del motor clínico (sin navegador)
 npm i -D playwright
-npm run test:ui                           # 36 recorridos de interfaz en Chromium real
+npm run test:ui                           # 38 recorridos de interfaz en Chromium real
 npm run test:docx                         # 63 comprobaciones del .docx exportado
 npm run test:all                          # las tres suites
 ```
@@ -200,6 +200,24 @@ La aplicación **no es un instrumento de auditoría de historia clínica**: est�
 | 31–56 Manejo | Sí | Plan de líquidos por fase, antipirético, contraindicaciones y monitoreo |
 
 **Deliberadamente fuera de alcance**, por ser datos administrativos o de auditoría institucional: ítem 9 (conciliación medicamentosa), 25–30 (remisión, tiempos, IPS destino), 57–65 (nivel de apropiación de la IPS), y los campos de afiliación, aseguradora, desenlace, autopsia y evaluador.
+
+## Las seis manifestaciones de la definición de caso
+
+Aquí conviven dos definiciones que **no dicen lo mismo**, y la aplicación tiene que obedecer a una sola: la que rige la notificación al SIVIGILA en Colombia.
+
+**INS, _Protocolo de Vigilancia de Dengue_ v07, 15 de julio de 2024** — es la que manda:
+
+> «Enfermedad febril aguda de 2 a 7 días de evolución en la que se observan **dos o más** de las siguientes manifestaciones: cefalea, dolor retroocular, mialgias, artralgias, erupción cutánea, rash o **leucopenia**.»
+
+Seis, enumeradas por separado, **sin prueba de torniquete**. Es exactamente la sección 6 de la ficha 210/220/580 más la leucopenia — que es de donde salió el rótulo `'prot'` de esa entrada.
+
+**OPS, _Definiciones de caso…_ 2023 y _Algoritmos…_ 2024** — definición regional. Agrupa distinto y **sí** incluye el torniquete: «1. Náusea o vómito · 2. Exantema · 3. Cefalea o dolor retro ocular · 4. Mialgia o artralgia · **5. Petequias o prueba de torniquete positiva (+)** · 6. Leucopenia».
+
+La app **cuenta por el INS**. El torniquete se realiza, se registra y se imprime —el instrumento de auditoría lo exige en el ítem 13— pero no completa la definición colombiana: contarlo notificaría casos que el SIVIGILA no reconoce como tales. Cuando el torniquete sale positivo y el caso queda **a una manifestación de cumplir**, la app lo advierte en vez de dejarlo descartar en silencio: *«con el torniquete positivo, la OPS ya lo consideraría caso probable — busque dirigidamente las otras manifestaciones y las petequias antes de descartarlo»*.
+
+La **leucopenia sí cuenta**, y como el leucograma ya está digitado, la app la reconoce sola —umbral < 4.000 /mm³— en vez de pedir que se marque una casilla más. Va rotulada con su origen: *«Leucopenia — tomada de leucocitos 3.200 /mm³»*, para que quien lea la historia clínica vea de dónde salió. Una manifestación marcada a mano no se cuenta dos veces.
+
+**Nada de esto toca el grupo de manejo.** Las manifestaciones alimentan la clasificación para el SIVIGILA; el grupo A/B1/B2/C lo deciden los signos de alarma, las manifestaciones graves y las condiciones asociadas. Dos pruebas lo verifican comparando `clasificar()` y `planLiquidos()` con y sin las manifestaciones deducidas.
 
 ## Respuestas que se contradicen
 

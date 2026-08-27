@@ -645,8 +645,15 @@ footer b{color:var(--text)}
       Se considera <b>positiva con 10 o más petequias</b> (algunos textos usan el umbral previo de 20).
     </div>
     <div class="note warn" style="margin-bottom:0">
-      El instrumento de auditoría la exige dentro del ítem 11. <b>No es casilla de la sección 6 de la ficha</b>,
-      así que no suma para la definición de caso: se registra en el reporte y en el documento Word.
+      <b>No suma para la definición de caso en Colombia, pero refuerza la sospecha.</b>
+      La definición que rige la notificación al SIVIGILA enumera seis manifestaciones y el torniquete no está
+      entre ellas: «dos o más de las siguientes manifestaciones: cefalea, dolor retroocular, mialgias,
+      artralgias, erupción cutánea, rash o leucopenia»
+      <span class="muted">(INS, <i>Protocolo de Vigilancia de Dengue</i> v07, 2024 — es la sección 6 de la ficha, más la leucopenia).</span>
+      La definición <b>regional</b> de la OPS sí la cuenta, dentro de «petequias o prueba de torniquete positiva (+)»
+      <span class="muted">(OPS, <i>Definiciones de caso…</i>, 2023)</span>, de modo que un resultado positivo en un caso
+      que queda a una manifestación de cumplir es motivo para buscar mejor, no para descartar.
+      El instrumento de auditoría la exige además dentro del ítem 13.
     </div>
   </div>
 
@@ -762,7 +769,7 @@ footer b{color:var(--text)}
 
 /* === ENGINE START === */
 
-var APP_VERSION = '3.5.3';   /* fuente única: pie de página, Word y service worker */
+var APP_VERSION = '3.6.1';   /* fuente única: pie de página, Word y service worker */
 
 /* ==================================================================
    SELLO DE REVISIÓN CLÍNICA
@@ -781,6 +788,8 @@ var REVISION = {
            'OPS, «Dengue: guías para la atención de enfermos en la Región de las Américas», 2.ª ed., 2016; ' +
            'OPS, «Instrumento para el diagnóstico y la atención a pacientes con sospecha de arbovirosis», 2016; ' +
            'OPS/CDE, «Algoritmos para el manejo clínico del dengue», 2020; ' +
+           'OPS, «Definiciones de caso, clasificación clínica y fases de la enfermedad», 2023; ' +
+           'OPS, «Algoritmos para el manejo clínico de los casos de dengue», 2024; ' +
            'OPS, «Directrices para el diagnóstico clínico y el tratamiento del dengue, el chikunguña y el zika», 2022 (GRADE); ' +
            'OMS 2009 y 2012; e Instrumento de seguimiento y evaluación de casos de dengue del MinSalud.',
   mesesVigencia: 12                    /* pasado este plazo la app pide reverificar */
@@ -825,6 +834,67 @@ var MANIF = [
   ['rash','Erupción o rash','','ficha'],
   ['leucopenia','Leucopenia','Incluida en la Tabla 2 del protocolo; no aparece como casilla en la sección 6 de la ficha.','prot']
 ];
+
+/* ============================================================================
+   QUÉ CUENTA PARA LA DEFINICIÓN DE CASO, Y SEGÚN QUIÉN
+   ----------------------------------------------------------------------------
+   Aquí hay dos definiciones que NO dicen lo mismo, y la aplicación tiene que
+   obedecer a una sola: la que rige la notificación al SIVIGILA en Colombia.
+
+   INS, «Protocolo de Vigilancia de Dengue» v07, 15 de julio de 2024 — ES LA QUE
+   MANDA para notificar en Colombia:
+     «Enfermedad febril aguda de 2 a 7 días de evolución en la que se observan
+     dos o más de las siguientes manifestaciones: cefalea, dolor retroocular,
+     mialgias, artralgias, erupción cutánea, rash o LEUCOPENIA».
+   Seis manifestaciones, enumeradas por separado, sin prueba de torniquete. Es
+   exactamente la sección 6 de la ficha 210/220/580, más la leucopenia.
+
+   OPS, «Definiciones de caso…» 2023 y «Algoritmos…» 2024 — definición REGIONAL,
+   agrupa distinto y sí incluye el torniquete:
+     «…dos o más de las siguientes seis manifestaciones: 1. Náusea o vómito
+     2. Exantema 3. Cefalea o dolor retro ocular 4. Mialgia o artralgia
+     5. Petequias o prueba de torniquete positiva (+) 6. Leucopenia».
+
+   La app cuenta por el INS. El torniquete se realiza, se registra y se imprime
+   —el instrumento de auditoría lo exige— pero NO completa la definición de caso
+   colombiana: hacerlo notificaría casos que el SIVIGILA no reconoce como tales.
+   La leucopenia sí cuenta, y como el leucograma ya está digitado, la app la
+   reconoce sola en vez de pedir que se marque a mano una casilla más.
+
+   Nada de esto toca el grupo de manejo: las manifestaciones alimentan la
+   clasificación para el SIVIGILA, nunca clasificar() ni el plan de líquidos.
+   ============================================================================ */
+function manifAuto(S){
+  var f = [];
+  var leu = parseFloat(S.leucocitos);
+  if(!isNaN(leu) && leu > 0 && leu < 4000 && (S.manif || []).indexOf('leucopenia') < 0)
+    f.push({ clave:'leucopenia', nombre:'Leucopenia',
+             origen:'leucocitos ' + leu.toLocaleString('es-CO') + ' /mm³' });
+  return f;
+}
+/* El torniquete positivo no completa la definición colombiana, pero tampoco es
+   un dato mudo: refuerza la sospecha y la definición regional de la OPS sí lo
+   cuenta. Cuando el caso queda a UNA manifestación de cumplir, el médico tiene
+   que enterarse de eso antes de descartarlo. */
+function avisoTorniquete(S){
+  if(S.torniquete !== 'pos') return null;
+  var n = manifCaso(S).length;
+  return {
+    tono: n < 2 ? 'warn' : 'info',
+    texto: 'Prueba del torniquete POSITIVA. No entra en la definición operativa del INS —que enumera cefalea, ' +
+      'dolor retroocular, mialgias, artralgias, erupción o rash, y leucopenia— así que no suma al conteo de esta app. ' +
+      'La definición regional de la OPS sí la cuenta, dentro de «petequias o prueba de torniquete positiva (+)». ' +
+      (n < 2
+        ? 'ESTE CASO QUEDA A UNA MANIFESTACIÓN DE CUMPLIR: con el torniquete positivo, la OPS ya lo consideraría caso probable. ' +
+          'Busque dirigidamente las otras manifestaciones y las petequias antes de descartarlo, y consigne el resultado en la historia clínica.'
+        : 'Registrada para el ítem 13 del instrumento de auditoría y como refuerzo de la sospecha clínica.')
+  };
+}
+/* Todas las que cuentan: las marcadas por el médico más las que la app ya tiene. */
+function manifCaso(S){
+  var marcadas = (S.manif || []).map(function(k){ return nombreDe(MANIF, k); });
+  return marcadas.concat(manifAuto(S).map(function(x){ return x.nombre; }));
+}
 
 /* ============================================================================
    SIGNOS DE ALARMA — dos listas que NO son la misma, y que aquí van separadas.
@@ -1232,7 +1302,7 @@ function mostrarMenor5(S){
 
 /* ---------- Definición operativa de caso (ficha SIVIGILA / Tabla 2) ---------- */
 function definicionCaso(S){
-  var nm = S.manif.length, faltan = [];
+  var nm = manifCaso(S).length, faltan = [];
   if(!S.endemica) faltan.push('procedencia de área endémica');
   if(!S.fiebre) faltan.push('fiebre');
   if(nm < 2) faltan.push('dos o más manifestaciones (marcadas: ' + nm + ')');
@@ -1640,7 +1710,7 @@ var TORNIQUETE = { nr:'No realizada', neg:'Negativa', pos:'Positiva (10 o más p
 function auditoria(S){
   var reg = function(txt, valor){ return { item: txt, valor: valor || null }; };
   var lista = function(arr){ return arr.length ? arr.join('; ') : null; };
-  var manifs = (S.fiebre ? ['Fiebre'] : []).concat(S.manif.map(function(k){ return nombreDe(MANIF,k); }));
+  var manifs = (S.fiebre ? ['Fiebre'] : []).concat(manifCaso(S));
   var alarmas = S.alarma.map(function(k){ return nombreDe(ALARMA,k); });
   var cond = autoCondiciones(S).concat(S.cond.map(function(k){ return nombreDe(COND,k); }));
   var soc = S.social.map(function(k){ return nombreDe(SOCIAL,k); });
@@ -2004,7 +2074,7 @@ function veredictoHemograma(S){
     v.tiles.push({ k:'leu', etiqueta:'Leucocitos', valor: leu.toLocaleString('es-CO'),
       estado: lbajo ? 'Leucopenia' : 'Normales',
       tono: lbajo ? 'warn' : 'ok',
-      nota: lbajo ? 'La leucopenia cuenta como manifestación para la definición de caso.' : null });
+      nota: lbajo ? 'La leucopenia cuenta como manifestación para la definición de caso: la app ya la sumó.' : null });
   }
   return v;
 }
@@ -2048,7 +2118,7 @@ function interpretarHematocrito(S){
   if(!isNaN(plq) && plq < 100000)
     r.notas.push('Plaquetas ' + plq.toLocaleString('es-CO') + ' /mm³: por debajo de 100.000 es signo de alarma de la ficha. Márquelo si no lo ha hecho.');
   if(!isNaN(leu) && leu < 4000)
-    r.notas.push('Leucocitos ' + leu.toLocaleString('es-CO') + ' /mm³: leucopenia. Es una de las manifestaciones que cuentan para la definición de caso.');
+    r.notas.push('Leucocitos ' + leu.toLocaleString('es-CO') + ' /mm³: leucopenia. Es una de las seis manifestaciones de la definición de caso, y la app ya la contó — no tiene que volver a marcarla.');
   if(!isNaN(hb) && !isNaN(act)){
     var esperado = hb*3;
     if(Math.abs(act - esperado) > 6)
@@ -2387,7 +2457,14 @@ function construirReporte(S){
 
   m.hallazgos = [];
   var manifs = (S.fiebre ? ['Fiebre'] : []).concat(S.manif.map(function(k){ return nombreDe(MANIF,k); }));
-  if(S.torniquete && S.torniquete !== 'nr') manifs.push('Prueba del torniquete: ' + TORNIQUETE[S.torniquete].toLowerCase());
+  /* Las que la app dedujo van rotuladas con su origen: quien lea la historia
+     clínica tiene que poder ver de dónde salió cada una. */
+  manifAuto(S).forEach(function(x){ manifs.push(x.nombre + ' — tomada de ' + x.origen); });
+  /* El torniquete se registra siempre que se haya hecho, pero fuera del conteo:
+     no es una de las seis manifestaciones del INS. */
+  if(S.torniquete && S.torniquete !== 'nr')
+    manifs.push('Prueba del torniquete: ' + TORNIQUETE[S.torniquete].toLowerCase() +
+                (S.torniquete === 'pos' ? ' — registrada, no cuenta para la definición del INS' : ''));
   if(manifs.length) m.hallazgos.push({ titulo:'Manifestaciones', color:'1B6B5A', items: manifs });
 
   if(S.alarma.length) m.hallazgos.push({ titulo:'Signos de alarma', color:'E65100', items: S.alarma.map(function(k){ return nombreDe(ALARMA,k); }) });
@@ -2421,6 +2498,9 @@ function construirReporte(S){
   m.gestacion = estadoGestacion(S);
   if(m.gestacion) m.avisos.push({ tono: m.gestacion.tono,
     texto: m.gestacion.titulo + '. ' + m.gestacion.texto });
+
+  m.torniquete = avisoTorniquete(S);
+  if(m.torniquete) m.avisos.push({ tono: m.torniquete.tono, texto: m.torniquete.texto });
 
   /* Por qué un signo marcado puede no haber movido la categoría. */
   m.alarmaNoOPS = avisoAlarmaNoOPS(S);
@@ -2780,7 +2860,12 @@ function updateManifCount(){
   if(n < 2) falta.push('dos o más manifestaciones');
   el.innerHTML = 'Manifestaciones marcadas: <b>' + n + '</b>. ' + (ok
     ? 'Cumple la definición de <b>dengue sin signos de alarma</b>.'
-    : 'Falta: ' + falta.join(', ') + '.');
+    : 'Falta: ' + falta.join(', ') + '.') +
+    /* El conteo de esta pantalla todavía no es el definitivo: faltan dos de las
+       seis manifestaciones, que se conocen más adelante. Decir «falta una» sin
+       aclararlo hace que el médico marque algo de más para completar el cupo. */
+    (n < 2 ? ' <span class="muted">El hemograma todavía no se ha digitado: si los leucocitos están por debajo ' +
+             'de 4.000, la leucopenia cuenta también y la app la suma sola.</span>' : '');
 }
 
 /* Cambiar la hora de inicio rehace el horario del plan sin tocar nada más. */

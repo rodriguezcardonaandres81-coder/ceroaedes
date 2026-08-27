@@ -164,7 +164,7 @@ fs.mkdirSync(TMP, { recursive: true });
   if (salidaMin.indexOf('signos vitales y estado hemodinámico') > salidaMin.indexOf('1 · reposición'))
     throw new Error('Los signos vitales deben ir antes de la Conducta');
   for (const e of ['700 ml en 1 hora', '350 – 490 ml/h', '210 – 350 ml/h', '140 – 280 ml/h',
-                   '233 gotas/min', '500 mg cada 6 horas', 'Diarrea', 'torniquete: positiva',
+                   '233 gotas/min', '500 mg cada 6 horas', 'Diarrea', 'torniquete positiva',
                    'Dolor abdominal intenso y continuo']) {
     if (!salida.includes(e)) throw new Error('Falta en el resultado: ' + e);
   }
@@ -340,7 +340,7 @@ fs.mkdirSync(TMP, { recursive: true });
   await page.click('button:has-text("Clasificar")');
   await page.waitForSelector('#s7.active');
   const out7 = await page.locator('#out').textContent();
-  for (const e of ['torniquete: positiva', 'Registro para historia clínica', 'PAM',
+  for (const e of ['torniquete positiva', 'Registro para historia clínica', 'PAM',
                    'Ninguna — buscadas dirigidamente y ausentes', 'Ecografía abdominal y radiografía de tórax',
                    'NEGATIVA no descarta el dengue', 'técnicas distintas, molecular y virológica', 'aislamiento viral',
                    'solo si es necesario y en DOSIS ÚNICA', 'Restricciones y contraindicaciones']) {
@@ -1090,6 +1090,87 @@ fs.mkdirSync(TMP, { recursive: true });
   await page.click('#s7 button:has-text("Volver")').catch(() => {});
   await page.waitForTimeout(200);
   console.log('  OK   │ Caso 24: la app detecta respuestas contradictorias y da la conducta del signo correcto');
+
+  // ====== Caso 25: el torniquete y el leucograma completan la definición ======
+  /* La app pedía el torniquete, lo imprimía, y declaraba en pantalla que no
+     contaba; y tenía el leucograma digitado sin usarlo. Un caso con fiebre, una
+     manifestación, torniquete positivo y leucocitos en 3.200 salía como NO
+     notificable teniendo cuatro manifestaciones a la vista. */
+  await page.goto(URL);
+  await page.click('#s0 button:has-text("Comenzar")');
+  await page.locator('#f-endemica').click();
+  await page.locator('#f-fiebre').click();
+  await page.locator('#list-manif .chk').nth(0).click();     // solo cefalea
+  const cuenta = await page.locator('#manif-count').innerText();
+  if (!/marcadas: 1/i.test(cuenta))
+    throw new Error('Debe contar una manifestación marcada: ' + cuenta);
+  if (!/torniquete|leucocitos/i.test(cuenta))
+    throw new Error('Con una sola manifestación debe avisar que faltan dos pantallas: ' + cuenta);
+
+  await page.click('#s1 button:has-text("Siguiente")');
+  await page.fill('#f-edad', '15');
+  await page.fill('#f-peso', '50');
+  await page.fill('#f-inicio', '2026-08-23');
+  await page.fill('#f-fecha', '2026-08-26');
+  await page.locator('#acc-hemograma').evaluate(e => e.open = true);
+  await page.fill('#f-leucocitos', '3.200');
+  await page.click('#s2 button:has-text("Siguiente")');
+  await page.selectOption('#f-torniquete', 'pos');
+  const notaTorn = await page.locator('#s3').innerText();
+  /* La definición que rige la notificación en Colombia es la del INS, y no
+     enumera el torniquete. La regional de la OPS sí. La pantalla dice las dos
+     cosas y cuál manda, en vez de escoger una en silencio. */
+  if (!/no suma para la definición de caso en colombia/i.test(notaTorn))
+    throw new Error('Debe decir que no suma para la definición colombiana: ' + notaTorn);
+  if (!/protocolo de vigilancia de dengue/i.test(notaTorn))
+    throw new Error('Debe citar el protocolo del INS, que es el que manda');
+  if (!/regional/i.test(notaTorn) || !/petequias o prueba de torniquete positiva/i.test(notaTorn))
+    throw new Error('Debe nombrar la definición regional de la OPS y su diferencia');
+
+  await page.click('#s3 button:has-text("Siguiente")');
+  await ninguno('alarma'); await avanzar(4);
+  await ninguno('grave'); await avanzar(5);
+  await responderCasa();
+  await page.click('#s6 button:has-text("Clasificar y calcular manejo")');
+  await page.waitForSelector('#s7.active');
+
+  const c25 = await page.locator('#s7').innerText();
+  if (!/dengue sin signos de alarma/i.test(c25))
+    throw new Error('Con cefalea + leucopenia el caso SÍ es notificable para el INS');
+  if (!/2 manifestaciones/.test(c25))
+    throw new Error('Debe contar dos: cefalea y leucopenia — ' + (c25.match(/\d+ manifestaciones/) || []));
+  if (!/tomada de leucocitos 3\.200/i.test(c25))
+    throw new Error('Debe decir de dónde salió la leucopenia');
+  if (!/no cuenta para la definición del INS/i.test(c25))
+    throw new Error('El torniquete debe quedar registrado y marcado como no contable');
+  /* La barrera que importa: esto es notificación, no tratamiento. */
+  if (!/categoría de intervención a/i.test(c25))
+    throw new Error('Sin signos de alarma el grupo de manejo debe seguir siendo A');
+  await shot('26-definicion-caso');
+  console.log('  OK   │ Caso 25: la leucopenia completa la definición del INS y el torniquete queda advertido');
+
+  // ====== Caso 26: el caso que queda a una manifestación de cumplir ======
+  /* Fiebre + cefalea + torniquete positivo, sin hemograma. Para el INS no cumple;
+     para la OPS sí. Descartarlo sin saberlo es perder un caso notificable. */
+  await definicionCaso({ manifs: [0] });
+  await llenarPaciente({ edad: '30', peso: '65' });
+  await page.click('#s2 button:has-text("Siguiente")');
+  await page.selectOption('#f-torniquete', 'pos');
+  await page.click('#s3 button:has-text("Siguiente")');
+  await ninguno('alarma'); await avanzar(4);
+  await ninguno('grave'); await avanzar(5);
+  await responderCasa();
+  await page.click('#s6 button:has-text("Clasificar y calcular manejo")');
+  await page.waitForSelector('#s7.active');
+  const c26 = await page.locator('#s7').innerText();
+  if (!/no cumple la definición/i.test(c26))
+    throw new Error('Para el INS, cefalea + torniquete positivo no cumple');
+  if (!/queda a una manifestación de cumplir/i.test(c26))
+    throw new Error('Debe advertir que está a una manifestación, no dejarlo descartar en silencio');
+  if (!/busque dirigidamente/i.test(c26))
+    throw new Error('Debe decir qué hacer antes de descartarlo');
+  await shot('27-torniquete-limite');
+  console.log('  OK   │ Caso 26: el torniquete positivo al límite avisa en vez de dejar perder el caso');
 
   await browser.close();
   console.log('\n  Todos los recorridos de interfaz pasaron. Capturas en shots/\n');
