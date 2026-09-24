@@ -118,7 +118,11 @@ El escritor de `.docx` está implementado en JavaScript puro dentro del mismo ar
 
 - **Adultos y pediátricos** en el mismo flujo: el umbral de 18 años cambia la dosis de acetaminofén (500 mg c/6 h frente a 10–15 mg/kg/dosis, con equivalencia en jarabe de 150 mg/5 ml) y el inicio de la fase crítica (día 4–6 en adultos, día 3–6 en niños).
 - **Condiciones asociadas automáticas** por edad y gestación: menor de 1 año, ≥ 65 años y embarazo elevan el caso a B1 sin que haya que marcarlas. El *menor de 5 años* se ofrece marcado y es desmarcable, porque la guía nacional lo incluye en el grupo B y el algoritmo OPS 2019 no.
-- **Peso ideal en obesidad**: si la talla está registrada y el peso supera en más del 20 % el peso ideal, la app ofrece calcular los volúmenes con peso ideal. La indicación es de la OMS — *«Use the ideal body weight for calculation of fluid infusion for obese and overweight patients»*, Handbook for Clinical Management of Dengue, secciones 2.2.2 y 2.2.3.1. La OMS publica una tabla de peso ideal por talla (Textbox J); la app lo calcula con la **fórmula de Devine**, que puede diferir en uno o dos kilos.
+- **Peso ideal en sobrepeso y obesidad** — la indicación es de la OMS: *«Use the ideal body weight for calculation of fluid infusion for obese and overweight patients»*, Handbook for Clinical Management of Dengue, secciones 2.2.2 y 2.2.3.1. El cálculo depende de la edad:
+  - **Adultos (≥ 18 años)**: fórmula de **Devine**; el aviso aparece cuando el peso supera en más del 20 % el peso ideal. La OMS publica una tabla por talla (Textbox J) que puede diferir en uno o dos kilos.
+  - **2 a 17 años**: peso ideal = **IMC mediano de la OMS para la edad y el sexo × talla²**, con las tablas LMS de los Patrones de Crecimiento 2006 (24–60 meses) y la Referencia 2007 (5–19 años). El aviso se dispara por el **IMC para la edad** con los puntos de corte de la Resolución 2465 de 2016: > +1 DE (sobrepeso) desde los 5 años y > +2 DE entre 2 y 5 años. Devine no se usa en menores: es una fórmula de adultos.
+  - **Menores de 2 años**: sin cálculo automático.
+  - Si hay exceso de peso y los líquidos se calcularon con el peso real, el informe y el Word lo advierten; si se usó el peso ideal, lo dejan registrado con el método.
 - **Evaluación hemodinámica compuesta, no un solo umbral**: la app no decide el choque únicamente por la presión de pulso. Evalúa en conjunto hipotensión según la edad (tabla del CDC, equivalente a 70 + 2 × edad entre 1 y 9 años y a 90 mmHg desde los 10), presión de pulso ≤ 20 mmHg, llenado capilar > 2 s, taquicardia según la edad, PAM baja, alteración del estado de conciencia y desaturación. Distingue **choque compensado** —presión de pulso estrecha con presión sistólica conservada, el signo precoz— de **choque hipotenso o descompensado**, que la OMS describe como *«a late finding [that] signals an imminent total cardiorespiratory collapse»*. Una presión de pulso amplia **nunca** se presenta como tranquilizadora si ya hay hipotensión.
 - **Un NS1 negativo no cierra el caso**: la app lo dice explícitamente y encadena el siguiente paso según el día de evolución — RT-PCR hasta el día 5 (técnica molecular, distinta de la detección de antígeno) e IgM desde el día 6, más el diferencial con chikungunya y Zika. Coinciden el CDC (*«A negative result from an NAAT or NS1 antigen test does not rule out infection»*), la guía provisional de la OMS de abril de 2025 y el protocolo del INS (*«resultados negativos de las pruebas inmunocromatográficas para la detección de NS1 e IgM no excluyen la infección por dengue»*).
 
@@ -218,6 +222,27 @@ La app **cuenta por el INS**. El torniquete se realiza, se registra y se imprime
 La **leucopenia sí cuenta**, y como el leucograma ya está digitado, la app la reconoce sola —umbral < 4.000 /mm³— en vez de pedir que se marque una casilla más. Va rotulada con su origen: *«Leucopenia — tomada de leucocitos 3.200 /mm³»*, para que quien lea la historia clínica vea de dónde salió. Una manifestación marcada a mano no se cuenta dos veces.
 
 **Nada de esto toca el grupo de manejo.** Las manifestaciones alimentan la clasificación para el SIVIGILA; el grupo A/B1/B2/C lo deciden los signos de alarma, las manifestaciones graves y las condiciones asociadas. Dos pruebas lo verifican comparando `clasificar()` y `planLiquidos()` con y sin las manifestaciones deducidas.
+
+## Signos de alarma que ya dice el hemograma (v3.6.4)
+
+El hemograma se digita en la pantalla del paciente, dos pasos antes de la lista de signos de alarma. Hasta la v3.6.3, con plaquetas en 85.000 la app solo decía *«márquelo si no lo ha hecho»*: el médico tenía que volver a marcar un dato que ya había escrito, y si lo olvidaba el signo no llegaba ni a la ficha ni a la historia clínica.
+
+Ahora la casilla **sale marcada**, rotulada con la cifra de origen — *«Marcado por la app — tomado de plaquetas 85.000 /mm³»* —, y el rótulo pasa igual al informe, al Word y a la conducta copiada. Si el médico había marcado «Ninguno», se desactiva solo.
+
+| Signo | Se marca solo cuando | Efecto en el grupo |
+|---|---|---|
+| Caída de plaquetas | plaquetas < 100.000 /mm³ | Ninguno: se notifica y pide control seriado |
+| Aumento del hematocrito | hematocrito ≥ 20 % sobre el **basal del propio paciente** | Lleva a B2 |
+
+Un único hematocrito alto frente a la referencia poblacional **no** se marca: la ficha pide aumento progresivo. Los demás signos de alarma son clínicos y no se deducen de ningún dato.
+
+**La decisión del médico manda.** Si desmarca un signo que puso la app, no se vuelve a marcar aunque se corrija la cifra, mientras siga por debajo del umbral. Si la cifra deja de cumplir, la app retira solo lo que ella misma puso; lo marcado a mano nunca se toca.
+
+## Peso ideal en adolescentes (v3.6.3)
+
+Un caso real lo destapó: una paciente de **14 años, 67 kg y 150 cm** (IMC 29,8; **z +2,4 DE, obesidad**) con lipotimia, que recibió en urgencias una carga de B2 de **670 ml** calculada con el peso real. Al pasar el caso por la app, tampoco hubo aviso: el recuadro de peso ideal se apagaba en todo menor de 18 años, aunque `pesoCalculo()` ya estaba escrito para aceptar adolescentes.
+
+Ahora el aviso aparece, el peso ideal sale de **44 kg** (IMC mediano OMS de 19,56 para una niña de 14 años × 1,50²) y la carga baja a **440 ml**. Además, si el médico decide seguir con el peso real, el informe lo deja escrito como advertencia en lugar de callarlo.
 
 ## Sin tensión arterial no se dice «sin choque»
 
@@ -319,7 +344,7 @@ El código puede seguir funcionando perfectamente mientras el contenido clínico
 
 ```js
 var REVISION = {
-  fecha: '2026-08-20',
+  fecha: '2026-09-24',
   fuentes: 'Ficha SIVIGILA 210/220/580 (2024), Protocolo INS v07, ...',
   mesesVigencia: 12
 };
@@ -346,7 +371,7 @@ Tenga presente que **el conteo va a quedar corto por diseño**: cuando el médic
 Después de editar `index.html`, suba el número de versión en `sw.js`:
 
 ```js
-const VERSION = 'ceroaedes-v3.2.1';
+const VERSION = 'ceroaedes-v3.6.3';
 ```
 
 Sin ese cambio, los celulares que ya la tengan instalada seguirán mostrando la versión cacheada.
@@ -367,6 +392,8 @@ Sin ese cambio, los celulares que ya la tengan instalada seguirán mostrando la 
 - Organización Panamericana de la Salud. *Algoritmos para el manejo clínico del dengue*. CDE; 2020. (Esquema reducido del Grupo B2 y criterios de hospitalización.)
 - Organización Mundial de la Salud. *Dengue: guidelines for diagnosis, treatment, prevention and control*. Ginebra: OMS; 2009. (Sobrecarga de líquidos, furosemida, interpretación del hematocrito, umbrales absolutos en choque y figura del curso de la enfermedad, capítulo 2.)
 - Organización Mundial de la Salud. *Laboratory testing for dengue virus: interim guidance*. Abril de 2025.
+- Organización Mundial de la Salud. *WHO Child Growth Standards* (2006) y *WHO Reference 2007* para 5–19 años — tablas LMS de IMC para la edad.
+- Ministerio de Salud y Protección Social. *Resolución 2465 de 2016* — indicadores antropométricos y puntos de corte.
 
 ## Autor
 
